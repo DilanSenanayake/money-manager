@@ -89,7 +89,7 @@ export const receiptLineItemSchema = z.object({
   price: z.number().nullable().optional(),
 });
 
-/** Shared by forms and Gemini generateObject for receipt OCR */
+/** Shared by Gemini generateObject for receipt text (after Tesseract OCR) */
 export const receiptExtractionSchema = z.object({
   merchant: z.string().describe("Store or merchant name"),
   amount: z.number().describe("Total amount paid"),

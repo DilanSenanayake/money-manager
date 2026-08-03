@@ -1,6 +1,6 @@
 # Ledgerly — Money Manager & Expense Tracker
 
-Next.js 15 App Router money manager with Supabase Auth/RLS and free-tier Gemini Flash AI for receipt OCR and bank SMS parsing.
+Next.js 15 App Router money manager with Supabase Auth/RLS, Tesseract.js receipt OCR, and free-tier Gemini Flash for structuring receipts, SMS, and one-line notes.
 
 > Full project write-up: **[DOCUMENTATION.md](./DOCUMENTATION.md)** (architecture, schema, features, setup checklist).
 
@@ -8,7 +8,7 @@ Next.js 15 App Router money manager with Supabase Auth/RLS and free-tier Gemini 
 
 - Next.js 15 + TypeScript + Tailwind CSS
 - Supabase (PostgreSQL + Auth + RLS)
-- Vercel AI SDK + `@ai-sdk/google` (`gemini-2.5-flash` / `gemini-1.5-flash` only)
+- Vercel AI SDK + `@ai-sdk/google` (`gemini-2.5-flash` / `gemini-2.5-flash-lite` only)
 - Zod schemas shared by forms and `generateObject`
 - Recharts analytics
 - PWA (manifest + service worker)
@@ -64,7 +64,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - Only free-tier Gemini Flash models
 - Structured extraction via `generateObject` + Zod
 - AI results never auto-save — review modal is required
-- Paths: receipt OCR, bank SMS, natural-language one-liner
+- Paths: receipt (Tesseract OCR → Gemini text), bank SMS, natural-language one-liner
 
 ## License
 

@@ -34,7 +34,7 @@ Ledgerly is a full-stack personal finance web app focused on **logging income an
 Only free-tier Flash models are allowed:
 
 - `gemini-2.5-flash` (preferred)
-- `gemini-1.5-flash` (fallback)
+- `gemini-2.5-flash-lite` / `gemini-flash-latest` (fallback)
 
 Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
 
@@ -107,7 +107,7 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 
 | Path | Steps |
 |------|--------|
-| Scan receipt | Camera/gallery → Confirm → Save |
+| Scan receipt | Tesseract OCR → Gemini text parse → Confirm → Save |
 | Paste bank SMS | Paste/clipboard → Parse → Confirm → Save |
 | Describe it | One line e.g. `Coffee 450` → Parse → Confirm → Save |
 | Quick manual | Amount + category chip → Save (defaults: today, first account) |
@@ -116,7 +116,9 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 - AI never auto-saves
 - `/import` redirects to `/add`
 - Components: `quick-add-panel.tsx`, `ai-review-modal.tsx`
-- Actions: `parseReceiptImage`, `parseBankSms`, `parseQuickText`, `saveReviewedTransaction`
+- Actions: `parseReceiptText` (after client OCR), `parseBankSms`, `parseQuickText`, `saveReviewedTransaction`
+- Receipt pipeline: **Tesseract.js** (browser OCR) → Gemini Flash text-only `generateObject` → review modal
+- Helper: `src/lib/ocr.ts` (`extractTextFromImage`)
 
 ### 3.10 PWA
 
@@ -269,7 +271,7 @@ Never commit `.env.local`.
 2. **Server Actions over REST** — mutations live under `src/app/actions/` for type-safe Next.js data flow.  
 3. **Shared Zod schemas** — same schemas validate UI input and AI `generateObject` output.  
 4. **Human-in-the-loop AI** — extraction always goes through a review modal; nothing saves until the user confirms.  
-5. **Flash-only AI** — keeps cost at free-tier; automatic fallback from 2.5 → 1.5 Flash.  
+5. **Flash-only AI** — keeps cost at free-tier; automatic fallback from 2.5 → 2.0 Flash.  
 6. **Sensible defaults** — today, first account, AI category guess; user only fixes mistakes.  
 7. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
 8. **RLS by default** — every table is user-scoped; no service-role key in the client.  

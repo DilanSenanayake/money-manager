@@ -2,7 +2,13 @@
 
 import { generateObject } from "ai";
 import { revalidatePath } from "next/cache";
-import { getFlashModel, getFlashModelFallback } from "@/lib/ai";
+import {
+  FREE_TIER_MODELS,
+  formatAiError,
+  getFlashModel,
+  isQuotaError,
+  type FreeTierModel,
+} from "@/lib/ai";
 import {
   aiReviewSaveSchema,
   quickTextExtractionSchema,
@@ -24,17 +30,31 @@ async function requireUser() {
   return { supabase, user };
 }
 
+/** Try Flash models in order; avoid burning retries on quota errors. */
 async function generateWithFallback<T>(
   run: (model: ReturnType<typeof getFlashModel>) => Promise<T>
 ): Promise<T> {
-  try {
-    return await run(getFlashModel("gemini-2.5-flash"));
-  } catch {
-    return await run(getFlashModelFallback());
+  let lastError: unknown;
+
+  for (const name of FREE_TIER_MODELS) {
+    try {
+      return await run(getFlashModel(name as FreeTierModel));
+    } catch (err) {
+      lastError = err;
+      // Quota is usually project-wide — switching models rarely helps, but try lite once.
+      if (isQuotaError(err) && name !== "gemini-2.5-flash-lite") {
+        continue;
+      }
+      if (isQuotaError(err)) break;
+    }
   }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("All Gemini Flash models failed");
 }
 
-export async function parseReceiptImage(formData: FormData): Promise<
+export async function parseReceiptText(ocrText: string): Promise<
   | { data: ReceiptExtraction }
   | { error: string }
 > {
@@ -44,45 +64,40 @@ export async function parseReceiptImage(formData: FormData): Promise<
     return { error: "GOOGLE_GENERATIVE_AI_API_KEY is not configured" };
   }
 
-  const file = formData.get("image");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Please upload a receipt image" };
+  const trimmed = ocrText.replace(/\r/g, "").trim();
+  if (trimmed.length < 8) {
+    return {
+      error:
+        "OCR text is too short. Try a clearer receipt photo, or add the expense manually.",
+    };
   }
 
-  const bytes = await file.arrayBuffer();
-  const mediaType = file.type || "image/jpeg";
+  // Cap payload size so we don't blow token limits on noisy OCR
+  const text = trimmed.length > 8000 ? trimmed.slice(0, 8000) : trimmed;
 
   try {
     const result = await generateWithFallback(async (model) => {
       const { object } = await generateObject({
         model,
         schema: receiptExtractionSchema,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Extract structured purchase data from this receipt image. Use ISO currency codes. Date must be YYYY-MM-DD.",
-              },
-              {
-                type: "image",
-                image: new Uint8Array(bytes),
-                mediaType,
-              },
-            ],
-          },
-        ],
+        maxRetries: 0,
+        prompt: `You are given plain text extracted from a purchase receipt by OCR (may contain typos or junk lines). Extract structured purchase fields. Amount must be the TOTAL paid (not tax-only or unit prices). Date must be YYYY-MM-DD; use today's date if unknown. Prefer a sensible expense category.
+
+OCR text:
+"""
+${text}
+"""`,
       });
       return object;
     });
 
-    return { data: result };
+    const notes =
+      result.notes?.trim() ||
+      `OCR: ${text.slice(0, 240)}${text.length > 240 ? "…" : ""}`;
+
+    return { data: { ...result, notes } };
   } catch (err) {
-    return {
-      error:
-        err instanceof Error ? err.message : "Failed to parse receipt image",
-    };
+    return { error: formatAiError(err, "Failed to parse receipt text") };
   }
 }
 
@@ -104,6 +119,7 @@ export async function parseBankSms(text: string): Promise<
       const { object } = await generateObject({
         model,
         schema: smsExtractionSchema,
+        maxRetries: 0,
         prompt: `Parse this bank SMS / alert into structured transaction fields. Credit = money received, Debit = money spent.\n\nMessage:\n${trimmed}`,
       });
       return object;
@@ -111,9 +127,7 @@ export async function parseBankSms(text: string): Promise<
 
     return { data: result };
   } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Failed to parse SMS",
-    };
+    return { error: formatAiError(err, "Failed to parse SMS") };
   }
 }
 
@@ -137,6 +151,7 @@ export async function parseQuickText(text: string): Promise<
       const { object } = await generateObject({
         model,
         schema: quickTextExtractionSchema,
+        maxRetries: 0,
         prompt: `Parse this short personal finance note into a single income or expense transaction. Prefer expense unless the text clearly means income (salary, refund, received, paid me, etc.). Date YYYY-MM-DD; use today if unknown.\n\nNote:\n${trimmed}`,
       });
       return object;
@@ -144,9 +159,7 @@ export async function parseQuickText(text: string): Promise<
 
     return { data: result };
   } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Failed to parse text",
-    };
+    return { error: formatAiError(err, "Failed to parse text") };
   }
 }
 

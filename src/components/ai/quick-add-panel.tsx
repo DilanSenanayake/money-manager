@@ -12,9 +12,10 @@ import {
 import {
   parseBankSms,
   parseQuickText,
-  parseReceiptImage,
+  parseReceiptText,
 } from "@/app/actions/ai";
 import { createTransaction } from "@/app/actions/transactions";
+import { extractTextFromImage } from "@/lib/ocr";
 import type { Account, Category } from "@/lib/types";
 import type {
   AiReviewSave,
@@ -54,6 +55,7 @@ export function QuickAddPanel({
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+  const [ocrStatus, setOcrStatus] = useState<string | null>(null);
   const [active, setActive] = useState<
     "receipt" | "sms" | "text" | "manual" | null
   >(initialMode === "receipt" ? null : (initialMode ?? null));
@@ -101,12 +103,40 @@ export function QuickAddPanel({
     }
   }
 
+  async function handleReceiptFile(file: File) {
+    setOcrStatus("Reading receipt with OCR…");
+    const ocr = await extractTextFromImage(file, (info) => {
+      const pct = Math.round(info.progress * 100);
+      setOcrStatus(
+        pct > 0 ? `${info.status} ${pct}%` : info.status
+      );
+    });
+
+    if ("error" in ocr) {
+      setOcrStatus(null);
+      toast.error(ocr.error);
+      return;
+    }
+
+    setOcrStatus("Structuring with Gemini…");
+    startTransition(async () => {
+      const result = await parseReceiptText(ocr.text);
+      setOcrStatus(null);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      openReview(result.data, "receipt");
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="animate-fade-up">
         <h1 className="font-display text-3xl tracking-tight">Add</h1>
         <p className="text-sm text-slate-500">
-          Log income or an expense in about 30 seconds — AI does the typing
+          Log income or an expense in about 30 seconds — OCR + AI help with
+          typing
         </p>
       </div>
 
@@ -124,7 +154,7 @@ export function QuickAddPanel({
           </span>
           <p className="font-semibold">Scan receipt</p>
           <p className="mt-1 text-xs text-slate-500">
-            Photo → confirm → save
+            OCR → AI → confirm → save
           </p>
         </button>
 
@@ -177,16 +207,7 @@ export function QuickAddPanel({
           const file = e.target.files?.[0];
           e.target.value = "";
           if (!file) return;
-          const formData = new FormData();
-          formData.set("image", file);
-          startTransition(async () => {
-            const result = await parseReceiptImage(formData);
-            if ("error" in result) {
-              toast.error(result.error);
-              return;
-            }
-            openReview(result.data, "receipt");
-          });
+          void handleReceiptFile(file);
         }}
       />
 
@@ -402,10 +423,10 @@ export function QuickAddPanel({
         </CardContent>
       </Card>
 
-      {pending && (
+      {(ocrStatus || pending) && (
         <div className="animate-fade-in flex items-center justify-center gap-2 text-sm text-slate-500">
           <span className="spinner" aria-hidden />
-          Working with Gemini Flash…
+          {ocrStatus ?? "Working with Gemini Flash…"}
         </div>
       )}
 
