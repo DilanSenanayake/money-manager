@@ -8,8 +8,7 @@ export type OcrProgress = {
 };
 
 /**
- * Browser-side OCR with Tesseract.js (free, no API key).
- * Returns cleaned plain text for Gemini structured parsing.
+ * Browser-side OCR. Returns cleaned plain text for structuring.
  */
 export async function extractTextFromImage(
   file: File | Blob,
@@ -18,7 +17,7 @@ export async function extractTextFromImage(
   let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
 
   try {
-    onProgress?.({ status: "Loading OCR engine…", progress: 0 });
+    onProgress?.({ status: "Getting ready…", progress: 0 });
 
     worker = await createWorker("eng", 1, {
       logger: (m) => {
@@ -26,8 +25,8 @@ export async function extractTextFromImage(
           onProgress?.({
             status:
               m.status === "recognizing text"
-                ? "Reading receipt…"
-                : "Preparing OCR…",
+                ? "Reading your receipt…"
+                : "Getting ready…",
             progress: m.progress,
           });
         }
@@ -43,17 +42,14 @@ export async function extractTextFromImage(
     if (cleaned.length < 8) {
       return {
         error:
-          "Couldn’t read enough text from this image. Try a clearer, well-lit photo.",
+          "We couldn’t read that photo clearly. Try again with better lighting, or add it manually.",
       };
     }
 
     return { text: cleaned };
-  } catch (err) {
+  } catch {
     return {
-      error:
-        err instanceof Error
-          ? err.message
-          : "OCR failed — try another photo or add manually",
+      error: "We couldn’t read that photo. Try another one, or add it manually.",
     };
   } finally {
     if (worker) {

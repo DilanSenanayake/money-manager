@@ -238,6 +238,79 @@ body {
   animation: spin-soft 0.7s linear infinite;
 }
 
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-pulse-core {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes loading-bar-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+@keyframes loading-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.loading-overlay {
+  animation: fade-in var(--dur) var(--ease-out) both;
+}
+
+.loading-overlay-card {
+  animation: loading-card-in var(--dur-slow) var(--ease-out) both;
+}
+
+.loading-ring {
+  position: relative;
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 999px;
+  border: 3px solid rgba(15, 118, 110, 0.15);
+  border-top-color: #0f766e;
+  border-right-color: #2dd4bf;
+  animation: loading-spin 0.9s linear infinite;
+  display: grid;
+  place-items: center;
+}
+
+.loading-ring-core {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #0f766e, #5eead4);
+  animation: loading-pulse-core 1.4s var(--ease-out) infinite;
+  box-shadow: 0 0 0 6px rgba(15, 118, 110, 0.1);
+}
+
+.loading-bar-indeterminate {
+  width: 40%;
+  animation: loading-bar-slide 1.1s var(--ease-out) infinite;
+}
+
 .dialog-overlay[data-state="open"] {
   animation: fade-in var(--dur) var(--ease-out) both;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { saveReviewedTransaction } from "@/app/actions/ai";
 import type { Account, Category } from "@/lib/types";
@@ -10,6 +11,8 @@ import type {
   ReceiptExtraction,
   SmsExtraction,
 } from "@/lib/schemas";
+import { matchCategoryId } from "@/lib/category-match";
+import { localDateYYYYMMDD } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export type AiSource = "receipt" | "sms" | "text" | "manual";
 export type Extraction =
@@ -47,36 +51,13 @@ type Props = {
   initialForm?: AiReviewSave | null;
 };
 
-function matchCategory(
-  categories: Category[],
-  type: "income" | "expense",
-  categoryName?: string | null
-) {
-  if (!categoryName) return null;
-  const needle = categoryName.toLowerCase().trim();
-  if (!needle) return null;
-
-  const exact = categories.find(
-    (c) => c.type === type && c.name.toLowerCase() === needle
-  );
-  if (exact) return exact.id;
-
-  const partial = categories.find(
-    (c) =>
-      c.type === type &&
-      (c.name.toLowerCase().includes(needle) ||
-        needle.includes(c.name.toLowerCase()))
-  );
-  return partial?.id ?? null;
-}
-
 function toReviewForm(
   extraction: Extraction,
   accounts: Account[],
   categories: Category[],
   source: AiSource | null
 ): AiReviewSave {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateYYYYMMDD();
   const defaultAccount = accounts[0]?.id ?? "";
 
   if (source === "text" && extraction) {
@@ -84,7 +65,13 @@ function toReviewForm(
     const type = text.type === "income" ? "income" : "expense";
     return {
       account_id: defaultAccount,
-      category_id: matchCategory(categories, type, text.category),
+      category_id: matchCategoryId(
+        categories,
+        type,
+        text.category,
+        text.merchant,
+        text.notes
+      ),
       amount: Number(text.amount ?? 0),
       type,
       date: text.date || today,
@@ -110,7 +97,12 @@ function toReviewForm(
     }
     return {
       account_id: accountId,
-      category_id: matchCategory(categories, type, sms.merchant),
+      category_id: matchCategoryId(
+        categories,
+        type,
+        sms.merchant,
+        sms.notes
+      ),
       amount: Number(sms.amount ?? 0),
       type,
       date: sms.date || today,
@@ -125,7 +117,13 @@ function toReviewForm(
   const type = "expense" as const;
   return {
     account_id: defaultAccount,
-    category_id: matchCategory(categories, type, receipt?.category),
+    category_id: matchCategoryId(
+      categories,
+      type,
+      receipt?.category,
+      receipt?.merchant,
+      receipt?.notes
+    ),
     amount: Number(receipt?.amount ?? 0),
     type,
     date: receipt?.date || today,
@@ -151,9 +149,10 @@ export function AiReviewModal({
   source,
   initialForm = null,
 }: Props) {
+  const router = useRouter();
   const [form, setForm] = useState<AiReviewSave | null>(null);
   const [showMore, setShowMore] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -178,9 +177,9 @@ export function AiReviewModal({
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
         <div className="flex max-h-[inherit] min-h-0 flex-col">
           <DialogHeader className="shrink-0 border-b border-slate-100 px-5 pb-3 pt-5 pr-12 dark:border-slate-800">
-            <DialogTitle>Confirm & save</DialogTitle>
+            <DialogTitle>Check & save</DialogTitle>
             <p className="text-sm text-slate-500">
-              Fields are filled from AI — edit anything, then save.
+              We filled this in for you — change anything you need, then save.
             </p>
           </DialogHeader>
 
@@ -327,26 +326,39 @@ export function AiReviewModal({
                 <Button
                   size="lg"
                   className="min-w-32 flex-1 sm:flex-none"
-                  disabled={pending || !form.account_id || !form.amount}
-                  onClick={() =>
-                    startTransition(async () => {
+                  disabled={saving || !form.account_id || !form.amount}
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
                       const result = await saveReviewedTransaction(form);
                       if (result.error) {
                         toast.error(result.error);
+                        setSaving(false);
                         return;
                       }
                       toast.success("Saved");
                       onOpenChange(false);
-                    })
-                  }
+                      setSaving(false);
+                      router.push("/dashboard");
+                      router.refresh();
+                    } catch {
+                      setSaving(false);
+                      toast.error("Something went wrong. Please try again.");
+                    }
+                  }}
                 >
-                  {pending ? "Saving…" : "Save"}
+                  {saving ? "Saving…" : "Save"}
                 </Button>
               </DialogFooter>
             </>
           )}
         </div>
       </DialogContent>
+      <LoadingOverlay
+        open={saving}
+        title="Saving"
+        message="Adding to your money tracker…"
+      />
     </Dialog>
   );
 }

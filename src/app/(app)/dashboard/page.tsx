@@ -152,7 +152,7 @@ export default async function DashboardPage() {
             <CardTitle className="text-base">Budget progress</CardTitle>
           </CardHeader>
           <CardContent>
-            <BudgetBars budgets={data.budgets.slice(0, 5)} currency={data.baseCurrency} />
+            <BudgetBars budgets={data.budgets} currency={data.baseCurrency} />
           </CardContent>
         </Card>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/app/actions/ai";
 import { createTransaction } from "@/app/actions/transactions";
 import { extractTextFromImage } from "@/lib/ocr";
+import { localDateYYYYMMDD } from "@/lib/dates";
 import type { Account, Category } from "@/lib/types";
 import type {
   AiReviewSave,
@@ -38,6 +39,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 type Props = {
   accounts: Account[];
@@ -54,8 +56,10 @@ export function QuickAddPanel({
 }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [pending, startTransition] = useTransition();
-  const [ocrStatus, setOcrStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [busyTitle, setBusyTitle] = useState("Just a moment");
+  const [busyMessage, setBusyMessage] = useState("Please wait…");
+  const [busyProgress, setBusyProgress] = useState<number | null>(null);
   const [active, setActive] = useState<
     "receipt" | "sms" | "text" | "manual" | null
   >(initialMode === "receipt" ? null : (initialMode ?? null));
@@ -83,10 +87,28 @@ export function QuickAddPanel({
 
   const manualCategories = categories.filter((c) => c.type === manualType);
 
+  function startBusy(
+    title: string,
+    message: string,
+    progress: number | null = null
+  ) {
+    setBusyTitle(title);
+    setBusyMessage(message);
+    setBusyProgress(progress);
+    setBusy(true);
+  }
+
+  function stopBusy() {
+    setBusy(false);
+    setBusyProgress(null);
+    setBusyMessage("Please wait…");
+  }
+
   function openReview(
     data: ReceiptExtraction | SmsExtraction | QuickTextExtraction,
     kind: AiSource
   ) {
+    stopBusy();
     setExtraction(data);
     setSource(kind);
     setInitialForm(null);
@@ -99,35 +121,109 @@ export function QuickAddPanel({
       setExtraction(null);
       setInitialForm(null);
       setSource(null);
-      router.refresh();
+      stopBusy();
     }
   }
 
   async function handleReceiptFile(file: File) {
-    setOcrStatus("Reading receipt with OCR…");
-    const ocr = await extractTextFromImage(file, (info) => {
-      const pct = Math.round(info.progress * 100);
-      setOcrStatus(
-        pct > 0 ? `${info.status} ${pct}%` : info.status
-      );
-    });
+    startBusy("Reading receipt", "Looking at your photo…", 0);
+    try {
+      const ocr = await extractTextFromImage(file, (info) => {
+        setBusyProgress(info.progress);
+        setBusyMessage(info.status);
+      });
 
-    if ("error" in ocr) {
-      setOcrStatus(null);
-      toast.error(ocr.error);
-      return;
-    }
+      if ("error" in ocr) {
+        stopBusy();
+        toast.error(ocr.error);
+        return;
+      }
 
-    setOcrStatus("Structuring with Gemini…");
-    startTransition(async () => {
+      startBusy("Almost done", "Filling in the details…", null);
       const result = await parseReceiptText(ocr.text);
-      setOcrStatus(null);
       if ("error" in result) {
+        stopBusy();
         toast.error(result.error);
         return;
       }
       openReview(result.data, "receipt");
-    });
+    } catch {
+      stopBusy();
+      toast.error("Something went wrong. Please try again.");
+    }
+  }
+
+  async function runSmsParse() {
+    if (!smsText.trim() || busy) return;
+    startBusy("Reading message", "Picking out the amount and details…");
+    try {
+      const result = await parseBankSms(smsText);
+      if ("error" in result) {
+        stopBusy();
+        toast.error(result.error);
+        return;
+      }
+      openReview(result.data, "sms");
+    } catch {
+      stopBusy();
+      toast.error("Something went wrong. Please try again.");
+    }
+  }
+
+  async function runTextParse() {
+    if (!quickText.trim() || busy) return;
+    startBusy("Understanding", "Filling in the details…");
+    try {
+      const result = await parseQuickText(quickText);
+      if ("error" in result) {
+        stopBusy();
+        toast.error(result.error);
+        return;
+      }
+      openReview(result.data, "text");
+    } catch {
+      stopBusy();
+      toast.error("Something went wrong. Please try again.");
+    }
+  }
+
+  async function runManualSave() {
+    const amount = Number(manualAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Enter an amount");
+      return;
+    }
+    if (!accounts[0] || busy) return;
+
+    startBusy("Saving", "Adding to your money tracker…");
+    try {
+      const result = await createTransaction({
+        account_id: accounts[0].id,
+        category_id: manualCategoryId,
+        amount,
+        type: manualType,
+        date: localDateYYYYMMDD(),
+        merchant: "",
+        notes: "",
+        is_recurring: false,
+        recurring_frequency: null,
+        transfer_to_account_id: null,
+      });
+      if (result.error) {
+        stopBusy();
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Saved");
+      setManualAmount("");
+      setManualCategoryId(null);
+      stopBusy();
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      stopBusy();
+      toast.error("Something went wrong. Please try again.");
+    }
   }
 
   return (
@@ -135,26 +231,26 @@ export function QuickAddPanel({
       <div className="animate-fade-up">
         <h1 className="font-display text-3xl tracking-tight">Add</h1>
         <p className="text-sm text-slate-500">
-          Log income or an expense in about 30 seconds — OCR + AI help with
-          typing
+          Log income or an expense in about 30 seconds
         </p>
       </div>
 
       <div className="stagger grid gap-3 sm:grid-cols-3">
         <button
           type="button"
+          disabled={busy}
           onClick={() => {
             setActive("receipt");
             fileRef.current?.click();
           }}
-          className="pressable rounded-2xl border border-slate-200 bg-white/95 p-4 text-left shadow-sm dark:border-slate-800 dark:bg-slate-950"
+          className="pressable rounded-2xl border border-slate-200 bg-white/95 p-4 text-left shadow-sm disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950"
         >
           <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
             <Camera className="h-5 w-5" />
           </span>
           <p className="font-semibold">Scan receipt</p>
           <p className="mt-1 text-xs text-slate-500">
-            OCR → AI → confirm → save
+            Photo → check → save
           </p>
         </button>
 
@@ -216,15 +312,15 @@ export function QuickAddPanel({
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <ClipboardPaste className="h-4 w-4" />
-              Bank SMS
+              Bank message
             </CardTitle>
             <CardDescription>
-              Paste a debit/credit alert — AI fills the fields
+              Paste a bank alert — we’ll fill in the details for you
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Textarea
-              placeholder="Paste bank SMS here…"
+              placeholder="Paste your bank message here…"
               value={smsText}
               onChange={(e) => setSmsText(e.target.value)}
               rows={4}
@@ -234,37 +330,29 @@ export function QuickAddPanel({
               <Button
                 type="button"
                 variant="outline"
+                disabled={busy}
                 onClick={async () => {
                   try {
                     const text = await navigator.clipboard.readText();
                     if (!text.trim()) {
-                      toast.error("Clipboard is empty");
+                      toast.error("Nothing to paste from the clipboard");
                       return;
                     }
                     setSmsText(text);
-                    toast.success("Pasted from clipboard");
+                    toast.success("Pasted");
                   } catch {
-                    toast.error("Clipboard blocked — paste manually");
+                    toast.error("Couldn’t read the clipboard — paste it yourself");
                   }
                 }}
               >
-                Read clipboard
+                Paste from clipboard
               </Button>
               <Button
-                disabled={pending || !smsText.trim()}
-                onClick={() =>
-                  startTransition(async () => {
-                    const result = await parseBankSms(smsText);
-                    if ("error" in result) {
-                      toast.error(result.error);
-                      return;
-                    }
-                    openReview(result.data, "sms");
-                  })
-                }
+                disabled={busy || !smsText.trim()}
+                onClick={() => void runSmsParse()}
               >
                 <Sparkles className="h-4 w-4" />
-                {pending ? "Parsing…" : "Parse & review"}
+                Continue
               </Button>
             </div>
           </CardContent>
@@ -276,7 +364,7 @@ export function QuickAddPanel({
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <MessageSquareText className="h-4 w-4" />
-              One-line note
+              Describe it
             </CardTitle>
             <CardDescription>
               Examples: “Groceries 3200” · “Salary 150000” · “Uber 850”
@@ -289,35 +377,19 @@ export function QuickAddPanel({
               onChange={(e) => setQuickText(e.target.value)}
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter" && quickText.trim() && !pending) {
+                if (e.key === "Enter" && quickText.trim() && !busy) {
                   e.preventDefault();
-                  startTransition(async () => {
-                    const result = await parseQuickText(quickText);
-                    if ("error" in result) {
-                      toast.error(result.error);
-                      return;
-                    }
-                    openReview(result.data, "text");
-                  });
+                  void runTextParse();
                 }
               }}
             />
             <Button
               className="w-full sm:w-auto"
-              disabled={pending || !quickText.trim()}
-              onClick={() =>
-                startTransition(async () => {
-                  const result = await parseQuickText(quickText);
-                  if ("error" in result) {
-                    toast.error(result.error);
-                    return;
-                  }
-                  openReview(result.data, "text");
-                })
-              }
+              disabled={busy || !quickText.trim()}
+              onClick={() => void runTextParse()}
             >
               <Sparkles className="h-4 w-4" />
-              {pending ? "Parsing…" : "Parse & review"}
+              Continue
             </Button>
           </CardContent>
         </Card>
@@ -325,10 +397,8 @@ export function QuickAddPanel({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Quick manual</CardTitle>
-          <CardDescription>
-            Amount + category + Save — no AI needed
-          </CardDescription>
+          <CardTitle className="text-base">Add manually</CardTitle>
+          <CardDescription>Enter the amount, pick a category, and save</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -336,12 +406,13 @@ export function QuickAddPanel({
               <button
                 key={t}
                 type="button"
+                disabled={busy}
                 onClick={() => {
                   setManualType(t);
                   setManualCategoryId(null);
                 }}
                 className={cn(
-                  "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.98]",
+                  "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60",
                   manualType === t
                     ? t === "expense"
                       ? "border-rose-600 bg-rose-50 text-rose-700"
@@ -360,6 +431,7 @@ export function QuickAddPanel({
             placeholder="Amount"
             className="h-12 text-2xl font-semibold"
             value={manualAmount}
+            disabled={busy}
             onChange={(e) => setManualAmount(e.target.value)}
           />
           <div className="flex flex-wrap gap-2">
@@ -367,9 +439,10 @@ export function QuickAddPanel({
               <button
                 key={c.id}
                 type="button"
+                disabled={busy}
                 onClick={() => setManualCategoryId(c.id)}
                 className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95",
+                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
                   manualCategoryId === c.id
                     ? "border-teal-700 bg-teal-700 text-white"
                     : "border-slate-200 text-slate-600 hover:border-teal-600/40"
@@ -382,53 +455,25 @@ export function QuickAddPanel({
           <Button
             size="lg"
             className="w-full"
-            disabled={pending || !manualAmount || !accounts[0]}
-            onClick={() => {
-              const amount = Number(manualAmount);
-              if (!amount || amount <= 0) {
-                toast.error("Enter an amount");
-                return;
-              }
-              startTransition(async () => {
-                const result = await createTransaction({
-                  account_id: accounts[0].id,
-                  category_id: manualCategoryId,
-                  amount,
-                  type: manualType,
-                  date: new Date().toISOString().slice(0, 10),
-                  merchant: "",
-                  notes: "",
-                  is_recurring: false,
-                  recurring_frequency: null,
-                  transfer_to_account_id: null,
-                });
-                if (result.error) {
-                  toast.error(result.error);
-                  return;
-                }
-                toast.success("Saved");
-                setManualAmount("");
-                setManualCategoryId(null);
-                router.refresh();
-              });
-            }}
+            disabled={busy || !manualAmount || !accounts[0]}
+            onClick={() => void runManualSave()}
           >
-            {pending ? "Saving…" : "Save"}
+            Save
           </Button>
           {accounts.length === 0 && (
             <p className="text-xs text-rose-600">
-              Create an account first under More → Accounts.
+              Add an account first in More → Accounts.
             </p>
           )}
         </CardContent>
       </Card>
 
-      {(ocrStatus || pending) && (
-        <div className="animate-fade-in flex items-center justify-center gap-2 text-sm text-slate-500">
-          <span className="spinner" aria-hidden />
-          {ocrStatus ?? "Working with Gemini Flash…"}
-        </div>
-      )}
+      <LoadingOverlay
+        open={busy}
+        title={busyTitle}
+        message={busyMessage}
+        progress={busyProgress}
+      />
 
       <AiReviewModal
         open={reviewOpen}

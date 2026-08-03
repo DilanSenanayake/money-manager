@@ -31,7 +31,12 @@ export function isQuotaError(err: unknown): boolean {
 
 export function formatAiError(err: unknown, fallback: string): string {
   if (isQuotaError(err)) {
-    return "Gemini free-tier quota exceeded (or limit is 0 for this project). Wait a minute and retry, check https://ai.dev/rate-limit, or create a new API key in a fresh AI Studio project. Billing Tier 1 also unlocks higher limits.";
+    return "We’re a bit busy right now. Please wait a minute and try again.";
   }
-  return err instanceof Error ? err.message : fallback;
+  const msg = err instanceof Error ? err.message : "";
+  // Hide raw API / model errors from users
+  if (/api|quota|model|gemini|generate|unauthorized|429|403/i.test(msg)) {
+    return fallback;
+  }
+  return msg || fallback;
 }

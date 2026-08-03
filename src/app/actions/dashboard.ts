@@ -3,6 +3,10 @@
 import { startOfMonth, endOfMonth, format, subMonths } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { computeNetWorth } from "@/lib/currency";
+import {
+  localMonthEndYYYYMMDD,
+  localMonthStartYYYYMMDD,
+} from "@/lib/dates";
 import { budgetStatus } from "@/lib/utils";
 import type { BudgetProgress } from "@/lib/types";
 
@@ -26,8 +30,8 @@ export async function getDashboardData() {
       supabase.from("exchange_rates").select("*").eq("user_id", user.id),
     ]);
 
-  const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
-  const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
+  const monthStart = localMonthStartYYYYMMDD();
+  const monthEnd = localMonthEndYYYYMMDD();
 
   const { data: monthTx } = await supabase
     .from("transactions")
@@ -59,11 +63,19 @@ export async function getDashboardData() {
     .reduce((s, t) => s + Number(t.amount), 0);
 
   const budgets: BudgetProgress[] = (categories ?? [])
-    .filter((c) => c.type === "expense" && c.monthly_budget != null)
+    .filter(
+      (c) =>
+        c.type === "expense" &&
+        c.monthly_budget != null &&
+        Number(c.monthly_budget) > 0
+    )
     .map((category) => {
       const spent = (monthTx ?? [])
         .filter(
-          (t) => t.type === "expense" && t.category_id === category.id
+          (t) =>
+            t.type === "expense" &&
+            t.category_id != null &&
+            String(t.category_id) === String(category.id)
         )
         .reduce((s, t) => s + Number(t.amount), 0);
       const limit = Number(category.monthly_budget) || 0;
@@ -88,6 +100,8 @@ export async function getDashboardData() {
     budgets,
     recent: recent ?? [],
     baseCurrency,
+    monthStart,
+    monthEnd,
   };
 }
 
