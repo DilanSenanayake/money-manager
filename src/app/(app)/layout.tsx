@@ -1,4 +1,5 @@
 import { AppSidebar, MobileNav } from "@/components/layout/app-sidebar";
+import { PageEnter } from "@/components/layout/page-enter";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +15,14 @@ export default function AppLayout({
           <AppSidebar />
         </div>
       </div>
-      <div className="flex min-h-screen flex-col pb-20 md:pb-0">
-        <header className="flex items-center justify-between border-b border-slate-200/70 bg-white/70 px-4 py-3 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/70">
-          <p className="font-display text-lg text-teal-800">Ledgerly</p>
+      <div className="flex min-h-screen flex-col pb-24 md:pb-0">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200/70 bg-white/75 px-4 py-3 backdrop-blur-md md:hidden dark:border-slate-800 dark:bg-slate-950/75">
+          <p className="font-display text-lg text-teal-800 dark:text-teal-300">
+            Ledgerly
+          </p>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8">
-          {children}
+          <PageEnter>{children}</PageEnter>
         </main>
       </div>
       <MobileNav />

@@ -103,23 +103,25 @@ export function QuickAddPanel({
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="animate-fade-up">
         <h1 className="font-display text-3xl tracking-tight">Add</h1>
         <p className="text-sm text-slate-500">
           Log income or an expense in about 30 seconds — AI does the typing
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="stagger grid gap-3 sm:grid-cols-3">
         <button
           type="button"
           onClick={() => {
             setActive("receipt");
             fileRef.current?.click();
           }}
-          className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-teal-600/40 hover:bg-teal-50/40 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-teal-950/30"
+          className="pressable rounded-2xl border border-slate-200 bg-white/95 p-4 text-left shadow-sm dark:border-slate-800 dark:bg-slate-950"
         >
-          <Camera className="mb-3 h-6 w-6 text-teal-700" />
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+            <Camera className="h-5 w-5" />
+          </span>
           <p className="font-semibold">Scan receipt</p>
           <p className="mt-1 text-xs text-slate-500">
             Photo → confirm → save
@@ -130,13 +132,15 @@ export function QuickAddPanel({
           type="button"
           onClick={() => setActive("sms")}
           className={cn(
-            "rounded-2xl border bg-white p-4 text-left shadow-sm transition dark:bg-slate-950",
+            "pressable rounded-2xl border bg-white/95 p-4 text-left shadow-sm dark:bg-slate-950",
             active === "sms"
               ? "border-teal-700 ring-2 ring-teal-700/20"
-              : "border-slate-200 hover:border-teal-600/40 dark:border-slate-800"
+              : "border-slate-200 dark:border-slate-800"
           )}
         >
-          <ClipboardPaste className="mb-3 h-6 w-6 text-teal-700" />
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+            <ClipboardPaste className="h-5 w-5" />
+          </span>
           <p className="font-semibold">Paste bank SMS</p>
           <p className="mt-1 text-xs text-slate-500">
             Clipboard or type → confirm
@@ -147,13 +151,15 @@ export function QuickAddPanel({
           type="button"
           onClick={() => setActive("text")}
           className={cn(
-            "rounded-2xl border bg-white p-4 text-left shadow-sm transition dark:bg-slate-950",
+            "pressable rounded-2xl border bg-white/95 p-4 text-left shadow-sm dark:bg-slate-950",
             active === "text"
               ? "border-teal-700 ring-2 ring-teal-700/20"
-              : "border-slate-200 hover:border-teal-600/40 dark:border-slate-800"
+              : "border-slate-200 dark:border-slate-800"
           )}
         >
-          <MessageSquareText className="mb-3 h-6 w-6 text-teal-700" />
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+            <MessageSquareText className="h-5 w-5" />
+          </span>
           <p className="font-semibold">Describe it</p>
           <p className="mt-1 text-xs text-slate-500">
             “Coffee 450 at Starbucks”
@@ -185,7 +191,7 @@ export function QuickAddPanel({
       />
 
       {active === "sms" && (
-        <Card>
+        <Card className="animate-slide-down">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <ClipboardPaste className="h-4 w-4" />
@@ -245,7 +251,7 @@ export function QuickAddPanel({
       )}
 
       {active === "text" && (
-        <Card>
+        <Card className="animate-slide-down">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <MessageSquareText className="h-4 w-4" />
@@ -314,12 +320,12 @@ export function QuickAddPanel({
                   setManualCategoryId(null);
                 }}
                 className={cn(
-                  "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize",
+                  "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.98]",
                   manualType === t
                     ? t === "expense"
                       ? "border-rose-600 bg-rose-50 text-rose-700"
                       : "border-teal-700 bg-teal-50 text-teal-800"
-                    : "border-slate-200 text-slate-600"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
                 )}
               >
                 {t}
@@ -342,10 +348,10 @@ export function QuickAddPanel({
                 type="button"
                 onClick={() => setManualCategoryId(c.id)}
                 className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium",
+                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95",
                   manualCategoryId === c.id
                     ? "border-teal-700 bg-teal-700 text-white"
-                    : "border-slate-200 text-slate-600"
+                    : "border-slate-200 text-slate-600 hover:border-teal-600/40"
                 )}
               >
                 {c.name}
@@ -397,9 +403,10 @@ export function QuickAddPanel({
       </Card>
 
       {pending && (
-        <p className="text-center text-sm text-slate-500">
+        <div className="animate-fade-in flex items-center justify-center gap-2 text-sm text-slate-500">
+          <span className="spinner" aria-hidden />
           Working with Gemini Flash…
-        </p>
+        </div>
       )}
 
       <AiReviewModal

@@ -184,7 +184,7 @@ export function AiReviewModal({
                   setForm({ ...form, type: t, category_id: null })
                 }
                 className={cn(
-                  "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition-colors",
+                  "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.98]",
                   form.type === t
                     ? t === "expense"
                       ? "border-rose-600 bg-rose-50 text-rose-700"
@@ -222,7 +222,7 @@ export function AiReviewModal({
                   type="button"
                   onClick={() => setForm({ ...form, category_id: c.id })}
                   className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95",
                     form.category_id === c.id
                       ? "border-teal-700 bg-teal-700 text-white"
                       : "border-slate-200 text-slate-600 hover:border-teal-600/40"

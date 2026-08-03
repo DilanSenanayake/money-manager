@@ -24,8 +24,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Button asChild size="lg" className="h-auto flex-col gap-1 py-4">
+      <div className="stagger grid gap-3 sm:grid-cols-3">
+        <Button asChild size="lg" className="pressable h-auto flex-col gap-1 py-4">
           <Link href="/add?type=expense">
             <Plus className="h-5 w-5" />
             <span>Add expense</span>
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
           asChild
           size="lg"
           variant="outline"
-          className="h-auto flex-col gap-1 py-4"
+          className="pressable h-auto flex-col gap-1 py-4"
         >
           <Link href="/add?mode=receipt">
             <Camera className="h-5 w-5" />
@@ -46,7 +46,7 @@ export default async function DashboardPage() {
           asChild
           size="lg"
           variant="outline"
-          className="h-auto flex-col gap-1 py-4"
+          className="pressable h-auto flex-col gap-1 py-4"
         >
           <Link href="/add?mode=sms">
             <ClipboardPaste className="h-5 w-5" />
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
       <BudgetAlerts budgets={data.budgets} />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="lift">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">
               Net worth
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="lift">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">
               Income (month)
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="lift">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">
               Expenses (month)
@@ -168,7 +168,7 @@ export default async function DashboardPage() {
           {data.recent.map((tx) => (
             <div
               key={tx.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 dark:border-slate-800"
+              className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 transition-[background-color,transform,border-color] duration-200 hover:border-slate-200 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-900/50"
             >
               <div>
                 <p className="text-sm font-medium">

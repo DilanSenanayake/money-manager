@@ -48,13 +48,18 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-[color,background-color,transform] duration-200 ease-out active:scale-[0.98]",
         active
-          ? "bg-teal-700 text-white"
+          ? "bg-teal-700 text-white shadow-sm shadow-teal-900/20"
           : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
       )}
     >
-      <Icon className="h-4 w-4" />
+      <Icon
+        className={cn(
+          "h-4 w-4 transition-transform duration-200 ease-out",
+          active ? "scale-110" : "group-hover:scale-105"
+        )}
+      />
       {label}
     </Link>
   );
@@ -64,7 +69,7 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-full flex-col border-r border-slate-200/80 bg-white/80 px-3 py-5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/70">
+    <aside className="flex h-full w-full flex-col border-r border-slate-200/80 bg-white/80 px-3 py-5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/70">
       <div className="mb-6 px-3">
         <p className="font-display text-xl tracking-tight text-teal-800 dark:text-teal-300">
           Ledgerly
@@ -115,7 +120,7 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex items-end border-t border-slate-200 bg-white/95 px-2 pb-2 pt-1 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/95">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex items-end border-t border-slate-200/80 bg-white/90 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md md:hidden dark:border-slate-800 dark:bg-slate-950/90">
       {mobileTabs.map(({ href, label, icon: Icon, emphasize }) => {
         const active =
           pathname === href ||
@@ -134,17 +139,15 @@ export function MobileNav() {
             >
               <span
                 className={cn(
-                  "-mt-5 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition",
-                  active
-                    ? "bg-teal-800 text-white"
-                    : "bg-teal-700 text-white hover:bg-teal-800"
+                  "fab-glow -mt-5 flex h-14 w-14 items-center justify-center rounded-full text-white transition-transform duration-200 ease-out active:scale-95",
+                  active ? "bg-teal-800" : "bg-teal-700"
                 )}
               >
                 <Icon className="h-6 w-6" />
               </span>
               <span
                 className={cn(
-                  "text-[10px] font-semibold",
+                  "text-[10px] font-semibold transition-colors duration-200",
                   active ? "text-teal-700" : "text-slate-500"
                 )}
               >
@@ -159,11 +162,16 @@ export function MobileNav() {
             key={href}
             href={href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-lg py-2 text-[10px] font-medium",
+              "flex flex-1 flex-col items-center gap-1 rounded-lg py-2 text-[10px] font-medium transition-[color,transform] duration-200 active:scale-95",
               active ? "text-teal-700" : "text-slate-500"
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon
+              className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                active && "scale-110"
+              )}
+            />
             {label}
           </Link>
         );

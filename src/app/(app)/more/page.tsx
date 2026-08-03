@@ -57,9 +57,9 @@ export default function MorePage() {
             <Link
               key={href}
               href={href}
-              className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-slate-50 dark:hover:bg-slate-900"
+              className="group flex items-center gap-3 px-4 py-3.5 transition-[background-color,transform] duration-200 hover:bg-slate-50 active:scale-[0.99] dark:hover:bg-slate-900"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-800 transition-transform duration-200 group-hover:scale-105 dark:bg-teal-950 dark:text-teal-300">
                 <Icon className="h-5 w-5" />
               </span>
               <span className="flex-1">
@@ -68,7 +68,7 @@ export default function MorePage() {
                   {description}
                 </span>
               </span>
-              <ChevronRight className="h-4 w-4 text-slate-400" />
+              <ChevronRight className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5" />
             </Link>
           ))}
         </CardContent>
