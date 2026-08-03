@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { signUp } from "@/app/actions/auth";
+import { CURRENCIES } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,6 +69,24 @@ export default function SignupPage() {
                 autoComplete="new-password"
                 minLength={6}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="base_currency">Currency</Label>
+              <select
+                id="base_currency"
+                name="base_currency"
+                defaultValue="USD"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">
+                Used for your wallets, budgets, and totals. You can change it later in Settings.
+              </p>
             </div>
             {error && (
               <p className="text-sm text-rose-600" role="alert">

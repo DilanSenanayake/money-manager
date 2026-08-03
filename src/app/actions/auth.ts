@@ -2,12 +2,17 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { currencySchema } from "@/lib/schemas";
 
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
   const email = String(formData.get("email") || "");
   const password = String(formData.get("password") || "");
   const displayName = String(formData.get("display_name") || "");
+  const currencyParsed = currencySchema.safeParse(
+    String(formData.get("base_currency") || "USD")
+  );
+  const baseCurrency = currencyParsed.success ? currencyParsed.data : "USD";
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -15,7 +20,7 @@ export async function signUp(formData: FormData) {
     options: {
       data: {
         display_name: displayName || email.split("@")[0],
-        base_currency: "USD",
+        base_currency: baseCurrency,
       },
     },
   });

@@ -1,5 +1,6 @@
 import { addDays, addMonths, addYears, format, parseISO } from "date-fns";
 import { getRecurringTransactions } from "@/app/actions/transactions";
+import { getProfile } from "@/app/actions/settings";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { formatMoney } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,11 @@ function nextDueDate(date: string, frequency: string | null) {
 }
 
 export default async function RecurringPage() {
-  const recurring = await getRecurringTransactions();
+  const [recurring, profile] = await Promise.all([
+    getRecurringTransactions(),
+    getProfile(),
+  ]);
+  const baseCurrency = profile.base_currency ?? "USD";
 
   // Deduplicate by merchant+amount+frequency (show latest occurrence)
   const unique = new Map<string, (typeof recurring)[number]>();
@@ -75,7 +80,7 @@ export default async function RecurringPage() {
               <p className="font-semibold text-rose-600">
                 {formatMoney(
                   Number(tx.amount),
-                  tx.account?.currency ?? "USD"
+                  tx.account?.currency ?? baseCurrency
                 )}
               </p>
             </div>

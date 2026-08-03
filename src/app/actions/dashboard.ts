@@ -2,7 +2,11 @@
 
 import { format, subMonths } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import { computeNetWorth } from "@/lib/currency";
+import {
+  accountCurrencyMap,
+  computeNetWorth,
+  txAmountInBase,
+} from "@/lib/currency";
 import {
   localMonthEndYYYYMMDD,
   localMonthStartYYYYMMDD,
@@ -49,18 +53,25 @@ export async function getDashboardData() {
     .limit(8);
 
   const baseCurrency = profile?.base_currency ?? "USD";
-  const netWorth = computeNetWorth(
-    accounts ?? [],
-    baseCurrency,
-    rates ?? []
-  );
+  const rateList = rates ?? [];
+  const currencyByAccount = accountCurrencyMap(accounts ?? []);
+  const netWorth = computeNetWorth(accounts ?? [], baseCurrency, rateList);
+
+  const toBase = (t: { amount: number | string; account_id: string }) =>
+    txAmountInBase(
+      Number(t.amount),
+      t.account_id,
+      currencyByAccount,
+      baseCurrency,
+      rateList
+    );
 
   const income = (monthTx ?? [])
     .filter((t) => t.type === "income")
-    .reduce((s, t) => s + Number(t.amount), 0);
+    .reduce((s, t) => s + toBase(t), 0);
   const expense = (monthTx ?? [])
     .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + Number(t.amount), 0);
+    .reduce((s, t) => s + toBase(t), 0);
 
   const budgets: BudgetProgress[] = (categories ?? [])
     .filter(
@@ -77,7 +88,7 @@ export async function getDashboardData() {
             t.category_id != null &&
             String(t.category_id) === String(category.id)
         )
-        .reduce((s, t) => s + Number(t.amount), 0);
+        .reduce((s, t) => s + toBase(t), 0);
       const limit = Number(category.monthly_budget) || 0;
       const ratio = limit > 0 ? spent / limit : 0;
       return {
@@ -93,7 +104,7 @@ export async function getDashboardData() {
   return {
     profile,
     accounts: accounts ?? [],
-    rates: rates ?? [],
+    rates: rateList,
     netWorth,
     income,
     expense,
@@ -121,19 +132,35 @@ export async function getAnalyticsData() {
   const rangeFrom = months[0].from;
   const rangeTo = months[months.length - 1].to;
 
-  const [{ data: tx }, { data: categories }] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .gte("date", rangeFrom)
-      .lte("date", rangeTo),
-    supabase
-      .from("categories")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("type", "expense"),
-  ]);
+  const [{ data: tx }, { data: categories }, { data: accounts }, { data: profile }, { data: rates }] =
+    await Promise.all([
+      supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("date", rangeFrom)
+        .lte("date", rangeTo),
+      supabase
+        .from("categories")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("type", "expense"),
+      supabase.from("accounts").select("id, currency").eq("user_id", user.id),
+      supabase.from("profiles").select("base_currency").eq("id", user.id).single(),
+      supabase.from("exchange_rates").select("*").eq("user_id", user.id),
+    ]);
+
+  const baseCurrency = profile?.base_currency ?? "USD";
+  const rateList = rates ?? [];
+  const currencyByAccount = accountCurrencyMap(accounts ?? []);
+  const toBase = (t: { amount: number | string; account_id: string }) =>
+    txAmountInBase(
+      Number(t.amount),
+      t.account_id,
+      currencyByAccount,
+      baseCurrency,
+      rateList
+    );
 
   const trend = months.map((m) => {
     const inMonth = (tx ?? []).filter(
@@ -143,10 +170,10 @@ export async function getAnalyticsData() {
       month: m.label,
       income: inMonth
         .filter((t) => t.type === "income")
-        .reduce((s, t) => s + Number(t.amount), 0),
+        .reduce((s, t) => s + toBase(t), 0),
       expense: inMonth
         .filter((t) => t.type === "expense")
-        .reduce((s, t) => s + Number(t.amount), 0),
+        .reduce((s, t) => s + toBase(t), 0),
     };
   });
 
@@ -162,13 +189,13 @@ export async function getAnalyticsData() {
             t.date >= thisMonth.from &&
             t.date <= thisMonth.to
         )
-        .reduce((s, t) => s + Number(t.amount), 0);
+        .reduce((s, t) => s + toBase(t), 0);
       return { name: cat.name, value: spent };
     })
     .filter((c) => c.value > 0)
     .sort((a, b) => b.value - a.value);
 
-  return { trend, categorySpend };
+  return { trend, categorySpend, baseCurrency };
 }
 
 export async function getBudgetProgress() {

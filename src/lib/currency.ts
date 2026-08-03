@@ -24,6 +24,24 @@ export function convertToBase(
   return amount;
 }
 
+export function accountCurrencyMap(
+  accounts: { id: string; currency: string }[]
+): Map<string, string> {
+  return new Map(accounts.map((a) => [a.id, a.currency]));
+}
+
+/** Convert a transaction amount using its account currency → base. */
+export function txAmountInBase(
+  amount: number,
+  accountId: string,
+  currencyByAccount: Map<string, string>,
+  baseCurrency: string,
+  rates: ExchangeRate[]
+): number {
+  const from = currencyByAccount.get(accountId) ?? baseCurrency;
+  return convertToBase(amount, from, baseCurrency, rates);
+}
+
 export function computeNetWorth(
   accounts: { balance: number; currency: string; type: string }[],
   baseCurrency: string,

@@ -2,7 +2,7 @@ import { getAnalyticsData } from "@/app/actions/dashboard";
 import { AnalyticsCharts } from "@/components/analytics/analytics-charts";
 
 export default async function AnalyticsPage() {
-  const { trend, categorySpend } = await getAnalyticsData();
+  const { trend, categorySpend, baseCurrency } = await getAnalyticsData();
 
   return (
     <div className="space-y-6">
@@ -12,7 +12,11 @@ export default async function AnalyticsPage() {
           Category breakdown and income vs expense trends
         </p>
       </div>
-      <AnalyticsCharts trend={trend} categorySpend={categorySpend} />
+      <AnalyticsCharts
+        trend={trend}
+        categorySpend={categorySpend}
+        currency={baseCurrency}
+      />
     </div>
   );
 }

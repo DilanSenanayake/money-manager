@@ -32,13 +32,38 @@ export async function getProfile() {
 export async function updateProfile(input: ProfileInput) {
   const parsed = profileSchema.parse(input);
   const { supabase, user } = await requireUser();
+
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("base_currency")
+    .eq("id", user.id)
+    .single();
+
   const { error } = await supabase
     .from("profiles")
     .update(parsed)
     .eq("id", user.id);
   if (error) return { error: error.message };
+
+  // Keep wallets that used the old base currency in sync so displays match
+  const previous = existing?.base_currency;
+  if (previous && previous !== parsed.base_currency) {
+    await supabase
+      .from("accounts")
+      .update({ currency: parsed.base_currency })
+      .eq("user_id", user.id)
+      .eq("currency", previous);
+  }
+
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+  revalidatePath("/accounts");
+  revalidatePath("/transactions");
+  revalidatePath("/budgets");
+  revalidatePath("/analytics");
+  revalidatePath("/add");
+  revalidatePath("/recurring");
+  revalidatePath("/", "layout");
   return { success: true };
 }
 

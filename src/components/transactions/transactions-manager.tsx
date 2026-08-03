@@ -38,6 +38,7 @@ type Props = {
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
+  defaultCurrency?: string;
   initialFilters?: {
     q?: string;
     account_id?: string;
@@ -52,6 +53,7 @@ export function TransactionsManager({
   transactions,
   accounts,
   categories,
+  defaultCurrency = "USD",
   initialFilters = {},
 }: Props) {
   const router = useRouter();
@@ -361,7 +363,7 @@ export function TransactionsManager({
 
       <div className="space-y-2">
         {transactions.map((tx) => {
-          const currency = tx.account?.currency ?? "USD";
+          const currency = tx.account?.currency ?? defaultCurrency;
           const sign =
             tx.type === "income" ||
             (tx.type === "transfer" &&

@@ -31,9 +31,11 @@ export function SettingsForm({
   const [pending, startTransition] = useTransition();
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
   const [baseCurrency, setBaseCurrency] = useState(profile.base_currency);
-  const [from, setFrom] = useState("USD");
-  const [to, setTo] = useState("LKR");
-  const [rate, setRate] = useState(300);
+  const [from, setFrom] = useState(profile.base_currency);
+  const [to, setTo] = useState(
+    profile.base_currency === "USD" ? "LKR" : "USD"
+  );
+  const [rate, setRate] = useState(1);
 
   return (
     <div className="space-y-6">
@@ -70,6 +72,10 @@ export function SettingsForm({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-slate-500">
+              Totals and budgets use this currency. Saving also updates wallets
+              that were in your previous base currency.
+            </p>
           </div>
           <Button
             disabled={pending}

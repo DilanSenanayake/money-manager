@@ -428,7 +428,7 @@ export function QuickAddPanel({
             type="number"
             step="0.01"
             min="0"
-            placeholder="Amount"
+            placeholder={`Amount (${accounts[0]?.currency ?? "USD"})`}
             className="h-12 text-2xl font-semibold"
             value={manualAmount}
             disabled={busy}

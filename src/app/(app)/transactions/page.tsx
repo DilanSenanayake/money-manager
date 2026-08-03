@@ -1,5 +1,6 @@
 import { getAccounts } from "@/app/actions/accounts";
 import { getCategories } from "@/app/actions/categories";
+import { getProfile } from "@/app/actions/settings";
 import { getTransactions } from "@/app/actions/transactions";
 import { TransactionsManager } from "@/components/transactions/transactions-manager";
 import type { TransactionFilter } from "@/lib/schemas";
@@ -26,10 +27,11 @@ export default async function TransactionsPage({
     to: typeof params.to === "string" ? params.to : undefined,
   };
 
-  const [transactions, accounts, categories] = await Promise.all([
+  const [transactions, accounts, categories, profile] = await Promise.all([
     getTransactions(filters),
     getAccounts(),
     getCategories(),
+    getProfile(),
   ]);
 
   return (
@@ -37,6 +39,7 @@ export default async function TransactionsPage({
       transactions={transactions}
       accounts={accounts}
       categories={categories}
+      defaultCurrency={profile.base_currency}
       initialFilters={filters}
     />
   );

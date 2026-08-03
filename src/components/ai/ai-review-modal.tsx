@@ -172,6 +172,11 @@ export function AiReviewModal({
     ? categories.filter((c) => c.type === form.type)
     : [];
 
+  const selectedAccountCurrency =
+    accounts.find((a) => a.id === form?.account_id)?.currency ??
+    accounts[0]?.currency ??
+    "USD";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
@@ -213,7 +218,9 @@ export function AiReviewModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="review-amount">Amount</Label>
+                  <Label htmlFor="review-amount">
+                    Amount ({selectedAccountCurrency})
+                  </Label>
                   <Input
                     id="review-amount"
                     type="number"

@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { formatMoney } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const PIE_COLORS = [
@@ -29,10 +30,14 @@ const PIE_COLORS = [
 export function AnalyticsCharts({
   trend,
   categorySpend,
+  currency,
 }: {
   trend: { month: string; income: number; expense: number }[];
   categorySpend: { name: string; value: number }[];
+  currency: string;
 }) {
+  const money = (value: number) => formatMoney(value, currency);
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="lg:col-span-2">
@@ -44,8 +49,8 @@ export function AnalyticsCharts({
             <AreaChart data={trend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
               <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
+              <YAxis tickFormatter={(v) => money(Number(v))} width={80} />
+              <Tooltip formatter={(value) => money(Number(value))} />
               <Legend />
               <Area
                 type="monotone"
@@ -85,7 +90,9 @@ export function AnalyticsCharts({
                   cx="50%"
                   cy="50%"
                   outerRadius={110}
-                  label
+                  label={({ name, value }) =>
+                    `${name}: ${money(Number(value))}`
+                  }
                 >
                   {categorySpend.map((_, index) => (
                     <Cell
@@ -94,7 +101,7 @@ export function AnalyticsCharts({
                     />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value) => money(Number(value))} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>

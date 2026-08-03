@@ -32,22 +32,30 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-const empty: AccountInput = {
-  name: "",
-  type: "checking",
-  balance: 0,
-  currency: "USD",
-};
+export function AccountsManager({
+  accounts,
+  defaultCurrency = "USD",
+}: {
+  accounts: Account[];
+  defaultCurrency?: string;
+}) {
+  const blank = (): AccountInput => ({
+    name: "",
+    type: "checking",
+    balance: 0,
+    currency: (CURRENCIES.includes(defaultCurrency as (typeof CURRENCIES)[number])
+      ? defaultCurrency
+      : "USD") as AccountInput["currency"],
+  });
 
-export function AccountsManager({ accounts }: { accounts: Account[] }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
-  const [form, setForm] = useState<AccountInput>(empty);
+  const [form, setForm] = useState<AccountInput>(blank);
   const [pending, startTransition] = useTransition();
 
   function openCreate() {
     setEditing(null);
-    setForm(empty);
+    setForm(blank());
     setOpen(true);
   }
 
