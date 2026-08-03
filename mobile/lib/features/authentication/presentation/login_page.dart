@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -31,6 +32,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _loading = true;
@@ -41,11 +43,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             email: _email.text,
             password: _password.text,
           );
-      if (mounted) context.go(RoutePaths.home);
+      await HapticFeedback.lightImpact();
+      if (!mounted) return;
+      // Prefer router redirect once session exists.
+      context.go(RoutePaths.home);
     } catch (e) {
-      setState(() {
-        _error = e is Failure ? e.message : e.toString();
-      });
+      if (!mounted) return;
+      final message = e is Failure ? e.message : e.toString();
+      setState(() => _error = message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -61,82 +69,87 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Ledgerly',
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.teal700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign in to track spending in seconds.',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: AppColors.slate,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    AppTextField(
-                      controller: _email,
-                      label: 'Email',
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      prefixIcon: Icons.mail_outline_rounded,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Email is required';
-                        }
-                        if (!v.contains('@')) return 'Enter a valid email';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    AppTextField(
-                      controller: _password,
-                      label: 'Password',
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.done,
-                      prefixIcon: Icons.lock_outline_rounded,
-                      suffix: IconButton(
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                        icon: Icon(
-                          _obscure
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+              child: AutofillGroup(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Ledgerly',
+                        style: theme.textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.teal700,
                         ),
                       ),
-                      validator: (v) {
-                        if (v == null || v.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                      onChanged: (_) {},
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Text(
-                        _error!,
-                        style: TextStyle(color: theme.colorScheme.error),
+                        'Sign in to track spending in seconds.',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: AppColors.slate,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      AppTextField(
+                        controller: _email,
+                        label: 'Email',
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        prefixIcon: Icons.mail_outline_rounded,
+                        autofillHints: const [AutofillHints.email],
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Email is required';
+                          }
+                          if (!v.contains('@')) return 'Enter a valid email';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      AppTextField(
+                        controller: _password,
+                        label: 'Password',
+                        obscureText: _obscure,
+                        textInputAction: TextInputAction.done,
+                        prefixIcon: Icons.lock_outline_rounded,
+                        autofillHints: const [AutofillHints.password],
+                        onFieldSubmitted: (_) => _submit(),
+                        suffix: IconButton(
+                          onPressed: () =>
+                              setState(() => _obscure = !_obscure),
+                          icon: Icon(
+                            _obscure
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _error!,
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      AppButton(
+                        label: 'Sign in',
+                        loading: _loading,
+                        onPressed: _submit,
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => context.go(RoutePaths.signup),
+                        child: const Text('Need an account? Sign up'),
                       ),
                     ],
-                    const SizedBox(height: 20),
-                    AppButton(
-                      label: 'Sign in',
-                      loading: _loading,
-                      onPressed: _submit,
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => context.go(RoutePaths.signup),
-                      child: const Text('Need an account? Sign up'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

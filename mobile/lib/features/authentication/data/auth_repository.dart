@@ -14,12 +14,14 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 });
 
 final currentUserProvider = Provider<User?>((ref) {
+  // Rebuild whenever auth events fire, but always read the live client session.
   ref.watch(authStateProvider);
   return SupabaseBootstrap.client.auth.currentUser;
 });
 
 final isAuthenticatedProvider = Provider<bool>((ref) {
-  return ref.watch(currentUserProvider) != null;
+  ref.watch(authStateProvider);
+  return SupabaseBootstrap.client.auth.currentSession != null;
 });
 
 class AuthRepository {
@@ -40,7 +42,9 @@ class AuthRepository {
         password: password,
       );
       if (response.session == null) {
-        throw const AuthFailure('Unable to sign in. Please try again.');
+        throw const AuthFailure(
+          'Unable to sign in. If you just signed up, confirm your email first.',
+        );
       }
     } catch (e) {
       throw mapException(e);
@@ -58,11 +62,25 @@ class AuthRepository {
         email: email.trim(),
         password: password,
         data: {
-          'display_name':
-              displayName.trim().isEmpty ? email.split('@').first : displayName.trim(),
+          'display_name': displayName.trim().isEmpty
+              ? email.split('@').first
+              : displayName.trim(),
           'base_currency': baseCurrency,
         },
       );
+
+      // Supabase may return a user with empty identities when the email
+      // is already registered and "Prevent duplicate" obfuscation is on.
+      final identities = response.user?.identities;
+      if (response.user != null &&
+          identities != null &&
+          identities.isEmpty &&
+          response.session == null) {
+        throw const AuthFailure(
+          'An account with this email already exists. Try signing in.',
+        );
+      }
+
       if (response.session != null) return null;
       return 'Account created. Check your email to confirm, then sign in.';
     } catch (e) {

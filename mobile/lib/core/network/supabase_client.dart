@@ -3,8 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseBootstrap {
   static Future<void> init() async {
-    final url = dotenv.env['SUPABASE_URL'];
-    final anonKey = dotenv.env['SUPABASE_ANON_KEY'];
+    final url = dotenv.env['SUPABASE_URL']?.trim();
+    final anonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim();
 
     if (url == null ||
         url.isEmpty ||
@@ -19,7 +19,6 @@ class SupabaseBootstrap {
 
     await Supabase.initialize(
       url: url,
-      // publishableKey is the new name for the public anon/publishable key.
       publishableKey: anonKey,
       authOptions: const FlutterAuthClientOptions(
         authFlowType: AuthFlowType.pkce,

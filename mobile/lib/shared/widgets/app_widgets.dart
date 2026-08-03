@@ -62,8 +62,10 @@ class AppTextField extends StatelessWidget {
     this.suffix,
     this.maxLines = 1,
     this.onChanged,
+    this.onFieldSubmitted,
     this.inputFormatters,
     this.enabled = true,
+    this.autofillHints,
   });
 
   final TextEditingController controller;
@@ -77,8 +79,10 @@ class AppTextField extends StatelessWidget {
   final Widget? suffix;
   final int maxLines;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onFieldSubmitted;
   final List<TextInputFormatter>? inputFormatters;
   final bool enabled;
+  final Iterable<String>? autofillHints;
 
   @override
   Widget build(BuildContext context) {
@@ -88,10 +92,13 @@ class AppTextField extends StatelessWidget {
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       validator: validator,
-      maxLines: maxLines,
+      // obscureText requires a single-line field
+      maxLines: obscureText ? 1 : maxLines,
       onChanged: onChanged,
+      onFieldSubmitted: onFieldSubmitted,
       inputFormatters: inputFormatters,
       enabled: enabled,
+      autofillHints: autofillHints,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

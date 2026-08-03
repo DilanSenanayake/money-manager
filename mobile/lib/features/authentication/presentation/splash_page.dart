@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,32 +23,35 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   }
 
   Future<void> _boot() async {
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    await Future<void>.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
-    final authed = ref.read(isAuthenticatedProvider);
-    if (!authed) {
+    final session = ref.read(authRepositoryProvider).currentSession;
+    if (session == null) {
       context.go(RoutePaths.login);
       return;
     }
 
-    // Optional biometric gate when a session already exists.
-    // Failure/cancel still continues — session remains valid.
-    try {
-      final auth = LocalAuthentication();
-      final canCheck =
-          await auth.canCheckBiometrics || await auth.isDeviceSupported();
-      if (canCheck) {
-        await auth.authenticate(
-          localizedReason: 'Unlock Ledgerly',
-          options: const AuthenticationOptions(
-            biometricOnly: false,
-            stickyAuth: true,
-          ),
-        );
+    // Biometrics are mobile-only; skip on web/desktop to avoid hangs.
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
+      try {
+        final auth = LocalAuthentication();
+        final canCheck =
+            await auth.canCheckBiometrics || await auth.isDeviceSupported();
+        if (canCheck) {
+          await auth.authenticate(
+            localizedReason: 'Unlock Ledgerly',
+            options: const AuthenticationOptions(
+              biometricOnly: false,
+              stickyAuth: true,
+            ),
+          );
+        }
+      } catch (_) {
+        // Continue with existing session.
       }
-    } catch (_) {
-      // Biometrics unavailable — continue with session.
     }
 
     if (mounted) context.go(RoutePaths.home);
