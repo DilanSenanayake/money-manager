@@ -16,6 +16,7 @@ import {
 
 export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -35,8 +36,11 @@ export default function SignupPage() {
             className="space-y-4"
             action={(formData) => {
               startTransition(async () => {
+                setError(null);
+                setMessage(null);
                 const result = await signUp(formData);
                 if (result?.error) setError(result.error);
+                else if (result?.message) setMessage(result.message);
               });
             }}
           >
@@ -70,7 +74,15 @@ export default function SignupPage() {
                 {error}
               </p>
             )}
-            <Button className="w-full" disabled={pending}>
+            {message && (
+              <p className="text-sm text-teal-800" role="status">
+                {message}{" "}
+                <Link href="/login" className="font-medium underline">
+                  Sign in
+                </Link>
+              </p>
+            )}
+            <Button className="w-full" disabled={pending || Boolean(message)}>
               {pending ? "Creating…" : "Create account"}
             </Button>
           </form>

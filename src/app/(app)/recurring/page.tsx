@@ -1,12 +1,13 @@
 import { addDays, addMonths, addYears, format, parseISO } from "date-fns";
 import { getRecurringTransactions } from "@/app/actions/transactions";
+import { localDateYYYYMMDD } from "@/lib/dates";
 import { formatMoney } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function nextDueDate(date: string, frequency: string | null) {
   const base = parseISO(date);
-  const today = new Date();
+  const today = localDateYYYYMMDD();
   let next = base;
 
   const advance = () => {
@@ -15,9 +16,9 @@ function nextDueDate(date: string, frequency: string | null) {
     else next = addMonths(next, 1);
   };
 
-  // Walk forward until upcoming (or today)
+  // Walk forward until upcoming (or today) using local calendar strings
   let guard = 0;
-  while (next < today && guard < 120) {
+  while (localDateYYYYMMDD(next) < today && guard < 120) {
     advance();
     guard += 1;
   }

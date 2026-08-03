@@ -52,7 +52,12 @@ export const categorySchema = z.object({
   name: z.string().min(1).max(100),
   icon: z.string().min(1).max(50).default("circle"),
   type: categoryTypeSchema,
-  monthly_budget: z.coerce.number().min(0).nullable().optional(),
+  // Don't coerce null/"" to 0 — that broke clearing budgets
+  monthly_budget: z.preprocess((value) => {
+    if (value === "" || value === null || value === undefined) return null;
+    const n = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(n) ? n : null;
+  }, z.number().min(0).nullable()),
 });
 
 export const transactionSchema = z.object({

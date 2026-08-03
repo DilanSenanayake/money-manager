@@ -129,7 +129,7 @@ begin
     (new.id, 'Health', 'heart', 'expense', 100),
     (new.id, 'Entertainment', 'film', 'expense', 100),
     (new.id, 'Rent', 'home', 'expense', 1200),
-    (new.id, 'Other', 'circle', 'expense', null);
+    (new.id, 'Other', 'circle', 'expense', 300);
 
   insert into public.accounts (user_id, name, type, balance, currency) values
     (new.id, 'Cash', 'cash', 0, coalesce(new.raw_user_meta_data->>'base_currency', 'USD')),

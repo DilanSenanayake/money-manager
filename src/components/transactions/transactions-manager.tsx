@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/transactions";
 import type { Account, Category, Transaction } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
+import { localDateYYYYMMDD } from "@/lib/dates";
 import type { TransactionInput } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,7 @@ export function TransactionsManager({
     category_id: null,
     amount: 0,
     type: "expense",
-    date: new Date().toISOString().slice(0, 10),
+    date: localDateYYYYMMDD(),
     merchant: "",
     notes: "",
     is_recurring: false,

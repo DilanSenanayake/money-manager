@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { matchCategoryId } from "@/lib/category-match";
 import {
   transactionFilterSchema,
   transactionSchema,
@@ -35,9 +36,10 @@ export async function getTransactions(filters: TransactionFilter = {}) {
   if (parsed.from) query = query.gte("date", parsed.from);
   if (parsed.to) query = query.lte("date", parsed.to);
   if (parsed.q) {
-    query = query.or(
-      `merchant.ilike.%${parsed.q}%,notes.ilike.%${parsed.q}%`
-    );
+    const safe = parsed.q.replace(/[%_,]/g, "").trim();
+    if (safe) {
+      query = query.or(`merchant.ilike.%${safe}%,notes.ilike.%${safe}%`);
+    }
   }
 
   const { data, error } = await query.limit(200);
@@ -51,10 +53,10 @@ export async function createTransaction(input: TransactionInput) {
 
   if (parsed.type === "transfer") {
     if (!parsed.transfer_to_account_id) {
-      return { error: "Destination account is required for transfers" };
+      return { error: "Choose where the money should go" };
     }
     if (parsed.transfer_to_account_id === parsed.account_id) {
-      return { error: "Cannot transfer to the same account" };
+      return { error: "Pick two different accounts for a transfer" };
     }
 
     const pairId = crypto.randomUUID();
@@ -86,10 +88,25 @@ export async function createTransaction(input: TransactionInput) {
 
     if (error) return { error: error.message };
   } else {
+    let categoryId = parsed.category_id ?? null;
+    if (!categoryId && (parsed.type === "expense" || parsed.type === "income")) {
+      const { data: categories } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("type", parsed.type);
+      categoryId = matchCategoryId(
+        categories ?? [],
+        parsed.type,
+        parsed.merchant,
+        parsed.notes
+      );
+    }
+
     const { error } = await supabase.from("transactions").insert({
       user_id: user.id,
       account_id: parsed.account_id,
-      category_id: parsed.category_id ?? null,
+      category_id: categoryId,
       amount: parsed.amount,
       type: parsed.type,
       date: parsed.date,

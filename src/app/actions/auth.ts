@@ -9,7 +9,7 @@ export async function signUp(formData: FormData) {
   const password = String(formData.get("password") || "");
   const displayName = String(formData.get("display_name") || "");
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -24,7 +24,15 @@ export async function signUp(formData: FormData) {
     return { error: error.message };
   }
 
-  redirect("/dashboard");
+  // Email confirmation may be required — only go home if we have a session
+  if (data.session) {
+    redirect("/dashboard");
+  }
+
+  return {
+    message:
+      "Account created. Check your email to confirm, then sign in.",
+  };
 }
 
 export async function signIn(formData: FormData) {

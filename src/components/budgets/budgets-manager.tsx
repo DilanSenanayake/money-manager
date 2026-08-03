@@ -107,7 +107,11 @@ export function BudgetsManager({
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    const result = await createCategory(form);
+                    const result = await createCategory({
+                      ...form,
+                      monthly_budget:
+                        form.type === "expense" ? form.monthly_budget : null,
+                    });
                     if (result.error) toast.error(result.error);
                     else {
                       toast.success("Category created");

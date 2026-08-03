@@ -127,15 +127,23 @@ export function AccountsManager({ accounts }: { accounts: Account[] }) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Balance</Label>
+                  <Label>
+                    {editing ? "Current balance" : "Starting balance"}
+                  </Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={form.balance}
+                    disabled={Boolean(editing)}
                     onChange={(e) =>
                       setForm({ ...form, balance: Number(e.target.value) })
                     }
                   />
+                  {editing && (
+                    <p className="text-xs text-slate-500">
+                      Balance updates automatically when you add transactions
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Currency</Label>

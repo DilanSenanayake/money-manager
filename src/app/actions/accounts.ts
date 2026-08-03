@@ -34,20 +34,28 @@ export async function createAccount(input: AccountInput) {
   if (error) return { error: error.message };
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
+  revalidatePath("/add");
+  revalidatePath("/transactions");
   return { success: true };
 }
 
 export async function updateAccount(id: string, input: AccountInput) {
   const parsed = accountSchema.parse(input);
   const { supabase, user } = await requireUser();
+  // Never overwrite live balance on edit — triggers keep it in sync with transactions
   const { error } = await supabase
     .from("accounts")
-    .update(parsed)
+    .update({
+      name: parsed.name,
+      type: parsed.type,
+      currency: parsed.currency,
+    })
     .eq("id", id)
     .eq("user_id", user.id);
   if (error) return { error: error.message };
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
+  revalidatePath("/add");
   return { success: true };
 }
 

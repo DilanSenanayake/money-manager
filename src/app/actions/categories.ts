@@ -35,6 +35,8 @@ export async function createCategory(input: CategoryInput) {
   if (error) return { error: error.message };
   revalidatePath("/budgets");
   revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/add");
   return { success: true };
 }
 
@@ -49,6 +51,7 @@ export async function updateCategory(id: string, input: CategoryInput) {
   if (error) return { error: error.message };
   revalidatePath("/budgets");
   revalidatePath("/dashboard");
+  revalidatePath("/add");
   return { success: true };
 }
 
@@ -61,5 +64,6 @@ export async function deleteCategory(id: string) {
     .eq("user_id", user.id);
   if (error) return { error: error.message };
   revalidatePath("/budgets");
+  revalidatePath("/dashboard");
   return { success: true };
 }

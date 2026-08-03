@@ -1,6 +1,6 @@
 "use server";
 
-import { startOfMonth, endOfMonth, format, subMonths } from "date-fns";
+import { format, subMonths } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { computeNetWorth } from "@/lib/currency";
 import {
@@ -113,8 +113,8 @@ export async function getAnalyticsData() {
     return {
       key: format(d, "yyyy-MM"),
       label: format(d, "MMM"),
-      from: format(startOfMonth(d), "yyyy-MM-dd"),
-      to: format(endOfMonth(d), "yyyy-MM-dd"),
+      from: localMonthStartYYYYMMDD(d),
+      to: localMonthEndYYYYMMDD(d),
     };
   });
 
@@ -157,7 +157,8 @@ export async function getAnalyticsData() {
         .filter(
           (t) =>
             t.type === "expense" &&
-            t.category_id === cat.id &&
+            t.category_id != null &&
+            String(t.category_id) === String(cat.id) &&
             t.date >= thisMonth.from &&
             t.date <= thisMonth.to
         )
