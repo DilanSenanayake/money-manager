@@ -5,9 +5,11 @@ import { revalidatePath } from "next/cache";
 import { getFlashModel, getFlashModelFallback } from "@/lib/ai";
 import {
   aiReviewSaveSchema,
+  quickTextExtractionSchema,
   receiptExtractionSchema,
   smsExtractionSchema,
   type AiReviewSave,
+  type QuickTextExtraction,
   type ReceiptExtraction,
   type SmsExtraction,
 } from "@/lib/schemas";
@@ -115,6 +117,48 @@ export async function parseBankSms(text: string): Promise<
   }
 }
 
+export async function parseQuickText(text: string): Promise<
+  | { data: QuickTextExtraction }
+  | { error: string }
+> {
+  await requireUser();
+
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return { error: "GOOGLE_GENERATIVE_AI_API_KEY is not configured" };
+  }
+
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { error: "Type something like “Coffee 450 at Starbucks”" };
+  }
+
+  try {
+    const result = await generateWithFallback(async (model) => {
+      const { object } = await generateObject({
+        model,
+        schema: quickTextExtractionSchema,
+        prompt: `Parse this short personal finance note into a single income or expense transaction. Prefer expense unless the text clearly means income (salary, refund, received, paid me, etc.). Date YYYY-MM-DD; use today if unknown.\n\nNote:\n${trimmed}`,
+      });
+      return object;
+    });
+
+    return { data: result };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to parse text",
+    };
+  }
+}
+
+function revalidateMoneyPaths() {
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/budgets");
+  revalidatePath("/analytics");
+  revalidatePath("/add");
+  revalidatePath("/recurring");
+}
+
 /** Persist only after human review confirmation */
 export async function saveReviewedTransaction(input: AiReviewSave) {
   const parsed = aiReviewSaveSchema.parse(input);
@@ -137,9 +181,6 @@ export async function saveReviewedTransaction(input: AiReviewSave) {
 
   if (error) return { error: error.message };
 
-  revalidatePath("/transactions");
-  revalidatePath("/dashboard");
-  revalidatePath("/budgets");
-  revalidatePath("/analytics");
+  revalidateMoneyPaths();
   return { success: true };
 }

@@ -1,12 +1,5 @@
-import { getAccounts } from "@/app/actions/accounts";
-import { getCategories } from "@/app/actions/categories";
-import { AiImportPanel } from "@/components/ai/ai-import-panel";
+import { redirect } from "next/navigation";
 
-export default async function ImportPage() {
-  const [accounts, categories] = await Promise.all([
-    getAccounts(),
-    getCategories(),
-  ]);
-
-  return <AiImportPanel accounts={accounts} categories={categories} />;
+export default function ImportRedirectPage() {
+  redirect("/add");
 }

@@ -128,6 +128,27 @@ export const smsExtractionSchema = z.object({
   notes: z.string().nullable().optional(),
 });
 
+/** One-line natural language: "Coffee 450 at Starbucks" / "Salary 120000" */
+export const quickTextExtractionSchema = z.object({
+  amount: z.number().describe("Transaction amount as a positive number"),
+  type: z
+    .enum(["income", "expense"])
+    .describe("income = money in, expense = money out"),
+  merchant: z
+    .string()
+    .describe("Merchant, payee, or short description"),
+  date: z
+    .string()
+    .describe("Transaction date in YYYY-MM-DD; use today if unknown"),
+  category: z
+    .string()
+    .describe(
+      "Likely category e.g. Salary, Groceries, Dining, Transport, Shopping, Utilities, Health, Entertainment, Rent, Other"
+    ),
+  currency: currencySchema.optional().describe("Currency if mentioned"),
+  notes: z.string().nullable().optional(),
+});
+
 export const aiReviewSaveSchema = z.object({
   account_id: z.string().uuid(),
   category_id: z.string().uuid().nullable().optional(),
@@ -148,4 +169,5 @@ export type TransactionFilter = z.infer<typeof transactionFilterSchema>;
 export type ExchangeRateInput = z.infer<typeof exchangeRateSchema>;
 export type ReceiptExtraction = z.infer<typeof receiptExtractionSchema>;
 export type SmsExtraction = z.infer<typeof smsExtractionSchema>;
+export type QuickTextExtraction = z.infer<typeof quickTextExtractionSchema>;
 export type AiReviewSave = z.infer<typeof aiReviewSaveSchema>;

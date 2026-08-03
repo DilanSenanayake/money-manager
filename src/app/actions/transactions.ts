@@ -107,6 +107,8 @@ export async function createTransaction(input: TransactionInput) {
   revalidatePath("/dashboard");
   revalidatePath("/budgets");
   revalidatePath("/analytics");
+  revalidatePath("/add");
+  revalidatePath("/recurring");
   return { success: true };
 }
 
@@ -140,6 +142,8 @@ export async function updateTransaction(id: string, input: TransactionInput) {
   revalidatePath("/dashboard");
   revalidatePath("/budgets");
   revalidatePath("/analytics");
+  revalidatePath("/add");
+  revalidatePath("/recurring");
   return { success: true };
 }
 
@@ -175,6 +179,8 @@ export async function deleteTransaction(id: string) {
   revalidatePath("/dashboard");
   revalidatePath("/budgets");
   revalidatePath("/analytics");
+  revalidatePath("/add");
+  revalidatePath("/recurring");
   return { success: true };
 }
 

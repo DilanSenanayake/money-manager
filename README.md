@@ -49,13 +49,14 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Features
 
+- **Quick Add (~30s):** scan receipt, paste bank SMS, type one line, or amount + category
 - Multi-account wallets (cash, checking, savings, credit) with live balances
 - Income / expense / transfer CRUD with filters
 - Category budgets with 80% / 100% alerts
 - Analytics: category pie + income vs expense trends
 - Recurring transactions & upcoming bill dates
 - Multi-currency base + manual exchange rates
-- AI receipt OCR and clipboard SMS parser with human review modal before save
+- AI results always go through a confirm step before save
 - PWA manifest + production service worker
 
 ## AI constraints
@@ -63,6 +64,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - Only free-tier Gemini Flash models
 - Structured extraction via `generateObject` + Zod
 - AI results never auto-save — review modal is required
+- Paths: receipt OCR, bank SMS, natural-language one-liner
 
 ## License
 

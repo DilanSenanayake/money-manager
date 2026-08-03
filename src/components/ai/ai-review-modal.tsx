@@ -4,7 +4,13 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { saveReviewedTransaction } from "@/app/actions/ai";
 import type { Account, Category } from "@/lib/types";
-import type { AiReviewSave, ReceiptExtraction, SmsExtraction } from "@/lib/schemas";
+import type {
+  AiReviewSave,
+  QuickTextExtraction,
+  ReceiptExtraction,
+  SmsExtraction,
+} from "@/lib/schemas";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +30,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Extraction = ReceiptExtraction | SmsExtraction | null;
+export type AiSource = "receipt" | "sms" | "text" | "manual";
+export type Extraction =
+  | ReceiptExtraction
+  | SmsExtraction
+  | QuickTextExtraction
+  | null;
 
 type Props = {
   open: boolean;
@@ -32,53 +43,89 @@ type Props = {
   extraction: Extraction;
   accounts: Account[];
   categories: Category[];
-  source: "receipt" | "sms" | null;
+  source: AiSource | null;
+  /** Optional pre-built form (e.g. manual quick add) */
+  initialForm?: AiReviewSave | null;
 };
+
+function matchCategory(
+  categories: Category[],
+  type: "income" | "expense",
+  categoryName?: string | null
+) {
+  if (!categoryName) return null;
+  const needle = categoryName.toLowerCase();
+  return (
+    categories.find(
+      (c) =>
+        c.type === type &&
+        (c.name.toLowerCase() === needle ||
+          c.name.toLowerCase().includes(needle) ||
+          needle.includes(c.name.toLowerCase()))
+    )?.id ?? null
+  );
+}
 
 function toReviewForm(
   extraction: Extraction,
   accounts: Account[],
   categories: Category[],
-  source: "receipt" | "sms" | null
+  source: AiSource | null
 ): AiReviewSave {
-  const isSms = source === "sms" && extraction && "type" in extraction;
-  const sms = isSms ? (extraction as SmsExtraction) : null;
-  const receipt = !isSms ? (extraction as ReceiptExtraction | null) : null;
+  const today = new Date().toISOString().slice(0, 10);
 
-  const type =
-    sms?.type === "Credit"
-      ? "income"
-      : ("expense" as "income" | "expense");
-
-  const categoryName = receipt?.category?.toLowerCase() ?? "";
-  const matched = categories.find(
-    (c) =>
-      c.type === type &&
-      (c.name.toLowerCase() === categoryName ||
-        c.name.toLowerCase().includes(categoryName) ||
-        categoryName.includes(c.name.toLowerCase()))
-  );
-
-  let accountId = accounts[0]?.id ?? "";
-  if (sms?.account_hint) {
-    const hint = sms.account_hint.toLowerCase();
-    const found = accounts.find(
-      (a) =>
-        a.name.toLowerCase().includes(hint) ||
-        hint.includes(a.name.toLowerCase())
-    );
-    if (found) accountId = found.id;
+  if (source === "sms" && extraction && "type" in extraction) {
+    const sms = extraction as SmsExtraction;
+    const type = sms.type === "Credit" ? "income" : "expense";
+    let accountId = accounts[0]?.id ?? "";
+    if (sms.account_hint) {
+      const hint = sms.account_hint.toLowerCase();
+      const found = accounts.find(
+        (a) =>
+          a.name.toLowerCase().includes(hint) ||
+          hint.includes(a.name.toLowerCase())
+      );
+      if (found) accountId = found.id;
+    }
+    return {
+      account_id: accountId,
+      category_id: null,
+      amount: Number(sms.amount ?? 0),
+      type,
+      date: sms.date || today,
+      merchant: sms.merchant ?? "",
+      notes: sms.notes ?? "",
+      is_recurring: false,
+      recurring_frequency: null,
+    };
   }
 
+  if (source === "text" && extraction && "category" in extraction) {
+    const text = extraction as QuickTextExtraction;
+    return {
+      account_id: accounts[0]?.id ?? "",
+      category_id: matchCategory(categories, text.type, text.category),
+      amount: Number(text.amount ?? 0),
+      type: text.type,
+      date: text.date || today,
+      merchant: text.merchant ?? "",
+      notes: text.notes ?? "",
+      is_recurring: false,
+      recurring_frequency: null,
+    };
+  }
+
+  const receipt = extraction as ReceiptExtraction | null;
+  const type = "expense" as const;
   return {
-    account_id: accountId,
-    category_id: matched?.id ?? null,
-    amount: Number(extraction?.amount ?? 0),
+    account_id: accounts[0]?.id ?? "",
+    category_id: matchCategory(categories, type, receipt?.category),
+    amount: Number(receipt?.amount ?? 0),
     type,
-    date: extraction?.date ?? new Date().toISOString().slice(0, 10),
-    merchant: extraction?.merchant ?? "",
+    date: receipt?.date || today,
+    merchant: receipt?.merchant ?? "",
     notes:
-      ("notes" in (extraction ?? {}) && extraction?.notes) ||
+      receipt?.notes ||
       (receipt?.line_items?.length
         ? receipt.line_items
             .map((i) => `${i.name}${i.price != null ? ` (${i.price})` : ""}`)
@@ -96,15 +143,21 @@ export function AiReviewModal({
   accounts,
   categories,
   source,
+  initialForm = null,
 }: Props) {
   const [form, setForm] = useState<AiReviewSave | null>(null);
+  const [showMore, setShowMore] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    if (open && extraction) {
+    if (!open) return;
+    if (initialForm) {
+      setForm(initialForm);
+    } else if (extraction) {
       setForm(toReviewForm(extraction, accounts, categories, source));
     }
-  }, [open, extraction, accounts, categories, source]);
+    setShowMore(false);
+  }, [open, extraction, accounts, categories, source, initialForm]);
 
   if (!form) return null;
 
@@ -112,32 +165,75 @@ export function AiReviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Review AI extraction</DialogTitle>
+          <DialogTitle>Confirm & save</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-slate-500">
-          Verify these fields before saving to your ledger. Nothing is stored
-          until you confirm.
+          Check the amount and category, then save. Nothing is stored until you
+          confirm.
         </p>
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <Label>Type</Label>
-            <Select
-              value={form.type}
-              onValueChange={(v) =>
-                setForm({ ...form, type: v as AiReviewSave["type"], category_id: null })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="expense">Expense (Debit)</SelectItem>
-                <SelectItem value="income">Income (Credit)</SelectItem>
-              </SelectContent>
-            </Select>
+
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            {(["expense", "income"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() =>
+                  setForm({ ...form, type: t, category_id: null })
+                }
+                className={cn(
+                  "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition-colors",
+                  form.type === t
+                    ? t === "expense"
+                      ? "border-rose-600 bg-rose-50 text-rose-700"
+                      : "border-teal-700 bg-teal-50 text-teal-800"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                {t}
+              </button>
+            ))}
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="review-amount">Amount</Label>
+            <Input
+              id="review-amount"
+              type="number"
+              step="0.01"
+              min="0"
+              autoFocus
+              className="h-12 text-2xl font-semibold"
+              value={form.amount || ""}
+              onChange={(e) =>
+                setForm({ ...form, amount: Number(e.target.value) })
+              }
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <div className="flex flex-wrap gap-2">
+              {relevantCategories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setForm({ ...form, category_id: c.id })}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    form.category_id === c.id
+                      ? "border-teal-700 bg-teal-700 text-white"
+                      : "border-slate-200 text-slate-600 hover:border-teal-600/40"
+                  )}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Account</Label>
             <Select
@@ -145,7 +241,7 @@ export function AiReviewModal({
               onValueChange={(v) => setForm({ ...form, account_id: v })}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Account" />
               </SelectTrigger>
               <SelectContent>
                 {accounts.map((a) => (
@@ -156,66 +252,54 @@ export function AiReviewModal({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Select
-              value={form.category_id ?? undefined}
-              onValueChange={(v) => setForm({ ...form, category_id: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {relevantCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.amount}
-                onChange={(e) =>
-                  setForm({ ...form, amount: Number(e.target.value) })
-                }
-              />
+
+          <button
+            type="button"
+            className="text-xs font-medium text-teal-700 hover:underline"
+            onClick={() => setShowMore((v) => !v)}
+          >
+            {showMore ? "Hide extra fields" : "More (date, merchant, notes)"}
+          </button>
+
+          {showMore && (
+            <div className="space-y-3 rounded-xl border border-slate-100 p-3 dark:border-slate-800">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Merchant</Label>
+                <Input
+                  value={form.merchant ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, merchant: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={form.notes ?? ""}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  rows={2}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Date</Label>
-              <Input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Merchant</Label>
-            <Input
-              value={form.merchant ?? ""}
-              onChange={(e) => setForm({ ...form, merchant: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea
-              value={form.notes ?? ""}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            />
-          </div>
+          )}
         </div>
-        <DialogFooter>
+
+        <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Discard
+            Cancel
           </Button>
           <Button
-            disabled={pending}
+            size="lg"
+            className="min-w-32 flex-1 sm:flex-none"
+            disabled={pending || !form.account_id || !form.amount}
             onClick={() =>
               startTransition(async () => {
                 const result = await saveReviewedTransaction(form);
@@ -223,12 +307,12 @@ export function AiReviewModal({
                   toast.error(result.error);
                   return;
                 }
-                toast.success("Transaction saved");
+                toast.success("Saved");
                 onOpenChange(false);
               })
             }
           >
-            {pending ? "Saving…" : "Confirm & save"}
+            {pending ? "Saving…" : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

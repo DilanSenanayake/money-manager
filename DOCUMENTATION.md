@@ -6,11 +6,12 @@ Complete record of what was built for the **Ledgerly** money manager & expense t
 
 ## 1. Overview
 
-Ledgerly is a full-stack personal finance web app. Users can manage accounts, log income/expenses/transfers, set category budgets, view analytics, track recurring bills, convert currencies with manual rates, and import transactions via AI (receipt OCR and bank SMS parsing).
+Ledgerly is a full-stack personal finance web app focused on **logging income and expenses in about 30 seconds**. AI (receipt scan, bank SMS, one-line text) fills the form; the user always confirms before save. Accounts, budgets, analytics, and recurring bills support day-to-day tracking.
 
 **Product name:** Ledgerly  
 **App type:** Progressive Web App (PWA)  
 **Auth:** Supabase Email/Password  
+**Primary UX goal:** Add expense/income in ≤30 seconds with few taps  
 
 ---
 
@@ -74,6 +75,8 @@ Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
 
 ### 3.5 Dashboard
 
+- Launch pad: **Add expense**, **Scan receipt**, **Paste SMS**
+- Empty-state guidance for first transaction
 - Summary of balances, recent activity, and budget health
 - Page: `/dashboard`
 - Data helpers: `src/app/actions/dashboard.ts`
@@ -98,15 +101,22 @@ Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
 - Page: `/settings`
 - Helpers: `src/lib/currency.ts`, `src/app/actions/settings.ts`
 
-### 3.9 AI import (receipt + SMS)
+### 3.9 Quick Add (AI-first, ~30 seconds)
 
-- **Receipt OCR:** upload image → structured extraction with Zod
-- **SMS parser:** paste bank SMS / clipboard text → structured extraction
-- Human **review modal** before any save (AI never auto-commits)
-- Page: `/import`
-- Actions: `src/app/actions/ai.ts`
-- UI: `ai-import-panel.tsx`, `ai-review-modal.tsx`
-- Schemas: `receiptExtractionSchema`, `smsExtractionSchema`, `aiReviewSaveSchema`
+Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
+
+| Path | Steps |
+|------|--------|
+| Scan receipt | Camera/gallery → Confirm → Save |
+| Paste bank SMS | Paste/clipboard → Parse → Confirm → Save |
+| Describe it | One line e.g. `Coffee 450` → Parse → Confirm → Save |
+| Quick manual | Amount + category chip → Save (defaults: today, first account) |
+
+- Confirm modal shows amount, type, category chips, account — extra fields under “More”
+- AI never auto-saves
+- `/import` redirects to `/add`
+- Components: `quick-add-panel.tsx`, `ai-review-modal.tsx`
+- Actions: `parseReceiptImage`, `parseBankSms`, `parseQuickText`, `saveReviewedTransaction`
 
 ### 3.10 PWA
 
@@ -118,9 +128,10 @@ Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
 
 ### 3.11 Layout & UX
 
-- Desktop sidebar + mobile bottom nav (`app-sidebar.tsx`)
+- Desktop: Home / Add / Activity + More group (accounts, budgets, analytics, recurring, settings)
+- Mobile: Home / Activity / **Add** (center) / More
+- More page: `/more` for secondary destinations on mobile
 - Landing page branding Ledgerly (`src/app/page.tsx`)
-- Dark-mode-friendly slate/teal styling in `globals.css`
 
 ---
 
@@ -135,11 +146,13 @@ money-manager/
 ├── src/
 │   ├── app/
 │   │   ├── (app)/             # Authenticated app shell
+│   │   │   ├── add/           # Quick Add hub (AI + manual)
 │   │   │   ├── accounts/
 │   │   │   ├── analytics/
 │   │   │   ├── budgets/
 │   │   │   ├── dashboard/
-│   │   │   ├── import/        # AI import
+│   │   │   ├── import/        # Redirects to /add
+│   │   │   ├── more/          # Secondary links (mobile)
 │   │   │   ├── recurring/
 │   │   │   ├── settings/
 │   │   │   ├── transactions/
@@ -252,13 +265,15 @@ Never commit `.env.local`.
 
 ## 8. Key Design Decisions
 
-1. **Server Actions over REST** — mutations live under `src/app/actions/` for type-safe Next.js data flow.  
-2. **Shared Zod schemas** — same schemas validate UI input and AI `generateObject` output.  
-3. **Human-in-the-loop AI** — extraction always goes through a review modal; nothing saves until the user confirms.  
-4. **Flash-only AI** — keeps cost at free-tier; automatic fallback from 2.5 → 1.5 Flash.  
-5. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
-6. **RLS by default** — every table is user-scoped; no service-role key in the client.  
-7. **PWA-ready** — manifest + SW for installable / offline-capable shell.  
+1. **30-second add first** — `/add` is the primary daily action; secondary tools live under More.  
+2. **Server Actions over REST** — mutations live under `src/app/actions/` for type-safe Next.js data flow.  
+3. **Shared Zod schemas** — same schemas validate UI input and AI `generateObject` output.  
+4. **Human-in-the-loop AI** — extraction always goes through a review modal; nothing saves until the user confirms.  
+5. **Flash-only AI** — keeps cost at free-tier; automatic fallback from 2.5 → 1.5 Flash.  
+6. **Sensible defaults** — today, first account, AI category guess; user only fixes mistakes.  
+7. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
+8. **RLS by default** — every table is user-scoped; no service-role key in the client.  
+9. **PWA-ready** — manifest + SW for installable / offline-capable shell.  
 
 ---
 
@@ -269,13 +284,15 @@ Never commit `.env.local`.
 | `/` | Public | Landing |
 | `/login` | Public | Sign in |
 | `/signup` | Public | Register |
-| `/dashboard` | Auth | Overview |
+| `/dashboard` | Auth | Home / launch pad |
+| `/add` | Auth | Quick Add (AI + manual) |
+| `/transactions` | Auth | Activity / full ledger |
+| `/more` | Auth | Secondary destinations |
 | `/accounts` | Auth | Wallets |
-| `/transactions` | Auth | Ledger CRUD |
 | `/budgets` | Auth | Category budgets |
 | `/analytics` | Auth | Charts |
 | `/recurring` | Auth | Recurring / bills |
-| `/import` | Auth | AI receipt & SMS |
+| `/import` | Auth | Redirects to `/add` |
 | `/settings` | Auth | Profile & FX rates |
 
 ---
@@ -289,13 +306,14 @@ Never commit `.env.local`.
 - [x] Accounts management UI  
 - [x] Transactions CRUD + filters + transfers  
 - [x] Categories & budget tracking with alerts  
-- [x] Dashboard summary  
+- [x] Dashboard summary + Quick Add launch pad  
 - [x] Analytics charts (Recharts)  
 - [x] Recurring transactions page  
 - [x] Settings (profile, base currency, exchange rates)  
-- [x] AI receipt OCR + SMS parse + review modal  
+- [x] Quick Add hub: receipt, SMS, one-line text, manual  
+- [x] Slim confirm modal (category chips, More for extras)  
+- [x] Nav: Home / Add / Activity / More  
 - [x] PWA manifest, icons, service worker  
-- [x] App shell (sidebar / mobile nav)  
 - [x] Landing page branding (Ledgerly)  
 
 ---
@@ -307,7 +325,8 @@ Never commit `.env.local`.
 - Shared household / multi-user households  
 - Push notifications for budget overruns  
 - End-to-end test suite  
+- Remember last-used account as default  
 
 ---
 
-*This document reflects the application as of the initial feature-complete commit.*
+*This document reflects the application including the 30-second Quick Add UX.*

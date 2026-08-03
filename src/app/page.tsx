@@ -12,8 +12,8 @@ export default function HomePage() {
           Money, tracked with clarity.
         </h1>
         <p className="mt-5 max-w-xl text-lg text-slate-600 dark:text-slate-300">
-          Multi-account balances, smart budgets, and free-tier Gemini parsing for
-          receipts and bank SMS — review before anything hits your ledger.
+          Log spending in about 30 seconds — scan a receipt, paste a bank SMS,
+          or type one line. You always confirm before anything hits your ledger.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button asChild size="lg">

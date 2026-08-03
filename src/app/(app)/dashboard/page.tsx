@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Camera, ClipboardPaste, Plus } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
 import { getDashboardData } from "@/app/actions/dashboard";
 import { BudgetAlerts, BudgetBars } from "@/components/budgets/budget-bars";
@@ -8,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function DashboardPage() {
   const data = await getDashboardData();
+  const isEmpty = data.recent.length === 0;
 
   return (
     <div className="space-y-6">
@@ -17,18 +19,63 @@ export default async function DashboardPage() {
             Hello{data.profile?.display_name ? `, ${data.profile.display_name}` : ""}
           </h1>
           <p className="text-sm text-slate-500">
-            Net worth and this month&apos;s cash flow
+            Add an expense in about 30 seconds
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/import">AI Import</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/transactions">Add transaction</Link>
-          </Button>
-        </div>
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Button asChild size="lg" className="h-auto flex-col gap-1 py-4">
+          <Link href="/add?type=expense">
+            <Plus className="h-5 w-5" />
+            <span>Add expense</span>
+          </Link>
+        </Button>
+        <Button
+          asChild
+          size="lg"
+          variant="outline"
+          className="h-auto flex-col gap-1 py-4"
+        >
+          <Link href="/add?mode=receipt">
+            <Camera className="h-5 w-5" />
+            <span>Scan receipt</span>
+          </Link>
+        </Button>
+        <Button
+          asChild
+          size="lg"
+          variant="outline"
+          className="h-auto flex-col gap-1 py-4"
+        >
+          <Link href="/add?mode=sms">
+            <ClipboardPaste className="h-5 w-5" />
+            <span>Paste SMS</span>
+          </Link>
+        </Button>
+      </div>
+
+      {isEmpty && (
+        <Card className="border-teal-200 bg-teal-50/50 dark:border-teal-900 dark:bg-teal-950/30">
+          <CardContent className="space-y-3 pt-6">
+            <p className="font-display text-xl text-teal-900 dark:text-teal-200">
+              Add your first expense in under 30 seconds
+            </p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Scan a receipt, paste a bank SMS, type one line like “Coffee 450”,
+              or tap amount + category.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <Link href="/add">Open Quick Add</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/add?type=income">Log income</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <BudgetAlerts budgets={data.budgets} />
 
@@ -73,8 +120,11 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Accounts</CardTitle>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/accounts">Manage</Link>
+            </Button>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.accounts.map((account) => (
@@ -91,6 +141,9 @@ export default async function DashboardPage() {
                 </p>
               </div>
             ))}
+            {data.accounts.length === 0 && (
+              <p className="text-sm text-slate-500">No accounts yet.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -105,8 +158,11 @@ export default async function DashboardPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Recent transactions</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Recent activity</CardTitle>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/transactions">See all</Link>
+          </Button>
         </CardHeader>
         <CardContent className="space-y-2">
           {data.recent.map((tx) => (
@@ -136,7 +192,7 @@ export default async function DashboardPage() {
               </p>
             </div>
           ))}
-          {data.recent.length === 0 && (
+          {!isEmpty && data.recent.length === 0 && (
             <p className="text-sm text-slate-500">No transactions yet.</p>
           )}
         </CardContent>
