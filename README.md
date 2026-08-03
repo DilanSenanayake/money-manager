@@ -47,6 +47,10 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Mobile app
+
+Native Flutter client lives in [`mobile/`](./mobile/). It uses the same Supabase project (Auth + RLS) directly — the Next.js backend is not modified. See [`mobile/README.md`](./mobile/README.md).
+
 ## Features
 
 - **Quick Add (~30s):** scan receipt, paste bank SMS, type one line, or amount + category
