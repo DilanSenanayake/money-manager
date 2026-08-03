@@ -3,8 +3,11 @@ import { getRecurringTransactions } from "@/app/actions/transactions";
 import { getProfile } from "@/app/actions/settings";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { formatMoney } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Repeat } from "lucide-react";
 
 function nextDueDate(date: string, frequency: string | null) {
   const base = parseISO(date);
@@ -17,7 +20,6 @@ function nextDueDate(date: string, frequency: string | null) {
     else next = addMonths(next, 1);
   };
 
-  // Walk forward until upcoming (or today) using local calendar strings
   let guard = 0;
   while (localDateYYYYMMDD(next) < today && guard < 120) {
     advance();
@@ -33,7 +35,6 @@ export default async function RecurringPage() {
   ]);
   const baseCurrency = profile.base_currency ?? "USD";
 
-  // Deduplicate by merchant+amount+frequency (show latest occurrence)
   const unique = new Map<string, (typeof recurring)[number]>();
   for (const tx of recurring) {
     const key = `${tx.merchant}-${tx.amount}-${tx.recurring_frequency}-${tx.category_id}`;
@@ -47,37 +48,35 @@ export default async function RecurringPage() {
   items.sort((a, b) => a.nextDue.localeCompare(b.nextDue));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">Recurring</h1>
-        <p className="text-sm text-slate-500">
-          Subscriptions and predicted upcoming bill dates
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="Recurring"
+        description="Subscriptions and predicted upcoming bill dates"
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Upcoming bills</CardTitle>
+          <CardTitle>Upcoming bills</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-1">
           {items.map((tx) => (
             <div
               key={tx.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 px-3 py-3 dark:border-slate-800"
+              className="flex items-center justify-between gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-[var(--background)]"
             >
-              <div>
-                <p className="font-medium">
+              <div className="min-w-0">
+                <p className="truncate font-medium">
                   {tx.merchant || tx.category?.name || "Recurring"}
                 </p>
-                <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
-                  <Badge className="capitalize">
+                <div className="mt-1.5 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                  <Badge variant="accent" className="capitalize">
                     {tx.recurring_frequency ?? "monthly"}
                   </Badge>
                   <span>Next due {tx.nextDue}</span>
                   {tx.account && <span>{tx.account.name}</span>}
                 </div>
               </div>
-              <p className="font-semibold text-rose-600">
+              <p className="shrink-0 font-semibold tabular-nums text-[var(--danger)]">
                 {formatMoney(
                   Number(tx.amount),
                   tx.account?.currency ?? baseCurrency
@@ -86,9 +85,12 @@ export default async function RecurringPage() {
             </div>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-slate-500">
-              Mark transactions as recurring to predict upcoming dues.
-            </p>
+            <EmptyState
+              icon={Repeat}
+              title="No recurring items yet"
+              description="Mark a transaction as recurring to predict upcoming dues."
+              className="border-0 bg-transparent py-8 shadow-none"
+            />
           )}
         </CardContent>
       </Card>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   Camera,
   ClipboardPaste,
@@ -227,13 +228,11 @@ export function QuickAddPanel({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="animate-fade-up">
-        <h1 className="font-display text-3xl tracking-tight">Add</h1>
-        <p className="text-sm text-slate-500">
-          Log income or an expense in about 30 seconds
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="Add"
+        description="Log income or an expense in about 30 seconds"
+      />
 
       <div className="stagger grid gap-3 sm:grid-cols-3">
         <button
@@ -243,13 +242,13 @@ export function QuickAddPanel({
             setActive("receipt");
             fileRef.current?.click();
           }}
-          className="pressable rounded-2xl border border-slate-200 bg-white/95 p-4 text-left shadow-sm disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950"
+          className="surface surface-interactive pressable p-4 text-left disabled:opacity-60"
         >
-          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
             <Camera className="h-5 w-5" />
           </span>
           <p className="font-semibold">Scan receipt</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[var(--muted)]">
             Photo → check → save
           </p>
         </button>
@@ -258,17 +257,16 @@ export function QuickAddPanel({
           type="button"
           onClick={() => setActive("sms")}
           className={cn(
-            "pressable rounded-2xl border bg-white/95 p-4 text-left shadow-sm dark:bg-slate-950",
-            active === "sms"
-              ? "border-teal-700 ring-2 ring-teal-700/20"
-              : "border-slate-200 dark:border-slate-800"
+            "surface surface-interactive pressable p-4 text-left",
+            active === "sms" &&
+              "border-[var(--accent)] ring-2 ring-[var(--accent-ring)]"
           )}
         >
-          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
             <ClipboardPaste className="h-5 w-5" />
           </span>
           <p className="font-semibold">Paste bank SMS</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[var(--muted)]">
             Clipboard or type → confirm
           </p>
         </button>
@@ -277,17 +275,16 @@ export function QuickAddPanel({
           type="button"
           onClick={() => setActive("text")}
           className={cn(
-            "pressable rounded-2xl border bg-white/95 p-4 text-left shadow-sm dark:bg-slate-950",
-            active === "text"
-              ? "border-teal-700 ring-2 ring-teal-700/20"
-              : "border-slate-200 dark:border-slate-800"
+            "surface surface-interactive pressable p-4 text-left",
+            active === "text" &&
+              "border-[var(--accent)] ring-2 ring-[var(--accent-ring)]"
           )}
         >
-          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
             <MessageSquareText className="h-5 w-5" />
           </span>
           <p className="font-semibold">Describe it</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[var(--muted)]">
             “Coffee 450 at Starbucks”
           </p>
         </button>

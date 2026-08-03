@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { createCategory, updateCategory } from "@/app/actions/categories";
 import type { BudgetProgress, Category } from "@/lib/types";
 import { BudgetBars } from "@/components/budgets/budget-bars";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,19 +45,16 @@ export function BudgetsManager({
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl tracking-tight">Budgets</h1>
-          <p className="text-sm text-slate-500">
-            Category monthly limits with 80% / 100% warnings
-          </p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>Add category</Button>
-          </DialogTrigger>
-          <DialogContent>
+    <div className="page-stack">
+      <PageHeader
+        title="Budgets"
+        description="Category monthly limits with clear 80% / 100% warnings"
+        actions={
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>Add category</Button>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>New category</DialogTitle>
             </DialogHeader>
@@ -125,11 +123,12 @@ export function BudgetsManager({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">This month</CardTitle>
+          <CardTitle>This month</CardTitle>
         </CardHeader>
         <CardContent>
           <BudgetBars budgets={budgets} currency={currency} />
@@ -138,7 +137,7 @@ export function BudgetsManager({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">All categories</CardTitle>
+          <CardTitle>All categories</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {categories.map((cat) => (

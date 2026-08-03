@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/settings";
 import type { ExchangeRate, Profile } from "@/lib/types";
 import { CURRENCIES } from "@/lib/schemas";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,17 +39,15 @@ export function SettingsForm({
   const [rate, setRate] = useState(1);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">Settings</h1>
-        <p className="text-sm text-slate-500">
-          Base currency and manual exchange rates
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="Settings"
+        description="Profile, base currency, and exchange rates"
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Profile</CardTitle>
+          <CardTitle>Profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2">
@@ -97,7 +96,7 @@ export function SettingsForm({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Exchange rates</CardTitle>
+          <CardTitle>Exchange rates</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-4">

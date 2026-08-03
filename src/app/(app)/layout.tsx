@@ -9,19 +9,20 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="app-grid min-h-screen md:grid md:grid-cols-[240px_1fr]">
+    <div className="min-h-screen md:grid md:grid-cols-[248px_1fr]">
       <div className="hidden md:block">
         <div className="sticky top-0 h-screen">
           <AppSidebar />
         </div>
       </div>
       <div className="flex min-h-screen flex-col pb-24 md:pb-0">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200/70 bg-white/75 px-4 py-3 backdrop-blur-md md:hidden dark:border-slate-800 dark:bg-slate-950/75">
-          <p className="font-display text-lg text-teal-800 dark:text-teal-300">
-            Ledgerly
-          </p>
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--border)] bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] px-4 py-3 backdrop-blur-xl md:hidden">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--accent)] text-[11px] font-bold text-[var(--accent-fg)]">
+            L
+          </span>
+          <p className="text-sm font-semibold tracking-tight">Ledgerly</p>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8 md:py-8">
           <PageEnter>{children}</PageEnter>
         </main>
       </div>

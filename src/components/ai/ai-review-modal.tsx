@@ -181,9 +181,9 @@ export function AiReviewModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
         <div className="flex max-h-[inherit] min-h-0 flex-col">
-          <DialogHeader className="shrink-0 border-b border-slate-100 px-5 pb-3 pt-5 pr-12 dark:border-slate-800">
+          <DialogHeader className="shrink-0 border-b border-[var(--border)] px-5 pb-3 pt-5 pr-12">
             <DialogTitle>Check & save</DialogTitle>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-[var(--muted)]">
               We filled this in for you — change anything you need, then save.
             </p>
           </DialogHeader>
@@ -326,7 +326,7 @@ export function AiReviewModal({
                 )}
               </div>
 
-              <DialogFooter className="shrink-0 gap-2 border-t border-slate-100 px-5 py-4 dark:border-slate-800 sm:gap-2">
+              <DialogFooter className="shrink-0 gap-2 border-t border-[var(--border)] px-5 py-4 sm:gap-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>

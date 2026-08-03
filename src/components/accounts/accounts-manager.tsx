@@ -11,6 +11,7 @@ import {
 import type { Account } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { CURRENCIES, type AccountInput } from "@/lib/schemas";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,21 +86,18 @@ export function AccountsManager({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl tracking-tight">Accounts</h1>
-          <p className="text-sm text-slate-500">
-            Cash, checking, savings, and credit cards
-          </p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4" />
-              Add account
-            </Button>
-          </DialogTrigger>
+    <div className="page-stack">
+      <PageHeader
+        title="Accounts"
+        description="Cash, checking, savings, and credit cards"
+        actions={
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreate}>
+                <Plus className="h-4 w-4" />
+                Add account
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -185,15 +183,18 @@ export function AccountsManager({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {accounts.map((account) => (
           <Card key={account.id}>
             <CardHeader className="flex flex-row items-start justify-between space-y-0">
               <div>
-                <CardTitle className="text-base">{account.name}</CardTitle>
-                <Badge className="mt-2 capitalize">{account.type}</Badge>
+                <CardTitle>{account.name}</CardTitle>
+                <Badge className="mt-2 capitalize" variant="accent">
+                  {account.type}
+                </Badge>
               </div>
               <div className="flex gap-1">
                 <Button
@@ -219,14 +220,14 @@ export function AccountsManager({
               </div>
             </CardHeader>
             <CardContent>
-              <p className="font-display text-2xl">
+              <p className="font-display text-[1.75rem] tabular-nums">
                 {formatMoney(Number(account.balance), account.currency)}
               </p>
             </CardContent>
           </Card>
         ))}
         {accounts.length === 0 && (
-          <p className="text-sm text-slate-500">No accounts yet.</p>
+          <p className="text-sm text-[var(--muted)] sm:col-span-2">No accounts yet.</p>
         )}
       </div>
     </div>

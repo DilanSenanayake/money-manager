@@ -3,34 +3,29 @@ import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   return (
-    <main className="app-grid relative min-h-screen overflow-hidden">
-      <div
-        className="hero-orb -left-24 top-10 h-72 w-72 bg-teal-400/40"
-        aria-hidden
-      />
-      <div
-        className="hero-orb -right-16 bottom-20 h-80 w-80 bg-sky-400/30"
-        style={{ animationDelay: "180ms" }}
-        aria-hidden
-      />
-
+    <main className="auth-shell relative min-h-screen overflow-hidden">
       <div className="relative mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-6 py-16">
-        <div className="stagger max-w-3xl">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-teal-700">
-            Ledgerly
-          </p>
-          <h1 className="font-display text-5xl leading-tight tracking-tight text-slate-900 md:text-6xl dark:text-slate-50">
+        <div className="stagger max-w-2xl">
+          <div className="mb-6 inline-flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg)]">
+              L
+            </span>
+            <span className="text-sm font-semibold tracking-tight text-[var(--accent-hover)]">
+              Ledgerly
+            </span>
+          </div>
+          <h1 className="font-display text-4xl leading-[1.1] tracking-tight text-[var(--foreground)] md:text-6xl">
             Money, tracked with clarity.
           </h1>
-          <p className="mt-5 max-w-xl text-lg text-slate-600 dark:text-slate-300">
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--muted)] md:text-lg">
             Log spending in about 30 seconds — scan a receipt, paste a bank SMS,
             or type one line. You always confirm before anything hits your ledger.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="pressable">
+            <Button asChild size="lg">
               <Link href="/signup">Get started</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="pressable">
+            <Button asChild variant="outline" size="lg">
               <Link href="/login">Sign in</Link>
             </Button>
           </div>

@@ -7,6 +7,7 @@ import {
   Settings,
   ChevronRight,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 
 const links = [
@@ -44,31 +45,29 @@ const links = [
 
 export default function MorePage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">More</h1>
-        <p className="text-sm text-slate-500">
-          Accounts, budgets, and other tools
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="More"
+        description="Accounts, budgets, analytics, and settings"
+      />
       <Card>
-        <CardContent className="divide-y divide-slate-100 p-0 dark:divide-slate-800">
+        <CardContent className="divide-y divide-[var(--border)] p-0">
           {links.map(({ href, label, description, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className="group flex items-center gap-3 px-4 py-3.5 transition-[background-color,transform] duration-200 hover:bg-slate-50 active:scale-[0.99] dark:hover:bg-slate-900"
+              className="group flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-[var(--background)] active:bg-[var(--background)]"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-800 transition-transform duration-200 group-hover:scale-105 dark:bg-teal-950 dark:text-teal-300">
-                <Icon className="h-5 w-5" />
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
+                <Icon className="h-5 w-5" aria-hidden />
               </span>
-              <span className="flex-1">
-                <span className="block text-sm font-medium">{label}</span>
-                <span className="block text-xs text-slate-500">
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{label}</span>
+                <span className="block text-xs text-[var(--muted)]">
                   {description}
                 </span>
               </span>
-              <ChevronRight className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5" />
+              <ChevronRight className="h-4 w-4 text-[var(--muted-fg)] transition-transform duration-150 group-hover:translate-x-0.5" />
             </Link>
           ))}
         </CardContent>

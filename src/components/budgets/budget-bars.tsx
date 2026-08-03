@@ -13,7 +13,7 @@ export function BudgetBars({
 }) {
   if (budgets.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-[var(--muted)]">
         Set monthly budgets on expense categories to track progress.
       </p>
     );
@@ -25,16 +25,16 @@ export function BudgetBars({
         const pct = Math.min(100, Math.round(b.ratio * 100));
         const indicator =
           b.status === "over"
-            ? "bg-rose-600"
+            ? "bg-[var(--danger)]"
             : b.status === "warn"
-              ? "bg-amber-500"
-              : "bg-teal-600";
+              ? "bg-[var(--warn)]"
+              : "bg-[var(--accent)]";
 
         return (
           <div key={b.category.id} className="space-y-2">
             <div className="flex items-center justify-between gap-2 text-sm">
               <span className="font-medium">{b.category.name}</span>
-              <span className="text-slate-500">
+              <span className="tabular-nums text-[var(--muted)]">
                 {formatMoney(b.spent, currency)} /{" "}
                 {formatMoney(b.limit, currency)}
               </span>
@@ -43,13 +43,15 @@ export function BudgetBars({
             {(b.status === "warn" || b.status === "over") && (
               <p
                 className={`flex items-center gap-1.5 text-xs ${
-                  b.status === "over" ? "text-rose-600" : "text-amber-600"
+                  b.status === "over"
+                    ? "text-[var(--danger)]"
+                    : "text-[var(--warn)]"
                 }`}
               >
                 <AlertTriangle className="h-3.5 w-3.5" />
                 {b.status === "over"
-                  ? "Budget exceeded (100%+)"
-                  : "Approaching limit (80%+)"}
+                  ? "Over budget"
+                  : "Nearing limit (80%+)"}
               </p>
             )}
           </div>
@@ -66,14 +68,14 @@ export function BudgetAlerts({ budgets }: { budgets: BudgetProgress[] }) {
   if (alerts.length === 0) return null;
 
   return (
-    <Card className="border-amber-200 bg-amber-50/80 dark:border-amber-900 dark:bg-amber-950/30">
+    <Card className="border-[color-mix(in_oklab,var(--warn)_35%,var(--border))] bg-[var(--warn-soft)]">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base text-amber-800 dark:text-amber-200">
+        <CardTitle className="flex items-center gap-2 text-[var(--warn)]">
           <AlertTriangle className="h-4 w-4" />
           Budget alerts
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1 text-sm text-amber-900 dark:text-amber-100">
+      <CardContent className="space-y-1 text-sm text-[var(--foreground)]">
         {alerts.map((b) => (
           <p key={b.category.id}>
             <strong>{b.category.name}</strong>:{" "}

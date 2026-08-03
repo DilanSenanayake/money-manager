@@ -1,71 +1,87 @@
 import Link from "next/link";
-import { Camera, ClipboardPaste, Plus } from "lucide-react";
+import { Camera, ClipboardPaste, Plus, Wallet } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
 import { getDashboardData } from "@/app/actions/dashboard";
 import { BudgetAlerts, BudgetBars } from "@/components/budgets/budget-bars";
+import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatCard } from "@/components/ui/stat-card";
 
 export default async function DashboardPage() {
   const data = await getDashboardData();
   const isEmpty = data.recent.length === 0;
+  const firstName = data.profile?.display_name?.split(" ")[0];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl tracking-tight">
-            Hello{data.profile?.display_name ? `, ${data.profile.display_name}` : ""}
-          </h1>
-          <p className="text-sm text-slate-500">
-            Add an expense in about 30 seconds
-          </p>
-        </div>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title={firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+        description="Your money at a glance — add spending in about 30 seconds."
+        actions={
+          <Button asChild>
+            <Link href="/add">
+              <Plus className="h-4 w-4" />
+              Add expense
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="stagger grid gap-3 sm:grid-cols-3">
-        <Button asChild size="lg" className="pressable h-auto flex-col gap-1 py-4">
-          <Link href="/add?type=expense">
+        <Link
+          href="/add?type=expense"
+          className="surface surface-interactive pressable flex items-center gap-3 p-4"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--accent-fg)]">
             <Plus className="h-5 w-5" />
-            <span>Add expense</span>
-          </Link>
-        </Button>
-        <Button
-          asChild
-          size="lg"
-          variant="outline"
-          className="pressable h-auto flex-col gap-1 py-4"
+          </span>
+          <span>
+            <span className="block text-sm font-semibold">Quick add</span>
+            <span className="block text-xs text-[var(--muted)]">
+              Amount, category, done
+            </span>
+          </span>
+        </Link>
+        <Link
+          href="/add?mode=receipt"
+          className="surface surface-interactive pressable flex items-center gap-3 p-4"
         >
-          <Link href="/add?mode=receipt">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
             <Camera className="h-5 w-5" />
-            <span>Scan receipt</span>
-          </Link>
-        </Button>
-        <Button
-          asChild
-          size="lg"
-          variant="outline"
-          className="pressable h-auto flex-col gap-1 py-4"
+          </span>
+          <span>
+            <span className="block text-sm font-semibold">Scan receipt</span>
+            <span className="block text-xs text-[var(--muted)]">
+              Photo → review → save
+            </span>
+          </span>
+        </Link>
+        <Link
+          href="/add?mode=sms"
+          className="surface surface-interactive pressable flex items-center gap-3 p-4"
         >
-          <Link href="/add?mode=sms">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
             <ClipboardPaste className="h-5 w-5" />
-            <span>Paste SMS</span>
-          </Link>
-        </Button>
+          </span>
+          <span>
+            <span className="block text-sm font-semibold">Paste SMS</span>
+            <span className="block text-xs text-[var(--muted)]">
+              Bank alert → confirm
+            </span>
+          </span>
+        </Link>
       </div>
 
       {isEmpty && (
-        <Card className="border-teal-200 bg-teal-50/50 dark:border-teal-900 dark:bg-teal-950/30">
-          <CardContent className="space-y-3 pt-6">
-            <p className="font-display text-xl text-teal-900 dark:text-teal-200">
-              Add your first expense in under 30 seconds
-            </p>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Scan a receipt, paste a bank SMS, type one line like “Coffee 450”,
-              or tap amount + category.
-            </p>
-            <div className="flex flex-wrap gap-2">
+        <EmptyState
+          icon={Wallet}
+          title="Start with your first expense"
+          description="Scan a receipt, paste a bank SMS, type “Coffee 450”, or enter an amount and category."
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
               <Button asChild>
                 <Link href="/add">Open Quick Add</Link>
               </Button>
@@ -73,83 +89,69 @@ export default async function DashboardPage() {
                 <Link href="/add?type=income">Log income</Link>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          }
+        />
       )}
 
       <BudgetAlerts budgets={data.budgets} />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="lift">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">
-              Net worth
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-display text-3xl">
-              {formatMoney(data.netWorth, data.baseCurrency)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="lift">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">
-              Income (month)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-display text-3xl text-teal-700">
-              {formatMoney(data.income, data.baseCurrency)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="lift">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">
-              Expenses (month)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-display text-3xl text-rose-600">
-              {formatMoney(data.expense, data.baseCurrency)}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard
+          label="Net worth"
+          value={formatMoney(data.netWorth, data.baseCurrency)}
+          hint={`In ${data.baseCurrency}`}
+        />
+        <StatCard
+          label="Income this month"
+          value={formatMoney(data.income, data.baseCurrency)}
+          tone="positive"
+        />
+        <StatCard
+          label="Spent this month"
+          value={formatMoney(data.expense, data.baseCurrency)}
+          tone="negative"
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Accounts</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle>Accounts</CardTitle>
             <Button asChild variant="ghost" size="sm">
               <Link href="/accounts">Manage</Link>
             </Button>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-1">
             {data.accounts.map((account) => (
               <div
                 key={account.id}
-                className="flex items-center justify-between text-sm"
+                className="flex items-center justify-between rounded-xl px-2 py-2.5 transition-colors hover:bg-[var(--background)]"
               >
-                <div>
-                  <p className="font-medium">{account.name}</p>
-                  <p className="capitalize text-slate-500">{account.type}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{account.name}</p>
+                  <p className="text-xs capitalize text-[var(--muted)]">
+                    {account.type}
+                  </p>
                 </div>
-                <p className="font-semibold">
+                <p className="shrink-0 text-sm font-semibold tabular-nums">
                   {formatMoney(Number(account.balance), account.currency)}
                 </p>
               </div>
             ))}
             {data.accounts.length === 0 && (
-              <p className="text-sm text-slate-500">No accounts yet.</p>
+              <p className="px-2 py-4 text-sm text-[var(--muted)]">
+                No accounts yet.
+              </p>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Budget progress</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle>Budgets</CardTitle>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/budgets">View all</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <BudgetBars budgets={data.budgets} currency={data.baseCurrency} />
@@ -158,30 +160,43 @@ export default async function DashboardPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Recent activity</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle>Recent activity</CardTitle>
           <Button asChild variant="ghost" size="sm">
             <Link href="/transactions">See all</Link>
           </Button>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-1">
           {data.recent.map((tx) => (
             <div
               key={tx.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 transition-[background-color,transform,border-color] duration-200 hover:border-slate-200 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-900/50"
+              className="flex items-center justify-between gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-[var(--background)]"
             >
-              <div>
-                <p className="text-sm font-medium">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">
                   {tx.merchant || tx.category?.name || tx.type}
                 </p>
-                <div className="mt-1 flex gap-2 text-xs text-slate-500">
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
                   <span>{tx.date}</span>
-                  <Badge className="capitalize">{tx.type}</Badge>
+                  <Badge
+                    variant={
+                      tx.type === "income"
+                        ? "success"
+                        : tx.type === "expense"
+                          ? "danger"
+                          : "default"
+                    }
+                    className="capitalize"
+                  >
+                    {tx.type}
+                  </Badge>
                 </div>
               </div>
               <p
-                className={`text-sm font-semibold ${
-                  tx.type === "income" ? "text-teal-700" : "text-rose-600"
+                className={`shrink-0 text-sm font-semibold tabular-nums ${
+                  tx.type === "income"
+                    ? "text-[var(--success)]"
+                    : "text-[var(--danger)]"
                 }`}
               >
                 {tx.type === "income" ? "+" : "-"}
@@ -193,7 +208,9 @@ export default async function DashboardPage() {
             </div>
           ))}
           {!isEmpty && data.recent.length === 0 && (
-            <p className="text-sm text-slate-500">No transactions yet.</p>
+            <p className="px-2 py-4 text-sm text-[var(--muted)]">
+              No transactions yet.
+            </p>
           )}
         </CardContent>
       </Card>

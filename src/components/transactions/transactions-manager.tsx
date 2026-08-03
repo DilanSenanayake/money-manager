@@ -12,6 +12,7 @@ import type { Account, Category, Transaction } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import type { TransactionInput } from "@/lib/schemas";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,22 +107,19 @@ export function TransactionsManager({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl tracking-tight">Transactions</h1>
-          <p className="text-sm text-slate-500">
-            Income, expenses, and internal transfers
-          </p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4" />
-              Add
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+    <div className="page-stack">
+      <PageHeader
+        title="Activity"
+        description="Income, expenses, and internal transfers"
+        actions={
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4" />
+                Add
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>New transaction</DialogTitle>
             </DialogHeader>
@@ -299,10 +297,11 @@ export function TransactionsManager({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
 
       <Card>
-        <CardContent className="grid gap-3 pt-6 md:grid-cols-6">
+        <CardContent className="grid gap-3 pt-5 md:grid-cols-6">
           <Input
             placeholder="Search merchant…"
             value={filters.q ?? ""}
@@ -374,27 +373,38 @@ export function TransactionsManager({
           return (
             <div
               key={tx.id}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/70"
+              className="surface flex items-center justify-between gap-3 px-4 py-3"
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">
                   {tx.merchant || tx.category?.name || tx.type}
                 </p>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
                   <span>{tx.date}</span>
-                  <Badge className="capitalize">{tx.type}</Badge>
+                  <Badge
+                    variant={
+                      tx.type === "income"
+                        ? "success"
+                        : tx.type === "expense"
+                          ? "danger"
+                          : "default"
+                    }
+                    className="capitalize"
+                  >
+                    {tx.type}
+                  </Badge>
                   {tx.account && <span>{tx.account.name}</span>}
                   {tx.is_recurring && (
-                    <Badge className="bg-teal-50 text-teal-800">
-                      {tx.recurring_frequency}
-                    </Badge>
+                    <Badge variant="accent">{tx.recurring_frequency}</Badge>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <p
-                  className={`font-semibold ${
-                    sign === "+" ? "text-teal-700" : "text-rose-600"
+                  className={`font-semibold tabular-nums ${
+                    sign === "+"
+                      ? "text-[var(--success)]"
+                      : "text-[var(--danger)]"
                   }`}
                 >
                   {sign}
@@ -403,6 +413,7 @@ export function TransactionsManager({
                 <Button
                   size="icon"
                   variant="ghost"
+                  aria-label="Delete transaction"
                   onClick={() =>
                     startTransition(async () => {
                       const result = await deleteTransaction(tx.id);
@@ -418,7 +429,9 @@ export function TransactionsManager({
           );
         })}
         {transactions.length === 0 && (
-          <p className="text-sm text-slate-500">No transactions found.</p>
+          <p className="py-8 text-center text-sm text-[var(--muted)]">
+            No transactions found.
+          </p>
         )}
       </div>
     </div>

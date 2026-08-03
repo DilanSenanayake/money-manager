@@ -47,17 +47,18 @@ function NavLink({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-[color,background-color,transform] duration-200 ease-out active:scale-[0.98]",
+        "group flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-[color,background-color] duration-150",
         active
-          ? "bg-teal-700 text-white shadow-sm shadow-teal-900/20"
-          : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
+          ? "bg-[var(--accent-soft)] text-[var(--accent-hover)]"
+          : "text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"
       )}
     >
       <Icon
         className={cn(
-          "h-4 w-4 transition-transform duration-200 ease-out",
-          active ? "scale-110" : "group-hover:scale-105"
+          "h-4 w-4 shrink-0",
+          active ? "text-[var(--accent)]" : "text-[var(--muted-fg)] group-hover:text-[var(--muted)]"
         )}
       />
       {label}
@@ -69,14 +70,24 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-full flex-col border-r border-slate-200/80 bg-white/80 px-3 py-5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/70">
-      <div className="mb-6 px-3">
-        <p className="font-display text-xl tracking-tight text-teal-800 dark:text-teal-300">
-          Ledgerly
-        </p>
-        <p className="text-xs text-slate-500">Add money in ~30 seconds</p>
+    <aside className="flex h-full w-full flex-col border-r border-[var(--border)] bg-[var(--surface)] px-3 py-5">
+      <div className="mb-7 px-3">
+        <Link href="/dashboard" className="inline-flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] text-sm font-bold tracking-tight">
+            L
+          </span>
+          <span>
+            <span className="block text-sm font-semibold tracking-tight">
+              Ledgerly
+            </span>
+            <span className="block text-[11px] text-[var(--muted-fg)]">
+              Money, clarified
+            </span>
+          </span>
+        </Link>
       </div>
-      <nav className="flex flex-1 flex-col gap-1">
+
+      <nav className="flex flex-1 flex-col gap-0.5" aria-label="Primary">
         {primary.map((item) => (
           <NavLink
             key={item.href}
@@ -86,8 +97,8 @@ export function AppSidebar() {
             }
           />
         ))}
-        <p className="mb-1 mt-5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-          More
+        <p className="mb-1 mt-6 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted-fg)]">
+          Manage
         </p>
         {secondary.map((item) => (
           <NavLink
@@ -99,8 +110,13 @@ export function AppSidebar() {
           />
         ))}
       </nav>
-      <form action={signOut} className="mt-4 px-1">
-        <Button type="submit" variant="ghost" className="w-full justify-start gap-3">
+
+      <form action={signOut} className="mt-4 border-t border-[var(--border)] pt-3">
+        <Button
+          type="submit"
+          variant="ghost"
+          className="w-full justify-start gap-2.5 font-medium"
+        >
           <LogOut className="h-4 w-4" />
           Sign out
         </Button>
@@ -120,62 +136,66 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex items-end border-t border-slate-200/80 bg-white/90 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-md md:hidden dark:border-slate-800 dark:bg-slate-950/90">
-      {mobileTabs.map(({ href, label, icon: Icon, emphasize }) => {
-        const active =
-          pathname === href ||
-          (href !== "/dashboard" && pathname.startsWith(`${href}/`)) ||
-          (href === "/more" &&
-            secondary.some(
-              (s) => pathname === s.href || pathname.startsWith(`${s.href}/`)
-            ));
+    <nav
+      aria-label="Mobile"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[color-mix(in_oklab,var(--surface)_92%,transparent)] px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl md:hidden"
+    >
+      <div className="mx-auto flex max-w-lg items-end">
+        {mobileTabs.map(({ href, label, icon: Icon, emphasize }) => {
+          const active =
+            pathname === href ||
+            (href !== "/dashboard" && pathname.startsWith(`${href}/`)) ||
+            (href === "/more" &&
+              secondary.some(
+                (s) => pathname === s.href || pathname.startsWith(`${s.href}/`)
+              ));
 
-        if (emphasize) {
+          if (emphasize) {
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className="flex flex-1 flex-col items-center gap-0.5"
+              >
+                <span
+                  className={cn(
+                    "-mt-4 flex h-12 w-12 items-center justify-center rounded-2xl text-[var(--accent-fg)] shadow-[var(--shadow-md)] transition-transform duration-150 active:scale-95",
+                    active ? "bg-[var(--accent-hover)]" : "bg-[var(--accent)]"
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span
+                  className={cn(
+                    "text-[10px] font-semibold",
+                    active ? "text-[var(--accent-hover)]" : "text-[var(--muted)]"
+                  )}
+                >
+                  {label}
+                </span>
+              </Link>
+            );
+          }
+
           return (
             <Link
               key={href}
               href={href}
-              className="flex flex-1 flex-col items-center gap-0.5"
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold transition-colors",
+                active
+                  ? "text-[var(--accent-hover)]"
+                  : "text-[var(--muted)]"
+              )}
             >
-              <span
-                className={cn(
-                  "fab-glow -mt-5 flex h-14 w-14 items-center justify-center rounded-full text-white transition-transform duration-200 ease-out active:scale-95",
-                  active ? "bg-teal-800" : "bg-teal-700"
-                )}
-              >
-                <Icon className="h-6 w-6" />
-              </span>
-              <span
-                className={cn(
-                  "text-[10px] font-semibold transition-colors duration-200",
-                  active ? "text-teal-700" : "text-slate-500"
-                )}
-              >
-                {label}
-              </span>
+              <Icon className="h-4 w-4" />
+              {label}
             </Link>
           );
-        }
-
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-lg py-2 text-[10px] font-medium transition-[color,transform] duration-200 active:scale-95",
-              active ? "text-teal-700" : "text-slate-500"
-            )}
-          >
-            <Icon
-              className={cn(
-                "h-4 w-4 transition-transform duration-200",
-                active && "scale-110"
-              )}
-            />
-            {label}
-          </Link>
-        );
-      })}
+        })}
+      </div>
     </nav>
   );
 }

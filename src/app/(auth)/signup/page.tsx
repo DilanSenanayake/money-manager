@@ -21,16 +21,21 @@ export default function SignupPage() {
   const [pending, startTransition] = useTransition();
 
   return (
-    <main className="app-grid flex min-h-screen items-center justify-center px-4 py-10">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">
-            Ledgerly
-          </p>
-          <CardTitle className="font-display text-2xl">Create account</CardTitle>
-          <CardDescription>
-            Start tracking wallets, budgets, and AI-parsed expenses
-          </CardDescription>
+    <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-10">
+      <Card className="w-full max-w-md shadow-[var(--shadow-md)]">
+        <CardHeader className="space-y-3">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-bold text-[var(--accent-fg)]">
+              L
+            </span>
+            <span className="text-sm font-semibold">Ledgerly</span>
+          </Link>
+          <div>
+            <CardTitle className="font-display text-2xl">Create account</CardTitle>
+            <CardDescription className="mt-1.5">
+              Set your currency once — wallets, budgets, and totals follow it
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form
@@ -57,6 +62,7 @@ export default function SignupPage() {
                 type="email"
                 required
                 autoComplete="email"
+                placeholder="you@example.com"
               />
             </div>
             <div className="space-y-2">
@@ -76,7 +82,7 @@ export default function SignupPage() {
                 id="base_currency"
                 name="base_currency"
                 defaultValue="USD"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-10 w-full rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm shadow-[var(--shadow-sm)] focus-visible:border-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
               >
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>
@@ -84,19 +90,25 @@ export default function SignupPage() {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-slate-500">
-                Used for your wallets, budgets, and totals. You can change it later in Settings.
+              <p className="text-xs text-[var(--muted)]">
+                You can change this later in Settings.
               </p>
             </div>
             {error && (
-              <p className="text-sm text-rose-600" role="alert">
+              <p
+                className="rounded-lg bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"
+                role="alert"
+              >
                 {error}
               </p>
             )}
             {message && (
-              <p className="text-sm text-teal-800" role="status">
+              <p
+                className="rounded-lg bg-[var(--success-soft)] px-3 py-2 text-sm text-[var(--success)]"
+                role="status"
+              >
                 {message}{" "}
-                <Link href="/login" className="font-medium underline">
+                <Link href="/login" className="font-semibold underline">
                   Sign in
                 </Link>
               </p>
@@ -105,9 +117,12 @@ export default function SignupPage() {
               {pending ? "Creating…" : "Create account"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-slate-500">
+          <p className="mt-5 text-center text-sm text-[var(--muted)]">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-teal-700 hover:underline">
+            <Link
+              href="/login"
+              className="font-semibold text-[var(--accent-hover)] hover:underline"
+            >
               Sign in
             </Link>
           </p>

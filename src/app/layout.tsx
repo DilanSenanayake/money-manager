@@ -1,17 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-dm-sans",
-});
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
+  variable: "--font-sans-app",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f766e",
+  themeColor: "#0d9488",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -40,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${dmSans.variable} ${fraunces.variable} antialiased`}>
+      <body className={`${sans.variable} font-sans antialiased`}>
         {children}
         <Toaster />
         <ServiceWorkerRegister />

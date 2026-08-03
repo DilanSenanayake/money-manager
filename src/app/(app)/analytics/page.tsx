@@ -1,17 +1,16 @@
 import { getAnalyticsData } from "@/app/actions/dashboard";
 import { AnalyticsCharts } from "@/components/analytics/analytics-charts";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function AnalyticsPage() {
   const { trend, categorySpend, baseCurrency } = await getAnalyticsData();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl tracking-tight">Analytics</h1>
-        <p className="text-sm text-slate-500">
-          Category breakdown and income vs expense trends
-        </p>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="Analytics"
+        description="Category breakdown and income vs expense trends"
+      />
       <AnalyticsCharts
         trend={trend}
         categorySpend={categorySpend}
