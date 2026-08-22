@@ -12,8 +12,8 @@ class SupabaseBootstrap {
         anonKey.isEmpty ||
         url.contains('your-project')) {
       throw StateError(
-        'Missing Supabase config. Copy mobile/.env.example to mobile/.env '
-        'and set SUPABASE_URL and SUPABASE_ANON_KEY.',
+        'Missing Supabase config. Copy apps/mobile/.env.example to '
+        'apps/mobile/.env and set SUPABASE_URL and SUPABASE_ANON_KEY.',
       );
     }
 

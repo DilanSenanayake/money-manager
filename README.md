@@ -1,74 +1,97 @@
 # Ledgerly — Money Manager & Expense Tracker
 
-Next.js 15 App Router money manager with Supabase Auth/RLS, Tesseract.js receipt OCR, and free-tier Gemini Flash for structuring receipts, SMS, and one-line notes.
+Personal finance app with a clear split between **backend**, **web**, and **mobile**, plus shared Supabase data.
 
-> Full project write-up: **[DOCUMENTATION.md](./DOCUMENTATION.md)** (architecture, schema, features, setup checklist).
+> Full write-up: **[DOCUMENTATION.md](./DOCUMENTATION.md)**
 
-## Stack
+## Folder tree
 
-- Next.js 15 + TypeScript + Tailwind CSS
-- Supabase (PostgreSQL + Auth + RLS)
-- Vercel AI SDK + `@ai-sdk/google` (`gemini-2.5-flash` / `gemini-2.5-flash-lite` only)
-- Zod schemas shared by forms and `generateObject`
-- Recharts analytics
-- PWA (manifest + service worker)
+```
+money-manager/
+├── apps/
+│   ├── api/          # BE  — ASP.NET Core 9 REST API
+│   ├── web/          # FE  — Next.js 15 web app
+│   └── mobile/       # Mobile — Flutter (Android / iOS)
+├── supabase/         # Shared DB migrations (Auth + Postgres + RLS)
+├── README.md
+└── DOCUMENTATION.md
+```
 
-## Setup
+| App | Path | Stack |
+|-----|------|--------|
+| **Backend** | [`apps/api`](./apps/api) | ASP.NET Core 9, JWT, Gemini, Swagger |
+| **Frontend** | [`apps/web`](./apps/web) | Next.js 15, TypeScript, Tailwind |
+| **Mobile** | [`apps/mobile`](./apps/mobile) | Flutter, Riverpod |
+| **Database** | [`supabase`](./supabase) | Postgres migrations + RLS |
 
-1. **Install**
+```
+┌─────────────┐     ┌─────────────┐
+│  apps/web   │     │ apps/mobile │
+│  (Next.js)  │     │  (Flutter)  │
+└──────┬──────┘     └──────┬──────┘
+       │  JWT + REST       │
+       └────────┬──────────┘
+                ▼
+       ┌────────────────┐
+       │   apps/api     │  ASP.NET Core
+       └────────┬───────┘
+                │
+       ┌────────┴────────┐
+       ▼                 ▼
+  Supabase Auth     Supabase Postgres
+```
+
+Clients sign in with **Supabase Auth**, then call the API with `Authorization: Bearer <token>`.
+
+## Quick start
+
+### 1. Database
+
+In the Supabase SQL Editor, run [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql). Enable Email auth.
+
+### 2. Backend — `apps/api`
 
 ```bash
+cd apps/api/src/Ledgerly.Api
+# Configure appsettings.Development.json — see apps/api/.env.example
+dotnet run
+```
+
+Swagger: [http://localhost:5080/swagger](http://localhost:5080/swagger)
+
+### 3. Frontend — `apps/web`
+
+```bash
+cd apps/web
+cp .env.example .env.local   # fill Supabase (+ Gemini while Server Actions remain)
 npm install
-```
-
-2. **Environment**
-
-Copy `.env.example` to `.env.local` and fill in:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-GOOGLE_GENERATIVE_AI_API_KEY=
-```
-
-3. **Database**
-
-In the Supabase SQL Editor, run [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql).
-
-4. **Auth**
-
-In Supabase Auth settings, enable Email provider (email/password).
-
-5. **Run**
-
-```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Mobile app
+> Web still uses Server Actions for some flows; migrate to `apps/api` next.
 
-Native Flutter client lives in [`mobile/`](./mobile/). It uses the same Supabase project (Auth + RLS) directly — the Next.js backend is not modified. See [`mobile/README.md`](./mobile/README.md).
+### 4. Mobile — `apps/mobile`
+
+```bash
+cd apps/mobile
+cp .env.example .env
+flutter pub get
+flutter run
+```
+
+See [`apps/mobile/README.md`](./apps/mobile/README.md).
 
 ## Features
 
-- **Quick Add (~30s):** scan receipt, paste bank SMS, type one line, or amount + category
-- Multi-account wallets (cash, checking, savings, credit) with live balances
-- Income / expense / transfer CRUD with filters
+- Quick Add: receipt OCR → Gemini, bank SMS, one-line text, or manual
+- Multi-account wallets with live balances (DB triggers)
+- Income / expense / transfer CRUD
 - Category budgets with 80% / 100% alerts
-- Analytics: category pie + income vs expense trends
-- Recurring transactions & upcoming bill dates
-- Multi-currency base + manual exchange rates
-- AI results always go through a confirm step before save
-- PWA manifest + production service worker
-
-## AI constraints
-
-- Only free-tier Gemini Flash models
-- Structured extraction via `generateObject` + Zod
-- AI results never auto-save — review modal is required
-- Paths: receipt (Tesseract OCR → Gemini text), bank SMS, natural-language one-liner
+- Analytics + recurring bills
+- Multi-currency + manual exchange rates
+- AI never auto-saves — confirm step required
 
 ## License
 

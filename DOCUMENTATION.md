@@ -6,11 +6,12 @@ Complete record of what was built for the **Ledgerly** money manager & expense t
 
 ## 1. Overview
 
-Ledgerly is a full-stack personal finance web app focused on **logging income and expenses in about 30 seconds**. AI (receipt scan, bank SMS, one-line text) fills the form; the user always confirms before save. Accounts, budgets, analytics, and recurring bills support day-to-day tracking.
+Ledgerly is a personal finance product focused on **logging income and expenses in about 30 seconds**. AI (receipt scan, bank SMS, one-line text) fills the form; the user always confirms before save. Accounts, budgets, analytics, and recurring bills support day-to-day tracking.
 
 **Product name:** Ledgerly  
-**App type:** Progressive Web App (PWA)  
-**Auth:** Supabase Email/Password  
+**Clients:** Progressive Web App (Next.js) + Flutter mobile  
+**Shared backend:** ASP.NET Core 9 REST API (`apps/api`)  
+**Auth:** Supabase Email/Password (JWT passed to API)  
 **Primary UX goal:** Add expense/income in ≤30 seconds with few taps  
 
 ---
@@ -19,15 +20,15 @@ Ledgerly is a full-stack personal finance web app focused on **logging income an
 
 | Layer | Choice |
 |--------|--------|
-| Framework | Next.js 15 (App Router) + Turbopack |
-| Language | TypeScript |
-| UI | Tailwind CSS v4, Radix UI primitives, Lucide icons |
-| Charts | Recharts |
+| API | ASP.NET Core 9 (Web API) + JWT Bearer + Swagger |
+| Web UI | Next.js 15 (App Router) + Turbopack + TypeScript |
+| Mobile UI | Flutter + Riverpod + go_router |
 | Auth & DB | Supabase (PostgreSQL, Auth, Row Level Security) |
-| Validation | Zod (shared by forms and AI `generateObject`) |
-| AI | Vercel AI SDK + `@ai-sdk/google` — **Gemini Flash free tier only** |
-| Toasts | Sonner |
-| Dates | date-fns |
+| Validation | C# DataAnnotations (API); Zod still used in web transitional layer |
+| AI | Google Gemini Flash free tier via API (`GeminiService`) |
+| Charts (web) | Recharts |
+| Toasts (web) | Sonner |
+| Dates | date-fns (web); `DateHelpers` (API) |
 
 ### AI model constraints
 
@@ -36,7 +37,51 @@ Only free-tier Flash models are allowed:
 - `gemini-2.5-flash` (preferred)
 - `gemini-2.5-flash-lite` / `gemini-flash-latest` (fallback)
 
-Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
+Configured in `apps/api` under `Gemini:Models`.
+
+---
+
+## 2b. Repository layout
+
+```
+money-manager/
+├── apps/
+│   ├── api/                 # BE  — ASP.NET Core REST API
+│   │   ├── Dockerfile
+│   │   ├── Ledgerly.sln
+│   │   └── src/Ledgerly.Api/
+│   ├── web/                 # FE  — Next.js web app
+│   │   ├── src/
+│   │   ├── public/
+│   │   └── package.json
+│   └── mobile/              # Mobile — Flutter
+│       ├── lib/
+│       └── pubspec.yaml
+├── supabase/migrations/     # Shared DB schema + RLS
+├── README.md
+└── DOCUMENTATION.md
+```
+
+**Data flow**
+
+1. Web/mobile sign in with Supabase Auth → access token  
+2. Client calls `GET/POST …/v1/*` with `Authorization: Bearer <token>`  
+3. API validates JWT (`Supabase:JwtSecret`)  
+4. API calls Supabase PostgREST with the same JWT → **RLS enforced**  
+5. AI parse endpoints use Gemini; secrets stay on the API  
+
+**Migration status**
+
+| Concern | Status |
+|---------|--------|
+| Shared REST API | ✅ Implemented in `apps/api` |
+| Folder split BE / FE / mobile | ✅ `apps/api`, `apps/web`, `apps/mobile` |
+| Web → API | ⏳ Web still uses Server Actions; switch next |
+| Mobile → API | ⏳ Mobile still uses Supabase client for CRUD |
+| Auth | ✅ Clients keep Supabase Auth |
+| DB / RLS | ✅ Unchanged |
+
+See [`apps/api/README.md`](./apps/api/README.md) for endpoints and run instructions.
 
 ---
 
@@ -44,10 +89,10 @@ Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
 
 ### 3.1 Authentication
 
-- Email/password **sign up** and **login** (`src/app/(auth)/`)
-- Server actions in `src/app/actions/auth.ts`
-- Middleware session refresh via `@supabase/ssr` (`src/middleware.ts`, `src/lib/supabase/middleware.ts`)
-- Protected app routes under `src/app/(app)/`
+- Email/password **sign up** and **login** (`apps/web/src/app/(auth)/`)
+- Server actions in `apps/web/src/app/actions/auth.ts`
+- Middleware session refresh via `@supabase/ssr` (`apps/web/src/middleware.ts`)
+- Protected app routes under `apps/web/src/app/(app)/`
 
 ### 3.2 Multi-account wallets
 
@@ -63,7 +108,7 @@ Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
 - Filters: search, account, category, type, date range
 - Recurring flag + frequency (`weekly` / `monthly` / `yearly`)
 - Page: `/transactions`
-- Actions: `src/app/actions/transactions.ts`
+- Actions: `apps/web/src/app/actions/transactions.ts`
 
 ### 3.4 Categories & budgets
 
@@ -79,7 +124,7 @@ Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
 - Empty-state guidance for first transaction
 - Summary of balances, recent activity, and budget health
 - Page: `/dashboard`
-- Data helpers: `src/app/actions/dashboard.ts`
+- Data helpers: `apps/web/src/app/actions/dashboard.ts`
 
 ### 3.6 Analytics
 
@@ -99,7 +144,7 @@ Paid / Pro models are intentionally excluded in `src/lib/ai.ts`.
 - Manual exchange rates (`exchange_rates` table)
 - Supported currencies: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, SGD
 - Page: `/settings`
-- Helpers: `src/lib/currency.ts`, `src/app/actions/settings.ts`
+- Helpers: `apps/web/src/lib/currency.ts`, `apps/web/src/app/actions/settings.ts`
 
 ### 3.9 Quick Add (AI-first, ~30 seconds)
 
@@ -141,59 +186,27 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 
 ```
 money-manager/
-├── public/
-│   ├── icons/                 # PWA icons
-│   ├── manifest.webmanifest
-│   └── sw.js                  # Service worker
-├── src/
-│   ├── app/
-│   │   ├── (app)/             # Authenticated app shell
-│   │   │   ├── add/           # Quick Add hub (AI + manual)
-│   │   │   ├── accounts/
-│   │   │   ├── analytics/
-│   │   │   ├── budgets/
-│   │   │   ├── dashboard/
-│   │   │   ├── import/        # Redirects to /add
-│   │   │   ├── more/          # Secondary links (mobile)
-│   │   │   ├── recurring/
-│   │   │   ├── settings/
-│   │   │   ├── transactions/
-│   │   │   └── layout.tsx
-│   │   ├── (auth)/
-│   │   │   ├── login/
-│   │   │   └── signup/
-│   │   ├── actions/           # Server Actions
-│   │   │   ├── accounts.ts
-│   │   │   ├── ai.ts
-│   │   │   ├── auth.ts
-│   │   │   ├── categories.ts
-│   │   │   ├── dashboard.ts
-│   │   │   ├── settings.ts
-│   │   │   └── transactions.ts
-│   │   ├── layout.tsx
-│   │   ├── page.tsx           # Marketing / landing
-│   │   └── globals.css
-│   ├── components/
-│   │   ├── accounts/
-│   │   ├── ai/
-│   │   ├── analytics/
-│   │   ├── budgets/
-│   │   ├── layout/
-│   │   ├── pwa/
-│   │   ├── settings/
-│   │   ├── transactions/
-│   │   └── ui/                # Button, Card, Dialog, etc.
-│   ├── lib/
-│   │   ├── ai.ts              # Gemini Flash helpers
-│   │   ├── currency.ts
-│   │   ├── schemas.ts         # Zod schemas
-│   │   ├── types.ts
-│   │   ├── utils.ts
-│   │   └── supabase/          # client, server, middleware
-│   └── middleware.ts
-└── supabase/
-    └── migrations/
-        └── 001_initial.sql    # Schema + RLS + triggers
+├── apps/
+│   ├── api/                   # Backend (.NET)
+│   │   ├── Dockerfile
+│   │   ├── Ledgerly.sln
+│   │   └── src/Ledgerly.Api/
+│   │       ├── Controllers/   # /v1/* endpoints
+│   │       ├── Services/
+│   │       ├── Infrastructure/
+│   │       ├── Models/
+│   │       └── Helpers/
+│   ├── web/                   # Frontend (Next.js)
+│   │   ├── public/            # PWA assets
+│   │   ├── src/
+│   │   │   ├── app/           # routes + transitional Server Actions
+│   │   │   ├── components/
+│   │   │   └── lib/
+│   │   └── package.json
+│   └── mobile/                # Mobile (Flutter)
+│       ├── lib/
+│       └── pubspec.yaml
+└── supabase/migrations/       # Schema + RLS + triggers
 ```
 
 ---
@@ -227,34 +240,46 @@ Defined in `supabase/migrations/001_initial.sql`.
 
 ## 6. Environment Variables
 
-Copy `.env.example` → `.env.local`:
+### Web (`.env.local` in `apps/web`)
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 GOOGLE_GENERATIVE_AI_API_KEY=your-google-ai-api-key
+# NEXT_PUBLIC_API_URL=http://localhost:5080   # when web calls Ledgerly.Api
 ```
 
-| Variable | Used for |
-|----------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser + server Supabase client |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini Flash via AI SDK (receipt/SMS) |
+### API (`apps/api` — env or appsettings)
 
-Never commit `.env.local`.
+```env
+Supabase__Url=https://your-project.supabase.co
+Supabase__AnonKey=your-anon-key
+Supabase__JwtSecret=your-jwt-secret
+Gemini__ApiKey=your-google-ai-api-key
+```
+
+Never commit secrets. JWT secret is in Supabase Dashboard → Project Settings → API.
 
 ---
 
 ## 7. Setup & Run
 
-1. `npm install`
-2. Configure `.env.local` (see above)
+### API
+
+1. Install [.NET 9 SDK](https://dotnet.microsoft.com/download)
+2. Configure Supabase + Gemini (see §6 / `apps/api/.env.example`)
+3. `cd apps/api/src/Ledgerly.Api && dotnet run`
+4. Swagger: http://localhost:5080/swagger
+
+### Web (transitional)
+
+1. `cd apps/web && npm install`
+2. Configure `apps/web/.env.local` (see §6)
 3. In Supabase SQL Editor, run `supabase/migrations/001_initial.sql`
 4. Enable Email provider in Supabase Auth
-5. Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/)
-6. `npm run dev` → [http://localhost:3000](http://localhost:3000)
+5. `npm run dev` → http://localhost:3000
 
-### Scripts
+### Scripts (web)
 
 | Command | Description |
 |---------|-------------|
@@ -263,19 +288,27 @@ Never commit `.env.local`.
 | `npm start` | Start production server |
 | `npm run lint` | ESLint |
 
+### Scripts (API)
+
+| Command | Description |
+|---------|-------------|
+| `dotnet run` | Run API (port 5080) |
+| `dotnet build` | Build |
+| `docker build -t ledgerly-api .` | From `apps/api/` |
+
 ---
 
 ## 8. Key Design Decisions
 
-1. **30-second add first** — `/add` is the primary daily action; secondary tools live under More.  
-2. **Server Actions over REST** — mutations live under `src/app/actions/` for type-safe Next.js data flow.  
-3. **Shared Zod schemas** — same schemas validate UI input and AI `generateObject` output.  
-4. **Human-in-the-loop AI** — extraction always goes through a review modal; nothing saves until the user confirms.  
-5. **Flash-only AI** — keeps cost at free-tier; automatic fallback from 2.5 → 2.0 Flash.  
-6. **Sensible defaults** — today, first account, AI category guess; user only fixes mistakes.  
-7. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
-8. **RLS by default** — every table is user-scoped; no service-role key in the client.  
-9. **PWA-ready** — manifest + SW for installable / offline-capable shell.  
+1. **Shared .NET API** — web and mobile share one REST backend (`apps/api`); business logic lives once.  
+2. **30-second add first** — `/add` is the primary daily action; secondary tools live under More.  
+3. **Supabase Auth + JWT to API** — clients login with Supabase; API validates and forwards the token for RLS.  
+4. **Human-in-the-loop AI** — extraction always goes through a review step; nothing saves until the user confirms.  
+5. **Flash-only AI** — keeps cost at free-tier; automatic fallback across Flash models.  
+6. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
+7. **RLS by default** — every table is user-scoped; no service-role key in clients.  
+8. **PWA-ready web** — manifest + SW for installable / offline-capable shell.  
+9. **Transitional Server Actions** — Next.js `apps/web/src/app/actions/` still works until the web client is fully switched to `/v1`.  
 
 ---
 
@@ -301,27 +334,25 @@ Never commit `.env.local`.
 
 ## 10. What Was Built (Checklist)
 
+- [x] ASP.NET Core 9 shared API (`apps/api`) with JWT + `/v1` resources + AI  
+- [x] Docker support for API deploy  
 - [x] Next.js 15 + TypeScript + Tailwind project scaffold  
 - [x] Supabase client/server/middleware helpers  
-- [x] Auth pages + server actions  
+- [x] Auth pages + server actions (web transitional)  
 - [x] Full SQL migration (tables, RLS, signup seed, balance triggers)  
-- [x] Accounts management UI  
-- [x] Transactions CRUD + filters + transfers  
-- [x] Categories & budget tracking with alerts  
-- [x] Dashboard summary + Quick Add launch pad  
-- [x] Analytics charts (Recharts)  
-- [x] Recurring transactions page  
-- [x] Settings (profile, base currency, exchange rates)  
+- [x] Accounts / transactions / budgets / dashboard / analytics / settings (web)  
 - [x] Quick Add hub: receipt, SMS, one-line text, manual  
-- [x] Slim confirm modal (category chips, More for extras)  
-- [x] Nav: Home / Add / Activity / More  
+- [x] Flutter mobile scaffold (direct Supabase CRUD; API next)  
 - [x] PWA manifest, icons, service worker  
-- [x] Landing page branding (Ledgerly)  
+- [ ] Wire Next.js UI to Ledgerly.Api (retire Server Actions)  
+- [ ] Wire Flutter repositories to Ledgerly.Api  
 
 ---
 
-## 11. Possible Next Steps (not implemented)
+## 11. Possible Next Steps
 
+- Point Next.js web at `Ledgerly.Api` (`NEXT_PUBLIC_API_URL`) and retire Server Actions  
+- Point Flutter repositories at the same REST API (keep Supabase only for auth)  
 - Automated recurring transaction generation on schedule  
 - Bank CSV import without AI  
 - Shared household / multi-user households  
@@ -331,4 +362,4 @@ Never commit `.env.local`.
 
 ---
 
-*This document reflects the application including the 30-second Quick Add UX.*
+*This document reflects the application including the ASP.NET Core shared-API architecture.*

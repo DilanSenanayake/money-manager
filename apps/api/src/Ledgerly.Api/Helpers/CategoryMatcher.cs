@@ -1,0 +1,103 @@
+using Ledgerly.Api.Models;
+
+namespace Ledgerly.Api.Helpers;
+
+public static class CategoryMatcher
+{
+    private static readonly Dictionary<string, string[]> ExpenseAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Dining"] =
+        [
+            "dining", "restaurant", "cafe", "coffee", "starbucks", "food", "lunch", "dinner",
+            "breakfast", "mcdonald", "kfc", "pizza", "uber eats", "doordash"
+        ],
+        ["Groceries"] =
+        [
+            "grocery", "groceries", "supermarket", "market", "walmart", "costco", "whole foods",
+            "trader joe"
+        ],
+        ["Transport"] =
+        [
+            "transport", "uber", "lyft", "taxi", "fuel", "gas", "petrol", "parking", "metro",
+            "bus", "train", "grab"
+        ],
+        ["Shopping"] =
+        [
+            "shopping", "amazon", "mall", "clothing", "apparel", "store", "retail"
+        ],
+        ["Utilities"] =
+        [
+            "utility", "utilities", "electric", "water", "internet", "wifi", "phone", "bill",
+            "gas bill"
+        ],
+        ["Health"] =
+        [
+            "health", "pharmacy", "medical", "doctor", "hospital", "dental", "clinic"
+        ],
+        ["Entertainment"] =
+        [
+            "entertainment", "movie", "netflix", "spotify", "game", "cinema", "concert"
+        ],
+        ["Rent"] = ["rent", "mortgage", "housing", "lease"],
+        ["Other"] = ["other", "misc", "general"],
+    };
+
+    private static readonly Dictionary<string, string[]> IncomeAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Salary"] = ["salary", "paycheck", "wage", "payroll"],
+        ["Freelance"] = ["freelance", "contract", "gig", "client"],
+        ["Investments"] = ["investment", "dividend", "interest", "stock"],
+    };
+
+    public static Guid? MatchCategoryId(
+        IEnumerable<Category> categories,
+        string type,
+        params string?[] hints)
+    {
+        var pool = categories.Where(c => c.Type == type).ToList();
+        if (pool.Count == 0) return null;
+
+        var joined = string.Join(
+            " ",
+            hints.Where(h => !string.IsNullOrWhiteSpace(h)).Select(h => h!.Trim().ToLowerInvariant()));
+
+        if (string.IsNullOrWhiteSpace(joined))
+        {
+            return pool.FirstOrDefault(c => c.Name.Equals("Other", StringComparison.OrdinalIgnoreCase))?.Id;
+        }
+
+        foreach (var c in pool)
+        {
+            var name = c.Name.ToLowerInvariant();
+            if (joined == name || joined.Contains(name) || name.Contains(joined))
+                return c.Id;
+        }
+
+        var aliases = type == CategoryTypes.Expense ? ExpenseAliases : IncomeAliases;
+        foreach (var (canonical, words) in aliases)
+        {
+            if (words.Any(w => joined.Contains(w, StringComparison.Ordinal)))
+            {
+                var found = pool.FirstOrDefault(c =>
+                    c.Name.Equals(canonical, StringComparison.OrdinalIgnoreCase));
+                if (found is not null) return found.Id;
+            }
+        }
+
+        var tokens = joined.Split(
+            [' ', '-', '_', '/', ',', '.', ';', ':', '|'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(t => t.Length > 2)
+            .ToArray();
+
+        foreach (var c in pool)
+        {
+            var name = c.Name.ToLowerInvariant();
+            if (tokens.Any(t => name.Contains(t) || t.Contains(name)))
+                return c.Id;
+        }
+
+        return pool.FirstOrDefault(c => c.Name.Equals("Other", StringComparison.OrdinalIgnoreCase))?.Id
+               ?? pool[^1].Id;
+    }
+}

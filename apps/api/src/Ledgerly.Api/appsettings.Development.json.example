@@ -1,0 +1,22 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information"
+    }
+  },
+  "Supabase": {
+    "Url": "",
+    "AnonKey": "",
+    "JwtSecret": ""
+  },
+  "Gemini": {
+    "ApiKey": ""
+  },
+  "Cors": {
+    "Origins": [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000"
+    ]
+  }
+}
