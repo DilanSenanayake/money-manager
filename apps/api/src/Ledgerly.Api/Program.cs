@@ -71,33 +71,62 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-if (string.IsNullOrWhiteSpace(supabase.JwtSecret))
+var supabaseUrl = (supabase.Url ?? "").TrimEnd('/');
+var authIssuer = string.IsNullOrWhiteSpace(supabaseUrl)
+    ? "supabase"
+    : $"{supabaseUrl}/auth/v1";
+
+// Asymmetric signing keys (ES256/RS256): validate via JWKS from Supabase Auth.
+// Legacy: optional long HS256 shared secret (not a signing-key UUID/kid).
+var useJwks = !string.IsNullOrWhiteSpace(supabaseUrl);
+var legacySecret = GetLegacyJwtSecret(supabase.JwtSecret);
+
+if (!useJwks && legacySecret is null)
 {
-    Console.WriteLine("WARNING: Supabase:JwtSecret is not configured. Auth will reject tokens.");
+    Console.WriteLine(
+        "WARNING: Supabase:Url is empty and no legacy JwtSecret is set. Auth will reject tokens.");
+}
+else if (useJwks)
+{
+    Console.WriteLine($"Auth: validating JWTs via JWKS ({authIssuer}/.well-known/jwks.json)");
+}
+else
+{
+    Console.WriteLine("Auth: validating JWTs with legacy HS256 JwtSecret");
 }
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        if (useJwks)
+        {
+            options.MetadataAddress =
+                $"{authIssuer}/.well-known/openid-configuration";
+            options.RequireHttpsMetadata = supabaseUrl.StartsWith(
+                "https://",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = string.IsNullOrWhiteSpace(supabase.Url)
-                ? "supabase"
-                : $"{supabase.Url.TrimEnd('/')}/auth/v1",
+            ValidIssuer = authIssuer,
             ValidateAudience = true,
             ValidAudience = "authenticated",
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    string.IsNullOrWhiteSpace(supabase.JwtSecret)
-                        ? "dev-placeholder-secret-at-least-32-chars!!"
-                        : supabase.JwtSecret)),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(2),
             NameClaimType = "sub",
         };
+
+        if (!useJwks)
+        {
+            options.TokenValidationParameters.IssuerSigningKey =
+                new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(
+                        legacySecret ?? "dev-placeholder-secret-at-least-32-chars!!"));
+        }
     });
 
 builder.Services.AddAuthorization();
@@ -126,3 +155,14 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// Legacy JWT secret is a long shared HMAC string — not a signing-key id (UUID/kid).
+/// </summary>
+static string? GetLegacyJwtSecret(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value)) return null;
+    if (Guid.TryParse(value, out _)) return null;
+    if (value.Length < 32) return null;
+    return value;
+}

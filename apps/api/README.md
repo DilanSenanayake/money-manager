@@ -15,9 +15,9 @@ Copy values into `src/Ledgerly.Api/appsettings.Development.json` or set env vars
 
 | Env var | Purpose |
 |---------|---------|
-| `Supabase__Url` | Supabase project URL |
-| `Supabase__AnonKey` | Anon/public key |
-| `Supabase__JwtSecret` | JWT secret (Project Settings → API) |
+| `Supabase__Url` | Supabase project URL (required; JWKS auth uses this) |
+| `Supabase__AnonKey` | Anon/publishable key |
+| `Supabase__JwtSecret` | Optional legacy HS256 secret — skip if using asymmetric signing keys |
 | `Gemini__ApiKey` | Google Generative AI key |
 | `Cors__Origins__0` | Allowed web origin (e.g. `http://localhost:3000`) |
 

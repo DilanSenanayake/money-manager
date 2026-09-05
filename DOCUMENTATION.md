@@ -66,7 +66,7 @@ money-manager/
 
 1. Web/mobile sign in with Supabase Auth → access token  
 2. Client calls `GET/POST …/v1/*` with `Authorization: Bearer <token>`  
-3. API validates JWT (`Supabase:JwtSecret`)  
+3. API validates JWT (JWKS / optional legacy `Supabase:JwtSecret`)  
 4. API calls Supabase PostgREST with the same JWT → **RLS enforced**  
 5. AI parse endpoints use Gemini; secrets stay on the API  
 
@@ -259,11 +259,12 @@ NEXT_PUBLIC_API_URL=http://localhost:5080
 ```env
 Supabase__Url=https://your-project.supabase.co
 Supabase__AnonKey=your-anon-key
-Supabase__JwtSecret=your-jwt-secret
+# Optional legacy HS256 only — asymmetric keys use JWKS automatically from Url
+# Supabase__JwtSecret=your-legacy-jwt-secret
 Gemini__ApiKey=your-google-ai-api-key
 ```
 
-Never commit secrets. JWT secret is in Supabase Dashboard → Project Settings → API.
+Never commit secrets. With asymmetric JWT signing keys (default on newer Supabase projects), the API validates tokens via JWKS — do not put a signing-key id in `JwtSecret`.
 
 ---
 
