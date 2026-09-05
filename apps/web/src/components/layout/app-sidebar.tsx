@@ -138,7 +138,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Mobile"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[color-mix(in_oklab,var(--surface)_92%,transparent)] px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
     >
       <div className="mx-auto flex max-w-lg items-end">
         {mobileTabs.map(({ href, label, icon: Icon, emphasize }) => {

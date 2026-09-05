@@ -36,16 +36,16 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/icons/") ||
     path === "/favicon.ico";
 
-  // If Supabase is unreachable (bad URL / paused project / DNS), do not block the page.
+  // Fast session check from cookie; server actions still validate with getUser().
   let user = null;
   try {
     const result = await Promise.race([
-      supabase.auth.getUser(),
+      supabase.auth.getSession(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Supabase auth timeout")), 4000)
+        setTimeout(() => reject(new Error("Supabase auth timeout")), 2000)
       ),
     ]);
-    user = result.data.user;
+    user = result.data.session?.user ?? null;
   } catch {
     if (!isPublic && !path.startsWith("/_next")) {
       const url = request.nextUrl.clone();

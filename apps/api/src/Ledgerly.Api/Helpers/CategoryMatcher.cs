@@ -66,38 +66,62 @@ public static class CategoryMatcher
             return pool.FirstOrDefault(c => c.Name.Equals("Other", StringComparison.OrdinalIgnoreCase))?.Id;
         }
 
-        foreach (var c in pool)
+        // Prefer longer / exact category names first to avoid "other" matching inside "mother"
+        foreach (var c in pool.OrderByDescending(c => c.Name.Length))
         {
             var name = c.Name.ToLowerInvariant();
-            if (joined == name || joined.Contains(name) || name.Contains(joined))
+            if (joined == name || HasWord(joined, name))
                 return c.Id;
         }
 
         var aliases = type == CategoryTypes.Expense ? ExpenseAliases : IncomeAliases;
-        foreach (var (canonical, words) in aliases)
+        var ranked = aliases
+            .SelectMany(kv => kv.Value.Select(w => (Canonical: kv.Key, Word: w)))
+            .OrderByDescending(x => x.Word.Length);
+
+        foreach (var (canonical, word) in ranked)
         {
-            if (words.Any(w => joined.Contains(w, StringComparison.Ordinal)))
+            if (!HasWord(joined, word) && !joined.Contains(word, StringComparison.Ordinal))
+                continue;
+            // Prefer multi-word / longer aliases: require Contains for phrases, word for singles
+            if (word.Contains(' '))
             {
-                var found = pool.FirstOrDefault(c =>
-                    c.Name.Equals(canonical, StringComparison.OrdinalIgnoreCase));
-                if (found is not null) return found.Id;
+                if (!joined.Contains(word, StringComparison.Ordinal)) continue;
             }
+            else if (!HasWord(joined, word))
+            {
+                continue;
+            }
+
+            var found = pool.FirstOrDefault(c =>
+                c.Name.Equals(canonical, StringComparison.OrdinalIgnoreCase));
+            if (found is not null) return found.Id;
         }
 
         var tokens = joined.Split(
-            [' ', '-', '_', '/', ',', '.', ';', ':', '|'],
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                [' ', '-', '_', '/', ',', '.', ';', ':', '|', '&', '+'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(t => t.Length > 2)
             .ToArray();
 
-        foreach (var c in pool)
+        foreach (var c in pool.OrderByDescending(c => c.Name.Length))
         {
             var name = c.Name.ToLowerInvariant();
-            if (tokens.Any(t => name.Contains(t) || t.Contains(name)))
+            if (tokens.Any(t => name == t || (t.Length >= 4 && (name.Contains(t) || t.Contains(name)))))
                 return c.Id;
         }
 
         return pool.FirstOrDefault(c => c.Name.Equals("Other", StringComparison.OrdinalIgnoreCase))?.Id
                ?? pool[^1].Id;
+    }
+
+    private static bool HasWord(string haystack, string needle)
+    {
+        if (string.IsNullOrEmpty(needle)) return false;
+        if (haystack == needle) return true;
+        var parts = haystack.Split(
+            [' ', '-', '_', '/', ',', '.', ';', ':', '|', '&', '+'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Any(p => p == needle);
     }
 }

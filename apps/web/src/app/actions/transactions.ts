@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/auth";
 import { matchCategoryId } from "@/lib/category-match";
 import {
   transactionFilterSchema,
@@ -9,15 +9,6 @@ import {
   type TransactionFilter,
   type TransactionInput,
 } from "@/lib/schemas";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-  return { supabase, user };
-}
 
 export async function getTransactions(filters: TransactionFilter = {}) {
   const parsed = transactionFilterSchema.parse(filters);
@@ -36,7 +27,7 @@ export async function getTransactions(filters: TransactionFilter = {}) {
   if (parsed.from) query = query.gte("date", parsed.from);
   if (parsed.to) query = query.lte("date", parsed.to);
   if (parsed.q) {
-    const safe = parsed.q.replace(/[%_,]/g, "").trim();
+    const safe = parsed.q.replace(/[%_,().]/g, "").trim();
     if (safe) {
       query = query.or(`merchant.ilike.%${safe}%,notes.ilike.%${safe}%`);
     }
@@ -57,6 +48,24 @@ export async function createTransaction(input: TransactionInput) {
     }
     if (parsed.transfer_to_account_id === parsed.account_id) {
       return { error: "Pick two different accounts for a transfer" };
+    }
+
+    const { data: transferAccounts } = await supabase
+      .from("accounts")
+      .select("id, currency")
+      .eq("user_id", user.id)
+      .in("id", [parsed.account_id, parsed.transfer_to_account_id]);
+    const from = transferAccounts?.find((a) => a.id === parsed.account_id);
+    const to = transferAccounts?.find(
+      (a) => a.id === parsed.transfer_to_account_id
+    );
+    if (!from || !to) {
+      return { error: "One of the accounts was not found" };
+    }
+    if (from.currency !== to.currency) {
+      return {
+        error: "Transfers must be between accounts that share the same currency",
+      };
     }
 
     const pairId = crypto.randomUUID();
@@ -137,6 +146,19 @@ export async function updateTransaction(id: string, input: TransactionInput) {
   }
 
   const { supabase, user } = await requireUser();
+
+  const { data: existing } = await supabase
+    .from("transactions")
+    .select("id, transfer_pair_id, type")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!existing) return { error: "Transaction not found" };
+  if (existing.transfer_pair_id || existing.type === "transfer") {
+    return { error: "Edit transfers by deleting and recreating them" };
+  }
+
   const { error } = await supabase
     .from("transactions")
     .update({

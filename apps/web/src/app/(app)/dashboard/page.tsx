@@ -167,7 +167,16 @@ export default async function DashboardPage() {
           </Button>
         </CardHeader>
         <CardContent className="space-y-1">
-          {data.recent.map((tx) => (
+          {data.recent.map((tx) => {
+            const direction = (
+              tx as { transfer_direction?: string | null }
+            ).transfer_direction;
+            const sign =
+              tx.type === "income" ||
+              (tx.type === "transfer" && direction === "in")
+                ? "+"
+                : "-";
+            return (
             <div
               key={tx.id}
               className="flex items-center justify-between gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-[var(--background)]"
@@ -194,19 +203,20 @@ export default async function DashboardPage() {
               </div>
               <p
                 className={`shrink-0 text-sm font-semibold tabular-nums ${
-                  tx.type === "income"
+                  sign === "+"
                     ? "text-[var(--success)]"
                     : "text-[var(--danger)]"
                 }`}
               >
-                {tx.type === "income" ? "+" : "-"}
+                {sign}
                 {formatMoney(
                   Number(tx.amount),
                   tx.account?.currency ?? data.baseCurrency
                 )}
               </p>
             </div>
-          ))}
+            );
+          })}
           {!isEmpty && data.recent.length === 0 && (
             <p className="px-2 py-4 text-sm text-[var(--muted)]">
               No transactions yet.

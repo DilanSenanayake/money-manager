@@ -54,6 +54,18 @@ public sealed class AccountsService(ISupabaseRestClient supabase, ICurrentUser u
 
         try
         {
+            var existing = await supabase.GetSingleAsync<Account>(
+                "accounts",
+                $"id=eq.{id}&user_id=eq.{user.UserId}",
+                ct);
+            if (existing is null)
+                return Result.Fail("Account not found");
+            if (existing.Currency != request.Currency && existing.Balance != 0)
+            {
+                return Result.Fail(
+                    "Change currency only when the balance is zero, or transfer funds out first");
+            }
+
             // Never overwrite live balance — DB triggers keep it in sync
             await supabase.UpdateAsync(
                 "accounts",

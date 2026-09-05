@@ -1,7 +1,5 @@
 "use client";
 
-import { createWorker } from "tesseract.js";
-
 export type OcrProgress = {
   status: string;
   progress: number;
@@ -9,11 +7,13 @@ export type OcrProgress = {
 
 /**
  * Browser-side OCR. Returns cleaned plain text for structuring.
+ * Tesseract is loaded on demand so it doesn't slow down other pages.
  */
 export async function extractTextFromImage(
   file: File | Blob,
   onProgress?: (info: OcrProgress) => void
 ): Promise<{ text: string } | { error: string }> {
+  const { createWorker } = await import("tesseract.js");
   let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
 
   try {

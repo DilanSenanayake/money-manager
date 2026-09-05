@@ -1,17 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/auth";
 import { categorySchema, type CategoryInput } from "@/lib/schemas";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-  return { supabase, user };
-}
 
 export async function getCategories() {
   const { supabase, user } = await requireUser();

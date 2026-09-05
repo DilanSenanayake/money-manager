@@ -24,7 +24,6 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
 
         try
         {
-            var existing = await GetProfileAsync(ct);
             await supabase.UpdateAsync(
                 "profiles",
                 $"id=eq.{user.UserId}",
@@ -35,15 +34,8 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
                 },
                 ct);
 
-            if (existing is not null &&
-                existing.BaseCurrency != request.BaseCurrency)
-            {
-                await supabase.UpdateAsync(
-                    "accounts",
-                    $"user_id=eq.{user.UserId}&currency=eq.{existing.BaseCurrency}",
-                    new { currency = request.BaseCurrency },
-                    ct);
-            }
+            // Do not relabel wallet currencies when base currency changes —
+            // that silently reinterpreted balances (e.g. 1000 USD → 1000 EUR).
 
             return Result.Ok();
         }

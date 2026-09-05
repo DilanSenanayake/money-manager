@@ -213,7 +213,12 @@ money-manager/
 
 ## 5. Database Schema
 
-Defined in `supabase/migrations/001_initial.sql`.
+Defined in `supabase/migrations/001_initial.sql` (plus later migrations).
+
+Run in order:
+1. `001_initial.sql`
+2. `002_other_budget.sql`
+3. `003_credit_balance_polarity.sql` — credit cards use positive “owed”; charges increase owed, payments decrease it
 
 ### Tables
 

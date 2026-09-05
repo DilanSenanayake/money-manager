@@ -94,6 +94,13 @@ function normalize(s: string) {
   return s.toLowerCase().trim();
 }
 
+function hasWord(haystack: string, needle: string) {
+  if (!needle) return false;
+  if (haystack === needle) return true;
+  const parts = haystack.split(/[^a-z0-9]+/).filter(Boolean);
+  return parts.includes(needle);
+}
+
 /**
  * Resolve a category id from LLM/user labels and optional merchant text.
  */
@@ -114,29 +121,41 @@ export function matchCategoryId(
     return other?.id ?? null;
   }
 
-  // Exact / partial name match
-  for (const c of pool) {
+  // Longer names first so "other" does not match inside "mother"
+  const byLength = [...pool].sort((a, b) => b.name.length - a.name.length);
+  for (const c of byLength) {
     const name = c.name.toLowerCase();
-    if (joined === name || joined.includes(name) || name.includes(joined)) {
+    if (joined === name || hasWord(joined, name)) {
       return c.id;
     }
   }
 
   const aliases = type === "expense" ? EXPENSE_ALIASES : INCOME_ALIASES;
-  for (const [canonical, words] of Object.entries(aliases)) {
-    if (words.some((w) => joined.includes(w))) {
-      const found = pool.find(
-        (c) => c.name.toLowerCase() === canonical.toLowerCase()
-      );
-      if (found) return found.id;
-    }
+  const ranked = Object.entries(aliases)
+    .flatMap(([canonical, words]) =>
+      words.map((word) => ({ canonical, word }))
+    )
+    .sort((a, b) => b.word.length - a.word.length);
+
+  for (const { canonical, word } of ranked) {
+    const matched = word.includes(" ")
+      ? joined.includes(word)
+      : hasWord(joined, word);
+    if (!matched) continue;
+    const found = pool.find(
+      (c) => c.name.toLowerCase() === canonical.toLowerCase()
+    );
+    if (found) return found.id;
   }
 
-  // Token overlap with category names
   const tokens = joined.split(/[^a-z0-9]+/).filter((t) => t.length > 2);
-  for (const c of pool) {
+  for (const c of byLength) {
     const name = c.name.toLowerCase();
-    if (tokens.some((t) => name.includes(t) || t.includes(name))) {
+    if (
+      tokens.some(
+        (t) => name === t || (t.length >= 4 && (name.includes(t) || t.includes(name)))
+      )
+    ) {
       return c.id;
     }
   }

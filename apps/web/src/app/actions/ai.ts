@@ -21,16 +21,7 @@ import {
   type ReceiptExtraction,
   type SmsExtraction,
 } from "@/lib/schemas";
-import { createClient } from "@/lib/supabase/server";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-  return { supabase, user };
-}
+import { requireUser } from "@/lib/supabase/auth";
 
 /** Try Flash models in order; avoid burning retries on quota errors. */
 async function generateWithFallback<T>(

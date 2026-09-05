@@ -62,6 +62,15 @@ public sealed class SupabaseRestClient(
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>
+    /// Write options that keep explicit nulls so PostgREST can clear nullable columns.
+    /// </summary>
+    private static readonly JsonSerializerOptions WriteJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+    };
+
     private HttpClient Client => httpClientFactory.CreateClient("supabase");
 
     private Uri BuildUri(string relative)
@@ -127,7 +136,7 @@ public sealed class SupabaseRestClient(
     public async Task UpdateAsync(string table, string filterQuery, object payload, CancellationToken ct = default)
     {
         using var request = CreateRequest(HttpMethod.Patch, $"{table}?{filterQuery}");
-        request.Content = JsonContent(payload);
+        request.Content = JsonContent(payload, includeNulls: true);
         using var response = await Client.SendAsync(request, ct);
         var body = await response.Content.ReadAsStringAsync(ct);
         if (!response.IsSuccessStatusCode)
@@ -156,8 +165,11 @@ public sealed class SupabaseRestClient(
             throw new InvalidOperationException(ParseError(body, response.StatusCode));
     }
 
-    private static StringContent JsonContent(object payload) =>
-        new(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json");
+    private static StringContent JsonContent(object payload, bool includeNulls = false) =>
+        new(
+            JsonSerializer.Serialize(payload, includeNulls ? WriteJsonOptions : JsonOptions),
+            Encoding.UTF8,
+            "application/json");
 
     private static string ParseError(string body, System.Net.HttpStatusCode status)
     {

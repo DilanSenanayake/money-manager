@@ -1,17 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/auth";
 import { accountSchema, type AccountInput } from "@/lib/schemas";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-  return { supabase, user };
-}
 
 export async function getAccounts() {
   const { supabase, user } = await requireUser();
@@ -42,6 +33,25 @@ export async function createAccount(input: AccountInput) {
 export async function updateAccount(id: string, input: AccountInput) {
   const parsed = accountSchema.parse(input);
   const { supabase, user } = await requireUser();
+
+  const { data: existing } = await supabase
+    .from("accounts")
+    .select("id, currency, balance")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!existing) return { error: "Account not found" };
+  if (
+    existing.currency !== parsed.currency &&
+    Number(existing.balance) !== 0
+  ) {
+    return {
+      error:
+        "Change currency only when the balance is zero, or transfer funds out first",
+    };
+  }
+
   // Never overwrite live balance on edit — triggers keep it in sync with transactions
   const { error } = await supabase
     .from("accounts")

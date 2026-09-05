@@ -42,7 +42,8 @@ public sealed class TransactionsService(
             parts.Add($"date=lte.{filter.To}");
         if (!string.IsNullOrWhiteSpace(filter.Q))
         {
-            var safe = filter.Q.Replace("%", "").Replace("_", "").Replace(",", "").Trim();
+            var safe = filter.Q.Replace("%", "").Replace("_", "").Replace(",", "")
+                .Replace("(", "").Replace(")", "").Replace(".", "").Trim();
             if (!string.IsNullOrWhiteSpace(safe))
             {
                 var encoded = Uri.EscapeDataString($"merchant.ilike.%{safe}%,notes.ilike.%{safe}%");
@@ -74,6 +75,17 @@ public sealed class TransactionsService(
                     return Result.Fail("Choose where the money should go");
                 if (request.TransferToAccountId == request.AccountId)
                     return Result.Fail("Pick two different accounts for a transfer");
+
+                var accounts = await supabase.GetListAsync<Account>(
+                    "accounts",
+                    $"user_id=eq.{user.UserId}&or=(id.eq.{request.AccountId},id.eq.{request.TransferToAccountId})",
+                    ct);
+                var from = accounts.FirstOrDefault(a => a.Id == request.AccountId);
+                var to = accounts.FirstOrDefault(a => a.Id == request.TransferToAccountId);
+                if (from is null || to is null)
+                    return Result.Fail("One of the accounts was not found");
+                if (from.Currency != to.Currency)
+                    return Result.Fail("Transfers must be between accounts that share the same currency");
 
                 var pairId = Guid.NewGuid();
                 var baseRow = new Dictionary<string, object?>
@@ -147,9 +159,20 @@ public sealed class TransactionsService(
             return Result.Fail("Edit transfers by deleting and recreating them");
         if (!TransactionTypes.All.Contains(request.Type))
             return Result.Fail("Invalid transaction type");
+        if (request.AccountId == Guid.Empty)
+            return Result.Fail("Choose an account");
 
         try
         {
+            var existing = await supabase.GetSingleAsync<Transaction>(
+                "transactions",
+                $"select=id,transfer_pair_id,type&id=eq.{id}&user_id=eq.{user.UserId}",
+                ct);
+            if (existing is null)
+                return Result.Fail("Transaction not found");
+            if (existing.TransferPairId is not null || existing.Type == TransactionTypes.Transfer)
+                return Result.Fail("Edit transfers by deleting and recreating them");
+
             await supabase.UpdateAsync(
                 "transactions",
                 $"id=eq.{id}&user_id=eq.{user.UserId}",

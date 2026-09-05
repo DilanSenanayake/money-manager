@@ -91,6 +91,15 @@ const incomeAliases = <String, List<String>>{
 
 String _normalize(String s) => s.toLowerCase().trim();
 
+bool _hasWord(String haystack, String needle) {
+  if (needle.isEmpty) return false;
+  if (haystack == needle) return true;
+  return haystack
+      .split(RegExp(r'[^a-z0-9]+'))
+      .where((p) => p.isNotEmpty)
+      .contains(needle);
+}
+
 /// Resolve a category id from LLM/user labels and optional merchant text.
 String? matchCategoryId(
   List<Category> categories,
@@ -110,30 +119,42 @@ String? matchCategoryId(
     return pool.where((c) => c.name.toLowerCase() == 'other').firstOrNull?.id;
   }
 
-  for (final c in pool) {
+  final byLength = [...pool]
+    ..sort((a, b) => b.name.length.compareTo(a.name.length));
+
+  for (final c in byLength) {
     final name = c.name.toLowerCase();
-    if (joined == name || joined.contains(name) || name.contains(joined)) {
+    if (joined == name || _hasWord(joined, name)) {
       return c.id;
     }
   }
 
   final aliases = type == 'expense' ? expenseAliases : incomeAliases;
-  for (final entry in aliases.entries) {
-    if (entry.value.any(joined.contains)) {
-      final found = pool
-          .where((c) => c.name.toLowerCase() == entry.key.toLowerCase())
-          .firstOrNull;
-      if (found != null) return found.id;
-    }
+  final ranked = <({String canonical, String word})>[
+    for (final entry in aliases.entries)
+      for (final word in entry.value) (canonical: entry.key, word: word),
+  ]..sort((a, b) => b.word.length.compareTo(a.word.length));
+
+  for (final item in ranked) {
+    final matched = item.word.contains(' ')
+        ? joined.contains(item.word)
+        : _hasWord(joined, item.word);
+    if (!matched) continue;
+    final found = pool
+        .where((c) => c.name.toLowerCase() == item.canonical.toLowerCase())
+        .firstOrNull;
+    if (found != null) return found.id;
   }
 
   final tokens = joined
       .split(RegExp(r'[^a-z0-9]+'))
       .where((t) => t.length > 2)
       .toList();
-  for (final c in pool) {
+  for (final c in byLength) {
     final name = c.name.toLowerCase();
-    if (tokens.any((t) => name.contains(t) || t.contains(name))) {
+    if (tokens.any(
+      (t) => name == t || (t.length >= 4 && (name.contains(t) || t.contains(name))),
+    )) {
       return c.id;
     }
   }

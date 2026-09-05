@@ -1,7 +1,7 @@
 "use server";
 
 import { format, subMonths } from "date-fns";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/auth";
 import {
   accountCurrencyMap,
   computeNetWorth,
@@ -13,15 +13,6 @@ import {
 } from "@/lib/dates";
 import { budgetStatus } from "@/lib/utils";
 import type { BudgetProgress } from "@/lib/types";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-  return { supabase, user };
-}
 
 export async function getDashboardData() {
   const { supabase, user } = await requireUser();

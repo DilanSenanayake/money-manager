@@ -1,22 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/auth";
 import {
   exchangeRateSchema,
   profileSchema,
   type ExchangeRateInput,
   type ProfileInput,
 } from "@/lib/schemas";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-  return { supabase, user };
-}
 
 export async function getProfile() {
   const { supabase, user } = await requireUser();
@@ -33,27 +24,14 @@ export async function updateProfile(input: ProfileInput) {
   const parsed = profileSchema.parse(input);
   const { supabase, user } = await requireUser();
 
-  const { data: existing } = await supabase
-    .from("profiles")
-    .select("base_currency")
-    .eq("id", user.id)
-    .single();
-
   const { error } = await supabase
     .from("profiles")
     .update(parsed)
     .eq("id", user.id);
   if (error) return { error: error.message };
 
-  // Keep wallets that used the old base currency in sync so displays match
-  const previous = existing?.base_currency;
-  if (previous && previous !== parsed.base_currency) {
-    await supabase
-      .from("accounts")
-      .update({ currency: parsed.base_currency })
-      .eq("user_id", user.id)
-      .eq("currency", previous);
-  }
+  // Do not rewrite account currencies when base currency changes — that
+  // silently reinterpreted balances (e.g. 1000 USD labeled as 1000 EUR).
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");

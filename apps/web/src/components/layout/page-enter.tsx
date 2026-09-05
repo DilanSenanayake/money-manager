@@ -1,9 +1,6 @@
-"use client";
-
-import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-/** Re-triggers enter animation when the route changes. */
+/** Subtle enter animation on first mount only — no remount on route change. */
 export function PageEnter({
   children,
   className,
@@ -11,11 +8,5 @@ export function PageEnter({
   children: React.ReactNode;
   className?: string;
 }) {
-  const pathname = usePathname();
-
-  return (
-    <div key={pathname} className={cn("page-enter", className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("page-enter", className)}>{children}</div>;
 }
