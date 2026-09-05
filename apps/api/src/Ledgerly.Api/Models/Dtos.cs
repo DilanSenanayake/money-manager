@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Ledgerly.Api.Models;
 
@@ -114,22 +115,23 @@ public sealed class CreateTransactionRequest
 
 public sealed class TransactionFilter
 {
-    [JsonPropertyName("q")]
+    // FromQuery Name required — JsonPropertyName does not bind query strings
+    [FromQuery(Name = "q")]
     public string? Q { get; set; }
 
-    [JsonPropertyName("account_id")]
+    [FromQuery(Name = "account_id")]
     public Guid? AccountId { get; set; }
 
-    [JsonPropertyName("category_id")]
+    [FromQuery(Name = "category_id")]
     public Guid? CategoryId { get; set; }
 
-    [JsonPropertyName("type")]
+    [FromQuery(Name = "type")]
     public string? Type { get; set; }
 
-    [JsonPropertyName("from")]
+    [FromQuery(Name = "from")]
     public string? From { get; set; }
 
-    [JsonPropertyName("to")]
+    [FromQuery(Name = "to")]
     public string? To { get; set; }
 }
 

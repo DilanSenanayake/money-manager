@@ -1,29 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/supabase/auth";
+import { apiMutate, apiRequest } from "@/lib/api/client";
+import type { ActionResult } from "@/lib/api/result";
 import { categorySchema, type CategoryInput } from "@/lib/schemas";
+import type { Category } from "@/lib/types";
 
 export async function getCategories() {
-  const { supabase, user } = await requireUser();
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("type")
-    .order("name");
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  return apiRequest<Category[]>("/v1/categories");
 }
 
-export async function createCategory(input: CategoryInput) {
+export async function createCategory(
+  input: CategoryInput
+): Promise<ActionResult> {
   const parsed = categorySchema.parse(input);
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase.from("categories").insert({
-    ...parsed,
-    user_id: user.id,
+  const result = await apiMutate("/v1/categories", {
+    method: "POST",
+    body: parsed,
   });
-  if (error) return { error: error.message };
+  if ("error" in result) return result;
   revalidatePath("/budgets");
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
@@ -31,29 +26,25 @@ export async function createCategory(input: CategoryInput) {
   return { success: true };
 }
 
-export async function updateCategory(id: string, input: CategoryInput) {
+export async function updateCategory(
+  id: string,
+  input: CategoryInput
+): Promise<ActionResult> {
   const parsed = categorySchema.parse(input);
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase
-    .from("categories")
-    .update(parsed)
-    .eq("id", id)
-    .eq("user_id", user.id);
-  if (error) return { error: error.message };
+  const result = await apiMutate(`/v1/categories/${id}`, {
+    method: "PATCH",
+    body: parsed,
+  });
+  if ("error" in result) return result;
   revalidatePath("/budgets");
   revalidatePath("/dashboard");
   revalidatePath("/add");
   return { success: true };
 }
 
-export async function deleteCategory(id: string) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase
-    .from("categories")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
-  if (error) return { error: error.message };
+export async function deleteCategory(id: string): Promise<ActionResult> {
+  const result = await apiMutate(`/v1/categories/${id}`, { method: "DELETE" });
+  if ("error" in result) return result;
   revalidatePath("/budgets");
   revalidatePath("/dashboard");
   return { success: true };

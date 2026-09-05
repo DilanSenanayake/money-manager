@@ -1,16 +1,23 @@
 # Ledgerly Web (Frontend)
 
-Next.js 15 App Router UI for Ledgerly. Auth via Supabase; data/AI should call [`../api`](../api) (`NEXT_PUBLIC_API_URL`).
+Next.js 15 App Router UI for Ledgerly. Auth via Supabase; data and AI go through [`../api`](../api) (`NEXT_PUBLIC_API_URL`).
 
 ## Setup
 
 ```bash
 cp .env.example .env.local
+# Set NEXT_PUBLIC_API_URL to local API or your VM, e.g.:
+#   http://localhost:5080
+#   http://<vm-ip>:8080
 npm install
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Server Actions under `src/app/actions/` call the ASP.NET API with your Supabase access token (Bearer). Auth (sign-in/up/out) stays on Supabase.
+
+Ensure the API allows CORS origin `http://localhost:3000` if you later call it from the browser; server-side actions do not need CORS.
 
 ## Scripts
 
@@ -20,7 +27,3 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run build` | Production build |
 | `npm start` | Start production server |
 | `npm run lint` | ESLint |
-
-## Note
-
-Server Actions under `src/app/actions/` are **transitional**. Prefer the shared ASP.NET API in `apps/api`.

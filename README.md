@@ -63,14 +63,14 @@ Swagger: [http://localhost:5080/swagger](http://localhost:5080/swagger)
 
 ```bash
 cd apps/web
-cp .env.example .env.local   # fill Supabase (+ Gemini while Server Actions remain)
+cp .env.example .env.local   # Supabase + NEXT_PUBLIC_API_URL (local or VM)
 npm install
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-> Web still uses Server Actions for some flows; migrate to `apps/api` next.
+For a remote API: set `NEXT_PUBLIC_API_URL=http://<vm-host>:8080` (same Supabase project as the VM).
 
 ### 4. Mobile — `apps/mobile`
 

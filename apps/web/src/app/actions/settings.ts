@@ -1,37 +1,27 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/supabase/auth";
+import { apiMutate, apiRequest } from "@/lib/api/client";
+import type { ActionResult } from "@/lib/api/result";
 import {
   exchangeRateSchema,
   profileSchema,
   type ExchangeRateInput,
   type ProfileInput,
 } from "@/lib/schemas";
+import type { ExchangeRate, Profile } from "@/lib/types";
 
 export async function getProfile() {
-  const { supabase, user } = await requireUser();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
+  return apiRequest<Profile>("/v1/settings/profile");
 }
 
-export async function updateProfile(input: ProfileInput) {
+export async function updateProfile(input: ProfileInput): Promise<ActionResult> {
   const parsed = profileSchema.parse(input);
-  const { supabase, user } = await requireUser();
-
-  const { error } = await supabase
-    .from("profiles")
-    .update(parsed)
-    .eq("id", user.id);
-  if (error) return { error: error.message };
-
-  // Do not rewrite account currencies when base currency changes — that
-  // silently reinterpreted balances (e.g. 1000 USD labeled as 1000 EUR).
+  const result = await apiMutate("/v1/settings/profile", {
+    method: "PATCH",
+    body: parsed,
+  });
+  if ("error" in result) return result;
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
@@ -46,44 +36,31 @@ export async function updateProfile(input: ProfileInput) {
 }
 
 export async function getExchangeRates() {
-  const { supabase, user } = await requireUser();
-  const { data, error } = await supabase
-    .from("exchange_rates")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  return apiRequest<ExchangeRate[]>("/v1/settings/exchange-rates");
 }
 
-export async function upsertExchangeRate(input: ExchangeRateInput) {
+export async function upsertExchangeRate(
+  input: ExchangeRateInput
+): Promise<ActionResult> {
   const parsed = exchangeRateSchema.parse(input);
   if (parsed.from_currency === parsed.to_currency) {
     return { error: "Currencies must be different" };
   }
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase.from("exchange_rates").upsert(
-    {
-      user_id: user.id,
-      ...parsed,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,from_currency,to_currency" }
-  );
-  if (error) return { error: error.message };
+  const result = await apiMutate("/v1/settings/exchange-rates", {
+    method: "PUT",
+    body: parsed,
+  });
+  if ("error" in result) return result;
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   return { success: true };
 }
 
-export async function deleteExchangeRate(id: string) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase
-    .from("exchange_rates")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
-  if (error) return { error: error.message };
+export async function deleteExchangeRate(id: string): Promise<ActionResult> {
+  const result = await apiMutate(`/v1/settings/exchange-rates/${id}`, {
+    method: "DELETE",
+  });
+  if ("error" in result) return result;
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   return { success: true };

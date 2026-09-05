@@ -76,7 +76,7 @@ money-manager/
 |---------|--------|
 | Shared REST API | ✅ Implemented in `apps/api` |
 | Folder split BE / FE / mobile | ✅ `apps/api`, `apps/web`, `apps/mobile` |
-| Web → API | ⏳ Web still uses Server Actions; switch next |
+| Web → API | ✅ Web Server Actions call Ledgerly.Api (`NEXT_PUBLIC_API_URL`) |
 | Mobile → API | ⏳ Mobile still uses Supabase client for CRUD |
 | Auth | ✅ Clients keep Supabase Auth |
 | DB / RLS | ✅ Unchanged |
@@ -199,7 +199,7 @@ money-manager/
 │   ├── web/                   # Frontend (Next.js)
 │   │   ├── public/            # PWA assets
 │   │   ├── src/
-│   │   │   ├── app/           # routes + transitional Server Actions
+│   │   │   ├── app/           # routes + Server Actions (API proxy)
 │   │   │   ├── components/
 │   │   │   └── lib/
 │   │   └── package.json
@@ -250,8 +250,8 @@ Run in order:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-GOOGLE_GENERATIVE_AI_API_KEY=your-google-ai-api-key
-# NEXT_PUBLIC_API_URL=http://localhost:5080   # when web calls Ledgerly.Api
+NEXT_PUBLIC_API_URL=http://localhost:5080
+# NEXT_PUBLIC_API_URL=http://<vm-host>:8080   # local FE → remote API
 ```
 
 ### API (`apps/api` — env or appsettings)
@@ -276,13 +276,15 @@ Never commit secrets. JWT secret is in Supabase Dashboard → Project Settings �
 3. `cd apps/api/src/Ledgerly.Api && dotnet run`
 4. Swagger: http://localhost:5080/swagger
 
-### Web (transitional)
+### Web
 
 1. `cd apps/web && npm install`
-2. Configure `apps/web/.env.local` (see §6)
+2. Configure `apps/web/.env.local` (see §6) — set `NEXT_PUBLIC_API_URL` to local API or VM
 3. In Supabase SQL Editor, run `supabase/migrations/001_initial.sql`
 4. Enable Email provider in Supabase Auth
 5. `npm run dev` → http://localhost:3000
+
+Local FE against a VM API: set `NEXT_PUBLIC_API_URL=http://<vm-host>:8080` and keep Supabase env pointing at the same project the VM uses.
 
 ### Scripts (web)
 
@@ -313,7 +315,7 @@ Never commit secrets. JWT secret is in Supabase Dashboard → Project Settings �
 6. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
 7. **RLS by default** — every table is user-scoped; no service-role key in clients.  
 8. **PWA-ready web** — manifest + SW for installable / offline-capable shell.  
-9. **Transitional Server Actions** — Next.js `apps/web/src/app/actions/` still works until the web client is fully switched to `/v1`.  
+9. **Thin Server Actions** — Next.js `apps/web/src/app/actions/` forward to Ledgerly.Api with the Supabase JWT; auth stays on Supabase.  
 
 ---
 
@@ -343,21 +345,21 @@ Never commit secrets. JWT secret is in Supabase Dashboard → Project Settings �
 - [x] Docker support for API deploy  
 - [x] Next.js 15 + TypeScript + Tailwind project scaffold  
 - [x] Supabase client/server/middleware helpers  
-- [x] Auth pages + server actions (web transitional)  
+- [x] Auth pages + server actions (Supabase auth; data via API)  
 - [x] Full SQL migration (tables, RLS, signup seed, balance triggers)  
 - [x] Accounts / transactions / budgets / dashboard / analytics / settings (web)  
 - [x] Quick Add hub: receipt, SMS, one-line text, manual  
 - [x] Flutter mobile scaffold (direct Supabase CRUD; API next)  
 - [x] PWA manifest, icons, service worker  
-- [ ] Wire Next.js UI to Ledgerly.Api (retire Server Actions)  
+- [x] Wire Next.js UI to Ledgerly.Api (`NEXT_PUBLIC_API_URL`)  
 - [ ] Wire Flutter repositories to Ledgerly.Api  
 
 ---
 
 ## 11. Possible Next Steps
 
-- Point Next.js web at `Ledgerly.Api` (`NEXT_PUBLIC_API_URL`) and retire Server Actions  
 - Point Flutter repositories at the same REST API (keep Supabase only for auth)  
+- Optionally call Ledgerly.Api from the browser (drop Server Action proxy)  
 - Automated recurring transaction generation on schedule  
 - Bank CSV import without AI  
 - Shared household / multi-user households  
