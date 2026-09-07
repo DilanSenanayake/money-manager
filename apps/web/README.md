@@ -1,6 +1,6 @@
-# Ledgerly Web (Frontend)
+# Smart Money Manager Web (Frontend)
 
-Next.js 15 App Router UI for Ledgerly. Auth via Supabase; data and AI go through [`../api`](../api) (`NEXT_PUBLIC_API_URL`).
+Next.js 15 App Router UI for Smart Money Manager. Auth via Supabase; data and AI go through [`../api`](../api) (`NEXT_PUBLIC_API_URL`).
 
 ## Setup
 

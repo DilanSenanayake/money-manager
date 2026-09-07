@@ -42,7 +42,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             await auth.canCheckBiometrics || await auth.isDeviceSupported();
         if (canCheck) {
           await auth.authenticate(
-            localizedReason: 'Unlock Ledgerly',
+            localizedReason: 'Unlock ${AppConstants.appName}',
             options: const AuthenticationOptions(
               biometricOnly: false,
               stickyAuth: true,
@@ -69,25 +69,27 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             colors: [AppColors.teal50, Color(0xFFE2E8F0), Colors.white],
           ),
         ),
-        child: const SafeArea(
+        child: SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Ledgerly',
-                style: TextStyle(
-                  fontSize: 40,
+                AppConstants.appName,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: AppColors.teal700,
                 ),
               ),
-              SizedBox(height: 12),
-              Text(
-                'Money, logged in seconds',
+              const SizedBox(height: 12),
+              const Text(
+                'Spend smarter. Save better. Live better.',
+                textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.slate),
               ),
-              SizedBox(height: 32),
-              CircularProgressIndicator(),
+              const SizedBox(height: 32),
+              const CircularProgressIndicator(),
             ],
           ),
         ),

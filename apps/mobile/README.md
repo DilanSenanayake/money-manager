@@ -1,6 +1,6 @@
-# Ledgerly Mobile
+# Smart Money Manager Mobile
 
-Flutter (Android / iOS) client for [Ledgerly](../../README.md).
+Flutter (Android / iOS) client for [Smart Money Manager](../../README.md).
 
 Lives under **`apps/mobile`** alongside:
 

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Ledgerly</string>
+	<string>Smart Money Manager</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -54,7 +54,7 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Unlock Ledgerly with Face ID</string>
+	<string>Unlock Smart Money Manager with Face ID</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

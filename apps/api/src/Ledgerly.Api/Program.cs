@@ -48,9 +48,9 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Ledgerly API",
+        Title = "Smart Money Manager API",
         Version = "v1",
-        Description = "Shared backend for Ledgerly web and mobile clients.",
+        Description = "Shared backend for Smart Money Manager web and mobile clients.",
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {

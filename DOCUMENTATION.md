@@ -1,18 +1,19 @@
-# Ledgerly — Project Documentation
+# Smart Money Manager — Project Documentation
 
-Complete record of what was built for the **Ledgerly** money manager & expense tracker.
+Complete record of what was built for **Smart Money Manager**.
 
 ---
 
 ## 1. Overview
 
-Ledgerly is a personal finance product focused on **logging income and expenses in about 30 seconds**. AI (receipt scan, bank SMS, one-line text) fills the form; the user always confirms before save. Accounts, budgets, analytics, and recurring bills support day-to-day tracking.
+Smart Money Manager is a personal finance product built around **Spend smarter. Save better. Live better.** — more than a normal ledger. AI (receipt scan, bank SMS, one-line text) fills the form; the user always confirms before save. Accounts, budgets, analytics, and recurring bills support day-to-day insight, not just data entry.
 
-**Product name:** Ledgerly  
+**Product name:** Smart Money Manager  
+**Tagline:** Spend smarter. Save better. Live better.  
 **Clients:** Progressive Web App (Next.js) + Flutter mobile  
 **Shared backend:** ASP.NET Core 9 REST API (`apps/api`)  
 **Auth:** Supabase Email/Password (JWT passed to API)  
-**Primary UX goal:** Add expense/income in ≤30 seconds with few taps  
+**Primary UX goal:** Effortless capture with AI assist, clear control, and smarter visibility into money  
 
 ---
 
@@ -146,7 +147,7 @@ See [`apps/api/README.md`](./apps/api/README.md) for endpoints and run instructi
 - Page: `/settings`
 - Helpers: `apps/web/src/lib/currency.ts`, `apps/web/src/app/actions/settings.ts`
 
-### 3.9 Quick Add (AI-first, ~30 seconds)
+### 3.9 Quick Add (AI-assisted capture)
 
 Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 
@@ -178,7 +179,7 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 - Desktop: Home / Add / Activity + More group (accounts, budgets, analytics, recurring, settings)
 - Mobile: Home / Activity / **Add** (center) / More
 - More page: `/more` for secondary destinations on mobile
-- Landing page branding Ledgerly (`src/app/page.tsx`)
+- Landing page branding Smart Money Manager (`src/app/page.tsx`)
 
 ---
 

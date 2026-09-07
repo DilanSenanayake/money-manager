@@ -20,7 +20,7 @@ export default async function DashboardPage() {
     <div className="page-stack">
       <PageHeader
         title={firstName ? `Welcome back, ${firstName}` : "Welcome back"}
-        description="Your money at a glance — add spending in about 30 seconds."
+        description="Spend smarter. Save better. Live better."
         actions={
           <Button asChild>
             <Link href="/add">

@@ -11,14 +11,14 @@ const sans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Ledgerly — Money Manager",
+  title: "Smart Money Manager",
   description:
-    "Track accounts, budgets, and expenses with free-tier AI receipt & SMS parsing.",
+    "Spend smarter. Save better. Live better. An intelligent money manager with AI-assisted tracking and insights.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Ledgerly",
+    title: "Smart Money Manager",
   },
 };
 

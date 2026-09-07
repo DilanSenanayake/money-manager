@@ -1,6 +1,6 @@
-# Ledgerly — Money Manager & Expense Tracker
+# Smart Money Manager
 
-Personal finance app with a clear split between **backend**, **web**, and **mobile**, plus shared Supabase data.
+Spend smarter. Save better. Live better. An intelligent personal finance app with a clear split between **backend**, **web**, and **mobile**, plus shared Supabase data.
 
 > Full write-up: **[DOCUMENTATION.md](./DOCUMENTATION.md)**
 

@@ -26,14 +26,14 @@ export default function SignupPage() {
         <CardHeader className="space-y-3">
           <Link href="/" className="inline-flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-bold text-[var(--accent-fg)]">
-              L
+              S
             </span>
-            <span className="text-sm font-semibold">Ledgerly</span>
+            <span className="text-sm font-semibold">Smart Money Manager</span>
           </Link>
           <div>
             <CardTitle className="font-display text-2xl">Create account</CardTitle>
             <CardDescription className="mt-1.5">
-              Set your currency once — wallets, budgets, and totals follow it
+              Start spending smarter — set your currency and you&apos;re in
             </CardDescription>
           </div>
         </CardHeader>

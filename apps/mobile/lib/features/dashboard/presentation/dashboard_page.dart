@@ -19,7 +19,7 @@ class DashboardPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ledgerly'),
+        title: const Text(AppConstants.appName),
         actions: [
           IconButton(
             tooltip: 'Add',
@@ -216,7 +216,7 @@ class DashboardPage extends ConsumerWidget {
                   EmptyState(
                     icon: Icons.receipt_long_outlined,
                     title: 'No transactions yet',
-                    message: 'Add your first expense in about 30 seconds.',
+                    message: 'Add your first expense — AI can help fill it in.',
                     actionLabel: 'Add now',
                     onAction: () => context.go(RoutePaths.add),
                   )

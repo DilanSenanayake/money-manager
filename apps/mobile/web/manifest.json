@@ -1,6 +1,6 @@
 {
-    "name": "ledgerly",
-    "short_name": "ledgerly",
+    "name": "Smart Money Manager",
+    "short_name": "Smart Money",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

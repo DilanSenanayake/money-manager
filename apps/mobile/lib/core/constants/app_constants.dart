@@ -1,5 +1,5 @@
 class AppConstants {
-  static const appName = 'Ledgerly';
+  static const appName = 'Smart Money Manager';
   static const currencies = [
     'USD',
     'EUR',

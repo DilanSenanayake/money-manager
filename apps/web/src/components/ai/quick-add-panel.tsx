@@ -35,6 +35,14 @@ import { CategoryChip } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
 import { DateQuickPick } from "@/components/ui/date-quick-pick";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
@@ -73,6 +81,9 @@ export function QuickAddPanel({
   const [manualType, setManualType] = useState<"income" | "expense">(
     initialType
   );
+  const [manualAccountId, setManualAccountId] = useState(
+    accounts[0]?.id ?? ""
+  );
   const [manualAmount, setManualAmount] = useState("");
   const [manualCategoryId, setManualCategoryId] = useState<string | null>(null);
   const [manualDate, setManualDate] = useState(localDateYYYYMMDD());
@@ -93,6 +104,10 @@ export function QuickAddPanel({
   }, [initialMode]);
 
   const manualCategories = categories.filter((c) => c.type === manualType);
+  const selectedAccountCurrency =
+    accounts.find((a) => a.id === manualAccountId)?.currency ??
+    accounts[0]?.currency ??
+    "USD";
 
   function startBusy(
     title: string,
@@ -203,12 +218,12 @@ export function QuickAddPanel({
       toast.error("Enter an amount");
       return;
     }
-    if (!accounts[0] || busy) return;
+    if (!manualAccountId || busy) return;
 
     startBusy("Saving", "Adding to your money tracker…");
     try {
       const result = await createTransaction({
-        account_id: accounts[0].id,
+        account_id: manualAccountId,
         category_id: manualCategoryId,
         amount,
         type: manualType,
@@ -241,7 +256,7 @@ export function QuickAddPanel({
     <div className="page-stack">
       <PageHeader
         title="Add"
-        description="Log income or an expense in about 30 seconds"
+        description="Let AI fill the details — scan, paste, describe, or enter manually"
       />
 
       <div className="stagger grid gap-3 sm:grid-cols-3">
@@ -406,7 +421,7 @@ export function QuickAddPanel({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Add manually</CardTitle>
           <CardDescription>
-            Amount, description, category, and save
+            Account, amount, description, category, and save
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -433,11 +448,30 @@ export function QuickAddPanel({
               </button>
             ))}
           </div>
+          <div className="space-y-2">
+            <Label>Account</Label>
+            <Select
+              value={manualAccountId}
+              onValueChange={setManualAccountId}
+              disabled={busy || accounts.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select account" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Input
             type="number"
             step="0.01"
             min="0"
-            placeholder={`Amount (${accounts[0]?.currency ?? "USD"})`}
+            placeholder={`Amount (${selectedAccountCurrency})`}
             className="h-12 text-2xl font-semibold"
             value={manualAmount}
             disabled={busy}
@@ -471,7 +505,7 @@ export function QuickAddPanel({
           <Button
             size="lg"
             className="w-full"
-            disabled={busy || !manualAmount || !accounts[0]}
+            disabled={busy || !manualAmount || !manualAccountId}
             onClick={() => void runManualSave()}
           >
             Save

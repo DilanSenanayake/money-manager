@@ -73,15 +73,15 @@ export function AppSidebar() {
     <aside className="flex h-full w-full flex-col border-r border-[var(--border)] bg-[var(--surface)] px-3 py-5">
       <div className="mb-7 px-3">
         <Link href="/dashboard" className="inline-flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] text-sm font-bold tracking-tight">
-            L
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] text-sm font-bold tracking-tight">
+            S
           </span>
           <span>
-            <span className="block text-sm font-semibold tracking-tight">
-              Ledgerly
+            <span className="block text-sm font-semibold leading-snug tracking-tight">
+              Smart Money Manager
             </span>
             <span className="block text-[11px] text-[var(--muted-fg)]">
-              Money, clarified
+              Spend smarter. Save better.
             </span>
           </span>
         </Link>

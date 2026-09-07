@@ -76,7 +76,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Ledgerly',
+                        AppConstants.appName,
                         style: theme.textTheme.displaySmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: AppColors.teal700,
@@ -84,7 +84,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Sign in to track spending in seconds.',
+                        'Sign in to spend smarter and save better.',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: AppColors.slate,
                         ),

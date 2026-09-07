@@ -1,6 +1,6 @@
 # Ledgerly API — Backend (ASP.NET Core 9)
 
-Shared REST backend for the Next.js web app (`apps/web`) and Flutter mobile app (`apps/mobile`).
+Shared REST API for **Smart Money Manager** web (`apps/web`) and Flutter mobile (`apps/mobile`).
 Talks to Supabase (Postgres + Auth JWT + RLS) and Groq (free-tier LLM) for AI parse endpoints.
 
 ## Prerequisites

@@ -24,14 +24,14 @@ export default function LoginPage() {
         <CardHeader className="space-y-3">
           <Link href="/" className="inline-flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-bold text-[var(--accent-fg)]">
-              L
+              S
             </span>
-            <span className="text-sm font-semibold">Ledgerly</span>
+            <span className="text-sm font-semibold">Smart Money Manager</span>
           </Link>
           <div>
             <CardTitle className="font-display text-2xl">Welcome back</CardTitle>
             <CardDescription className="mt-1.5">
-              Sign in to continue managing your money
+              Sign in to spend smarter and save better
             </CardDescription>
           </div>
         </CardHeader>
