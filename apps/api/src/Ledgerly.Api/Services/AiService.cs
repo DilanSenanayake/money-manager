@@ -37,12 +37,11 @@ public sealed class AiService(
         }
 
         var text = trimmed.Length > 8000 ? trimmed[..8000] : trimmed;
-        var expenseCats = (await categories.GetAllAsync(ct))
+        var expenseCategories = (await categories.GetAllAsync(ct))
             .Where(c => c.Type == CategoryTypes.Expense)
-            .Select(c => c.Name)
             .ToList();
-        var categoryNames = expenseCats.Count > 0
-            ? string.Join(", ", expenseCats)
+        var categoryNames = expenseCategories.Count > 0
+            ? string.Join(", ", expenseCategories.Select(c => c.Name))
             : "Groceries, Dining, Transport, Shopping, Utilities, Health, Entertainment, Rent, Other";
 
         try
@@ -51,11 +50,13 @@ public sealed class AiService(
                 $"""
                 You are given plain text extracted from a purchase receipt by OCR (may contain typos or junk lines). Extract structured purchase fields. Amount must be the TOTAL paid (not tax-only or unit prices). Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
                 Pick category as ONE of these exact names when possible: {categoryNames}.
+                Prefer Dining for restaurants, cafes, coffee shops, fast food, and takeout. Prefer Groceries for supermarkets. Avoid Other when another listed category fits. Do not put raw OCR into notes — leave notes null unless there is a short useful detail.
 
                 OCR text:
-                """
-                + text
-                + "\"\"\"";
+                ---
+                {text}
+                ---
+                """;
 
             var schema =
                 """
@@ -63,11 +64,34 @@ public sealed class AiService(
                 """;
 
             var result = await llm.GenerateObjectAsync<ReceiptExtraction>(prompt, schema, ct);
-            var notes = string.IsNullOrWhiteSpace(result.Notes)
-                ? $"From receipt: {text[..Math.Min(240, text.Length)]}{(text.Length > 240 ? "…" : "")}"
-                : result.Notes.Trim();
+            if (string.IsNullOrWhiteSpace(result.Notes)
+                || result.Notes.Trim().StartsWith("From receipt:", StringComparison.OrdinalIgnoreCase))
+            {
+                result.Notes = null;
+            }
+            else
+            {
+                result.Notes = result.Notes.Trim();
+            }
 
-            result.Notes = notes;
+            // Resolve category from merchant / line items when the model returns Other or a vague label
+            var lineHints = string.Join(
+                " ",
+                result.LineItems.Select(i => i.Name).Where(n => !string.IsNullOrWhiteSpace(n)));
+            var matchedId = CategoryMatcher.MatchCategoryId(
+                expenseCategories,
+                CategoryTypes.Expense,
+                result.Category,
+                result.Merchant,
+                lineHints,
+                result.Notes);
+            if (matchedId is Guid id)
+            {
+                var matchedName = expenseCategories.FirstOrDefault(c => c.Id == id)?.Name;
+                if (!string.IsNullOrWhiteSpace(matchedName))
+                    result.Category = matchedName;
+            }
+
             return Result<ReceiptExtraction>.Ok(result);
         }
         catch (Exception ex)

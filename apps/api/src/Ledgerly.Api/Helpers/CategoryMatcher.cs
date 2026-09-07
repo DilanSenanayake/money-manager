@@ -4,16 +4,22 @@ namespace Ledgerly.Api.Helpers;
 
 public static class CategoryMatcher
 {
+    private static readonly HashSet<string> WeakLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "other", "misc", "general", "unknown", "n/a", "na"
+    };
+
     private static readonly Dictionary<string, string[]> ExpenseAliases = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Dining"] =
         [
             "dining", "restaurant", "cafe", "coffee", "starbucks", "food", "lunch", "dinner",
-            "breakfast", "mcdonald", "kfc", "pizza", "uber eats", "doordash"
+            "breakfast", "mcdonald", "mcdonalds", "kfc", "pizza", "uber eats", "doordash", "burger", "sushi",
+            "bistro", "takeaway", "takeout", "eatery"
         ],
         ["Groceries"] =
         [
-            "grocery", "groceries", "supermarket", "market", "walmart", "costco", "whole foods",
+            "grocery", "groceries", "supermarket", "walmart", "costco", "whole foods",
             "trader joe"
         ],
         ["Transport"] =
@@ -23,11 +29,11 @@ public static class CategoryMatcher
         ],
         ["Shopping"] =
         [
-            "shopping", "amazon", "mall", "clothing", "apparel", "store", "retail"
+            "shopping", "amazon", "mall", "clothing", "apparel", "retail"
         ],
         ["Utilities"] =
         [
-            "utility", "utilities", "electric", "water", "internet", "wifi", "phone", "bill",
+            "utility", "utilities", "electric", "water", "internet", "wifi", "phone",
             "gas bill"
         ],
         ["Health"] =
@@ -39,7 +45,6 @@ public static class CategoryMatcher
             "entertainment", "movie", "netflix", "spotify", "game", "cinema", "concert"
         ],
         ["Rent"] = ["rent", "mortgage", "housing", "lease"],
-        ["Other"] = ["other", "misc", "general"],
     };
 
     private static readonly Dictionary<string, string[]> IncomeAliases = new(StringComparer.OrdinalIgnoreCase)
@@ -57,17 +62,37 @@ public static class CategoryMatcher
         var pool = categories.Where(c => c.Type == type).ToList();
         if (pool.Count == 0) return null;
 
-        var joined = string.Join(
-            " ",
-            hints.Where(h => !string.IsNullOrWhiteSpace(h)).Select(h => h!.Trim().ToLowerInvariant()));
+        var other = pool.FirstOrDefault(c =>
+            c.Name.Equals("Other", StringComparison.OrdinalIgnoreCase));
 
-        if (string.IsNullOrWhiteSpace(joined))
+        var cleaned = hints
+            .Where(h => !string.IsNullOrWhiteSpace(h))
+            .Select(h => h!.Trim().ToLowerInvariant())
+            .Where(h => !h.StartsWith("from receipt:", StringComparison.Ordinal))
+            .ToList();
+
+        var joined = string.Join(" ", cleaned);
+        if (string.IsNullOrWhiteSpace(joined) || cleaned.All(IsWeakLabel))
+            return other?.Id;
+
+        var byLength = pool
+            .Where(c => !c.Name.Equals("Other", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(c => c.Name.Length)
+            .ToList();
+
+        // Prefer an explicit non-Other category name from any single hint (LLM label)
+        foreach (var hint in cleaned)
         {
-            return pool.FirstOrDefault(c => c.Name.Equals("Other", StringComparison.OrdinalIgnoreCase))?.Id;
+            if (IsWeakLabel(hint)) continue;
+            foreach (var c in byLength)
+            {
+                var name = c.Name.ToLowerInvariant();
+                if (hint == name || HasWord(hint, name))
+                    return c.Id;
+            }
         }
 
-        // Prefer longer / exact category names first to avoid "other" matching inside "mother"
-        foreach (var c in pool.OrderByDescending(c => c.Name.Length))
+        foreach (var c in byLength)
         {
             var name = c.Name.ToLowerInvariant();
             if (joined == name || HasWord(joined, name))
@@ -81,9 +106,6 @@ public static class CategoryMatcher
 
         foreach (var (canonical, word) in ranked)
         {
-            if (!HasWord(joined, word) && !joined.Contains(word, StringComparison.Ordinal))
-                continue;
-            // Prefer multi-word / longer aliases: require Contains for phrases, word for singles
             if (word.Contains(' '))
             {
                 if (!joined.Contains(word, StringComparison.Ordinal)) continue;
@@ -99,29 +121,32 @@ public static class CategoryMatcher
         }
 
         var tokens = joined.Split(
-                [' ', '-', '_', '/', ',', '.', ';', ':', '|', '&', '+'],
+                [' ', '-', '_', '/', ',', '.', ';', ':', '|', '&', '+', '\'', '"'],
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(t => t.Length > 2)
             .ToArray();
 
-        foreach (var c in pool.OrderByDescending(c => c.Name.Length))
+        foreach (var c in byLength)
         {
             var name = c.Name.ToLowerInvariant();
             if (tokens.Any(t => name == t || (t.Length >= 4 && (name.Contains(t) || t.Contains(name)))))
                 return c.Id;
         }
 
-        return pool.FirstOrDefault(c => c.Name.Equals("Other", StringComparison.OrdinalIgnoreCase))?.Id
-               ?? pool[^1].Id;
+        return other?.Id ?? pool[^1].Id;
     }
+
+    private static bool IsWeakLabel(string value) => WeakLabels.Contains(value);
 
     private static bool HasWord(string haystack, string needle)
     {
         if (string.IsNullOrEmpty(needle)) return false;
         if (haystack == needle) return true;
         var parts = haystack.Split(
-            [' ', '-', '_', '/', ',', '.', ';', ':', '|', '&', '+'],
+            [' ', '-', '_', '/', ',', '.', ';', ':', '|', '&', '+', '\'', '"'],
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return parts.Any(p => p == needle);
+        return parts.Any(p =>
+            p == needle ||
+            (needle.Length >= 5 && p.StartsWith(needle, StringComparison.Ordinal)));
     }
 }

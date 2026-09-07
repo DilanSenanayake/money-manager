@@ -12,16 +12,22 @@ const expenseAliases = <String, List<String>>{
     'dinner',
     'breakfast',
     'mcdonald',
+    'mcdonalds',
     'kfc',
     'pizza',
     'uber eats',
     'doordash',
+    'burger',
+    'sushi',
+    'bistro',
+    'takeaway',
+    'takeout',
+    'eatery',
   ],
   'Groceries': [
     'grocery',
     'groceries',
     'supermarket',
-    'market',
     'walmart',
     'costco',
     'whole foods',
@@ -47,7 +53,6 @@ const expenseAliases = <String, List<String>>{
     'mall',
     'clothing',
     'apparel',
-    'store',
     'retail',
   ],
   'Utilities': [
@@ -58,7 +63,6 @@ const expenseAliases = <String, List<String>>{
     'internet',
     'wifi',
     'phone',
-    'bill',
     'gas bill',
   ],
   'Health': [
@@ -80,7 +84,6 @@ const expenseAliases = <String, List<String>>{
     'concert',
   ],
   'Rent': ['rent', 'mortgage', 'housing', 'lease'],
-  'Other': ['other', 'misc', 'general'],
 };
 
 const incomeAliases = <String, List<String>>{
@@ -88,6 +91,8 @@ const incomeAliases = <String, List<String>>{
   'Freelance': ['freelance', 'contract', 'gig', 'client'],
   'Investments': ['investment', 'dividend', 'interest', 'stock'],
 };
+
+const _weakLabels = {'other', 'misc', 'general', 'unknown', 'n/a', 'na'};
 
 String _normalize(String s) => s.toLowerCase().trim();
 
@@ -97,10 +102,15 @@ bool _hasWord(String haystack, String needle) {
   return haystack
       .split(RegExp(r'[^a-z0-9]+'))
       .where((p) => p.isNotEmpty)
-      .contains(needle);
+      .any((p) => p == needle || (needle.length >= 5 && p.startsWith(needle)));
 }
 
+bool _isWeakLabel(String value) => _weakLabels.contains(_normalize(value));
+
+bool _isOtherCategory(String name) => name.toLowerCase() == 'other';
+
 /// Resolve a category id from LLM/user labels and optional merchant text.
+/// "Other" never wins early — merchant aliases can still map to Dining, etc.
 String? matchCategoryId(
   List<Category> categories,
   String type,
@@ -109,18 +119,35 @@ String? matchCategoryId(
   final pool = categories.where((c) => c.type == type).toList();
   if (pool.isEmpty) return null;
 
-  final joined = hints
+  final other =
+      pool.where((c) => _isOtherCategory(c.name)).firstOrNull;
+
+  final cleaned = hints
       .whereType<String>()
       .map(_normalize)
       .where((h) => h.isNotEmpty)
-      .join(' ');
+      .where((h) => !h.startsWith('from receipt:'))
+      .toList();
 
-  if (joined.isEmpty) {
-    return pool.where((c) => c.name.toLowerCase() == 'other').firstOrNull?.id;
+  final joined = cleaned.join(' ');
+  if (joined.isEmpty || cleaned.every(_isWeakLabel)) {
+    return other?.id;
   }
 
-  final byLength = [...pool]
+  final byLength = pool
+      .where((c) => !_isOtherCategory(c.name))
+      .toList()
     ..sort((a, b) => b.name.length.compareTo(a.name.length));
+
+  for (final hint in cleaned) {
+    if (_isWeakLabel(hint)) continue;
+    for (final c in byLength) {
+      final name = c.name.toLowerCase();
+      if (hint == name || _hasWord(hint, name)) {
+        return c.id;
+      }
+    }
+  }
 
   for (final c in byLength) {
     final name = c.name.toLowerCase();
@@ -159,6 +186,5 @@ String? matchCategoryId(
     }
   }
 
-  return pool.where((c) => c.name.toLowerCase() == 'other').firstOrNull?.id ??
-      pool.last.id;
+  return other?.id ?? pool.last.id;
 }

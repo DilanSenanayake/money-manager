@@ -34,6 +34,13 @@ void main() {
     );
   });
 
+  test('Other label does not block merchant dining aliases', () {
+    expect(
+      matchCategoryId(categories, 'expense', ['Other', 'Starbucks']),
+      'dining',
+    );
+  });
+
   test('falls back to Other', () {
     expect(
       matchCategoryId(categories, 'expense', ['zzzz unknown']),

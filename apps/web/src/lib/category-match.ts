@@ -13,16 +13,22 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
     "dinner",
     "breakfast",
     "mcdonald",
+    "mcdonalds",
     "kfc",
     "pizza",
     "uber eats",
     "doordash",
+    "burger",
+    "sushi",
+    "bistro",
+    "takeaway",
+    "takeout",
+    "eatery",
   ],
   Groceries: [
     "grocery",
     "groceries",
     "supermarket",
-    "market",
     "walmart",
     "costco",
     "whole foods",
@@ -48,7 +54,6 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
     "mall",
     "clothing",
     "apparel",
-    "store",
     "retail",
   ],
   Utilities: [
@@ -59,7 +64,6 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
     "internet",
     "wifi",
     "phone",
-    "bill",
     "gas bill",
   ],
   Health: [
@@ -81,7 +85,6 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
     "concert",
   ],
   Rent: ["rent", "mortgage", "housing", "lease"],
-  Other: ["other", "misc", "general"],
 };
 
 const INCOME_ALIASES: Record<string, string[]> = {
@@ -89,6 +92,8 @@ const INCOME_ALIASES: Record<string, string[]> = {
   Freelance: ["freelance", "contract", "gig", "client"],
   Investments: ["investment", "dividend", "interest", "stock"],
 };
+
+const WEAK_LABELS = new Set(["other", "misc", "general", "unknown", "n/a", "na"]);
 
 function normalize(s: string) {
   return s.toLowerCase().trim();
@@ -98,11 +103,25 @@ function hasWord(haystack: string, needle: string) {
   if (!needle) return false;
   if (haystack === needle) return true;
   const parts = haystack.split(/[^a-z0-9]+/).filter(Boolean);
-  return parts.includes(needle);
+  return parts.some(
+    (p) =>
+      p === needle ||
+      // Brand stems: "mcdonald" matches "mcdonalds"
+      (needle.length >= 5 && p.startsWith(needle))
+  );
+}
+
+function isWeakLabel(value: string) {
+  return WEAK_LABELS.has(normalize(value));
+}
+
+function isOtherCategory(name: string) {
+  return name.toLowerCase() === "other";
 }
 
 /**
  * Resolve a category id from LLM/user labels and optional merchant text.
+ * "Other" / misc labels never win early — merchant aliases can still map to Dining, etc.
  */
 export function matchCategoryId(
   categories: Category[],
@@ -112,17 +131,35 @@ export function matchCategoryId(
   const pool = categories.filter((c) => c.type === type);
   if (pool.length === 0) return null;
 
-  const joined = hints
-    .filter(Boolean)
+  const other = pool.find((c) => isOtherCategory(c.name));
+
+  const cleaned = hints
+    .filter((h): h is string => Boolean(h && String(h).trim()))
     .map((h) => normalize(String(h)))
-    .join(" ");
-  if (!joined) {
-    const other = pool.find((c) => c.name.toLowerCase() === "other");
+    // Ignore OCR dumps that pollute alias matching (e.g. "STORE", "BILL")
+    .filter((h) => !h.startsWith("from receipt:"));
+
+  const joined = cleaned.join(" ");
+  if (!joined || cleaned.every(isWeakLabel)) {
     return other?.id ?? null;
   }
 
-  // Longer names first so "other" does not match inside "mother"
-  const byLength = [...pool].sort((a, b) => b.name.length - a.name.length);
+  // Prefer an explicit non-Other category name from any hint (usually the LLM label)
+  const byLength = [...pool]
+    .filter((c) => !isOtherCategory(c.name))
+    .sort((a, b) => b.name.length - a.name.length);
+
+  for (const hint of cleaned) {
+    if (isWeakLabel(hint)) continue;
+    for (const c of byLength) {
+      const name = c.name.toLowerCase();
+      if (hint === name || hasWord(hint, name)) {
+        return c.id;
+      }
+    }
+  }
+
+  // Then scan the full joined string for non-Other category names
   for (const c of byLength) {
     const name = c.name.toLowerCase();
     if (joined === name || hasWord(joined, name)) {
@@ -153,13 +190,14 @@ export function matchCategoryId(
     const name = c.name.toLowerCase();
     if (
       tokens.some(
-        (t) => name === t || (t.length >= 4 && (name.includes(t) || t.includes(name)))
+        (t) =>
+          name === t ||
+          (t.length >= 4 && (name.includes(t) || t.includes(name)))
       )
     ) {
       return c.id;
     }
   }
 
-  const other = pool.find((c) => c.name.toLowerCase() === "other");
   return other?.id ?? pool[pool.length - 1]?.id ?? null;
 }

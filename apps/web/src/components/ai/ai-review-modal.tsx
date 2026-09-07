@@ -121,12 +121,20 @@ function toReviewForm(
 
   const receipt = extraction as ReceiptExtraction | null;
   const type = "expense" as const;
+  const lineNames =
+    receipt?.line_items?.length
+      ? receipt.line_items.map((i) => i.name).filter(Boolean).join(" ")
+      : "";
   const lineNotes =
     receipt?.line_items?.length
       ? receipt.line_items
           .map((i) => `${i.name}${i.price != null ? ` (${i.price})` : ""}`)
           .join(", ")
       : "";
+  const receiptNotes =
+    receipt?.notes?.trim().toLowerCase().startsWith("from receipt:")
+      ? null
+      : receipt?.notes;
   return {
     account_id: defaultAccount,
     category_id: matchCategoryId(
@@ -134,14 +142,15 @@ function toReviewForm(
       type,
       receipt?.category,
       receipt?.merchant,
-      receipt?.notes
+      lineNames,
+      receiptNotes
     ),
     amount: Number(receipt?.amount ?? 0),
     type,
     date: receipt?.date || today,
     merchant: fromMerchantAndNotes(
       receipt?.merchant,
-      receipt?.notes || lineNotes || null
+      receiptNotes || lineNotes || null
     ),
     notes: null,
     is_recurring: false,
