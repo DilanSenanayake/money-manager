@@ -35,11 +35,19 @@ async function parseAi<T>(
     if (res && typeof res === "object" && "error" in res && !("data" in res)) {
       return { error: (res as ErrorBody).error };
     }
-    return { data: (res as DataEnvelope<T>).data };
+    const data = (res as DataEnvelope<T>).data;
+    if (data === undefined || data === null) {
+      return { error: "Smart add returned an empty result. Please try again." };
+    }
+    return { data };
   } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Request failed",
-    };
+    const message =
+      err instanceof Error ? err.message : "Request failed";
+    // Never surface raw Next.js / transport payloads in the UI
+    if (message.includes(":N") || message.includes('{"a":')) {
+      return { error: "Smart add failed. Please try again." };
+    }
+    return { error: message };
   }
 }
 

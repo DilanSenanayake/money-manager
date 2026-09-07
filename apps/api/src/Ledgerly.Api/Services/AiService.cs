@@ -20,7 +20,7 @@ public sealed class AiService(
     ICategoriesService categories) : IAiService
 {
     private const string NotConfigured =
-        "Smart add isn’t set up yet. You can still add expenses manually.";
+        "Smart add isn't set up yet. You can still add expenses manually.";
 
     public async Task<Result<ReceiptExtraction>> ParseReceiptAsync(
         string ocrText,
@@ -33,7 +33,7 @@ public sealed class AiService(
         if (trimmed.Length < 8)
         {
             return Result<ReceiptExtraction>.Fail(
-                "We couldn’t read enough from that photo. Try a clearer picture, or add it manually.");
+                "We couldn't read enough from that photo. Try a clearer picture, or add it manually.");
         }
 
         var text = trimmed.Length > 8000 ? trimmed[..8000] : trimmed;
@@ -73,7 +73,7 @@ public sealed class AiService(
         catch (Exception ex)
         {
             return Result<ReceiptExtraction>.Fail(
-                GeminiService.FormatAiError(ex, "We couldn’t understand that receipt. Please try again."));
+                GeminiService.FormatAiError(ex, "We couldn't understand that receipt. Please try again."));
         }
     }
 
@@ -89,19 +89,30 @@ public sealed class AiService(
         try
         {
             var prompt =
-                $"Parse this bank SMS / alert into structured transaction fields. Credit = money received, Debit = money spent.\n\nMessage:\n{trimmed}";
+                $"""
+                Parse this bank SMS / alert into structured transaction fields.
+                Credit = money received (income). Debit = money spent (expense).
+                Amount must be a positive number (no currency symbols).
+                Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
+                Merchant = payee/merchant/counterparty name (or "Unknown" if missing).
+                type must be exactly "Credit" or "Debit".
+
+                Message:
+                {trimmed}
+                """;
             var schema =
                 """
                 {"amount":number,"type":"Credit|Debit","merchant":"string","date":"YYYY-MM-DD","currency":"string|null","account_hint":"string|null","notes":"string|null"}
                 """;
 
             var result = await gemini.GenerateObjectAsync<SmsExtraction>(prompt, schema, ct);
+            NormalizeSms(result);
             return Result<SmsExtraction>.Ok(result);
         }
         catch (Exception ex)
         {
             return Result<SmsExtraction>.Fail(
-                GeminiService.FormatAiError(ex, "We couldn’t read that message. Please try again."));
+                GeminiService.FormatAiError(ex, "We couldn't read that message. Please try again."));
         }
     }
 
@@ -114,7 +125,7 @@ public sealed class AiService(
 
         var trimmed = text.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))
-            return Result<QuickTextExtraction>.Fail("Type something like “Coffee 450 at Starbucks”");
+            return Result<QuickTextExtraction>.Fail("Type something like \"Coffee 450 at Starbucks\"");
 
         var cats = await categories.GetAllAsync(ct);
         var expenseNames = string.Join(", ", cats.Where(c => c.Type == CategoryTypes.Expense).Select(c => c.Name));
@@ -143,7 +154,7 @@ public sealed class AiService(
         catch (Exception ex)
         {
             return Result<QuickTextExtraction>.Fail(
-                GeminiService.FormatAiError(ex, "We couldn’t understand that. Please try again."));
+                GeminiService.FormatAiError(ex, "We couldn't understand that. Please try again."));
         }
     }
 
@@ -206,6 +217,29 @@ public sealed class AiService(
         {
             return Result<Guid?>.Fail(ex.Message);
         }
+    }
+
+    private static void NormalizeSms(SmsExtraction result)
+    {
+        if (result.Amount < 0) result.Amount = Math.Abs(result.Amount);
+
+        var type = (result.Type ?? "").Trim();
+        if (type.Equals("credit", StringComparison.OrdinalIgnoreCase)
+            || type.Equals("income", StringComparison.OrdinalIgnoreCase)
+            || type.Equals("cr", StringComparison.OrdinalIgnoreCase))
+        {
+            result.Type = "Credit";
+        }
+        else
+        {
+            result.Type = "Debit";
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Merchant))
+            result.Merchant = "Unknown";
+
+        if (string.IsNullOrWhiteSpace(result.Date))
+            result.Date = DateHelpers.LocalDateYyyyMmDd();
     }
 }
 
