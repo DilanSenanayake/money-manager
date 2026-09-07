@@ -14,8 +14,10 @@ public static class CategoryMatcher
         ["Dining"] =
         [
             "dining", "restaurant", "cafe", "coffee", "starbucks", "food", "lunch", "dinner",
-            "breakfast", "mcdonald", "mcdonalds", "kfc", "pizza", "uber eats", "doordash", "burger", "sushi",
-            "bistro", "takeaway", "takeout", "eatery"
+            "breakfast", "brunch", "mcdonald", "mcdonalds", "kfc", "pizza", "uber eats", "doordash",
+            "burger", "sushi", "bistro", "takeaway", "takeout", "eatery", "latte", "cappuccino",
+            "espresso", "mocha", "bakery", "pastry", "noodles", "buffet", "meal", "kitchen",
+            "grill", "diner"
         ],
         ["Groceries"] =
         [
@@ -24,7 +26,7 @@ public static class CategoryMatcher
         ],
         ["Transport"] =
         [
-            "transport", "uber", "lyft", "taxi", "fuel", "gas", "petrol", "parking", "metro",
+            "transport", "uber", "lyft", "taxi", "fuel", "petrol", "parking", "metro",
             "bus", "train", "grab"
         ],
         ["Shopping"] =
@@ -134,6 +136,34 @@ public static class CategoryMatcher
         }
 
         return other?.Id ?? pool[^1].Id;
+    }
+
+    private static readonly HashSet<string> OcrNoise = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "total", "subtotal", "tax", "vat", "gst", "cash", "card", "credit", "debit", "change",
+        "thank", "thanks", "you", "visit", "receipt", "invoice", "tel", "phone", "fax", "date",
+        "time", "qty", "quantity", "price", "amount", "paid", "balance", "due", "www", "http",
+        "https", "com", "net", "org", "ltd", "llc", "inc", "pvt", "private", "limited", "table",
+        "server", "guest", "order", "ticket", "ref", "number", "item", "items", "description",
+        "rate", "discount", "service", "charge", "tip", "gratuity", "open", "close", "hours",
+        "address", "street", "road", "avenue", "city", "email", "mail", "store", "bill", "from"
+    };
+
+    /// <summary>
+    /// Strip receipt boilerplate so OCR can be used for category matching
+    /// without "store" / "bill" / "total" hijacking Shopping or Utilities.
+    /// </summary>
+    public static string? SanitizeOcrForCategoryHints(string? ocr)
+    {
+        if (string.IsNullOrWhiteSpace(ocr)) return null;
+        var tokens = ocr.ToLowerInvariant()
+            .Split(
+                [' ', '\n', '\r', '\t', '-', '_', '/', ',', '.', ';', ':', '|', '&', '+', '\'', '"', '#', '(', ')', '[', ']'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(t => t.Length > 2 && !OcrNoise.Contains(t) && !t.All(char.IsDigit))
+            .Take(80)
+            .ToArray();
+        return tokens.Length == 0 ? null : string.Join(" ", tokens);
     }
 
     private static bool IsWeakLabel(string value) => WeakLabels.Contains(value);

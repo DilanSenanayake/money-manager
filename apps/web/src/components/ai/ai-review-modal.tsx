@@ -11,7 +11,7 @@ import type {
   ReceiptExtraction,
   SmsExtraction,
 } from "@/lib/schemas";
-import { matchCategoryId } from "@/lib/category-match";
+import { matchCategoryId, sanitizeOcrForCategoryHints } from "@/lib/category-match";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import {
   fromMerchantAndNotes,
@@ -55,13 +55,16 @@ type Props = {
   categories: Category[];
   source: AiSource | null;
   initialForm?: AiReviewSave | null;
+  /** Raw OCR text from the receipt photo — used to resolve Dining etc. */
+  ocrText?: string | null;
 };
 
 function toReviewForm(
   extraction: Extraction,
   accounts: Account[],
   categories: Category[],
-  source: AiSource | null
+  source: AiSource | null,
+  ocrText?: string | null
 ): AiReviewSave {
   const today = localDateYYYYMMDD();
   const defaultAccount = accounts[0]?.id ?? "";
@@ -135,6 +138,7 @@ function toReviewForm(
     receipt?.notes?.trim().toLowerCase().startsWith("from receipt:")
       ? null
       : receipt?.notes;
+  const ocrHint = sanitizeOcrForCategoryHints(ocrText);
   return {
     account_id: defaultAccount,
     category_id: matchCategoryId(
@@ -143,7 +147,8 @@ function toReviewForm(
       receipt?.category,
       receipt?.merchant,
       lineNames,
-      receiptNotes
+      receiptNotes,
+      ocrHint
     ),
     amount: Number(receipt?.amount ?? 0),
     type,
@@ -166,6 +171,7 @@ export function AiReviewModal({
   categories,
   source,
   initialForm = null,
+  ocrText = null,
 }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<AiReviewSave | null>(null);
@@ -186,9 +192,9 @@ export function AiReviewModal({
         notes: null,
       });
     } else if (extraction) {
-      setForm(toReviewForm(extraction, accounts, categories, source));
+      setForm(toReviewForm(extraction, accounts, categories, source, ocrText));
     }
-  }, [open, extraction, accounts, categories, source, initialForm]);
+  }, [open, extraction, accounts, categories, source, initialForm, ocrText]);
 
   const relevantCategories = form
     ? categories.filter((c) => c.type === form.type)
@@ -329,8 +335,25 @@ export function AiReviewModal({
                       const { merchant, notes } = toMerchantAndNotes(
                         form.merchant ?? ""
                       );
+                      const selected = categories.find(
+                        (c) => c.id === form.category_id
+                      );
+                      const needsRematch =
+                        !form.category_id ||
+                        selected?.name.toLowerCase() === "other";
+                      const categoryId = needsRematch
+                        ? matchCategoryId(
+                            categories,
+                            form.type,
+                            selected?.name,
+                            merchant,
+                            notes,
+                            sanitizeOcrForCategoryHints(ocrText)
+                          ) ?? form.category_id
+                        : form.category_id;
                       const result = await saveReviewedTransaction({
                         ...form,
+                        category_id: categoryId,
                         merchant,
                         notes,
                       });

@@ -84,7 +84,8 @@ public sealed class AiService(
                 result.Category,
                 result.Merchant,
                 lineHints,
-                result.Notes);
+                result.Notes,
+                CategoryMatcher.SanitizeOcrForCategoryHints(text));
             if (matchedId is Guid id)
             {
                 var matchedName = expenseCategories.FirstOrDefault(c => c.Id == id)?.Name;
@@ -198,18 +199,23 @@ public sealed class AiService(
                 .ToList();
 
             Guid? categoryId = request.CategoryId;
+            var selectedName = categoryId is Guid cid
+                ? cats.FirstOrDefault(c => c.Id == cid)?.Name
+                : null;
             var resolved = CategoryMatcher.MatchCategoryId(
                 cats,
                 request.Type,
-                categoryId is Guid cid
-                    ? cats.FirstOrDefault(c => c.Id == cid)?.Name
-                    : null,
+                selectedName,
                 request.Merchant,
                 request.Notes);
 
-            if (categoryId is Guid selected)
+            if (categoryId is Guid selected && cats.Any(c => c.Id == selected))
             {
-                if (cats.All(c => c.Id != selected))
+                // Keep explicit pick unless it's the weak "Other" fallback and we found better
+                var isOther = selectedName?.Equals("Other", StringComparison.OrdinalIgnoreCase) == true;
+                if (!isOther || resolved is null || resolved == selected)
+                    categoryId = selected;
+                else
                     categoryId = resolved;
             }
             else

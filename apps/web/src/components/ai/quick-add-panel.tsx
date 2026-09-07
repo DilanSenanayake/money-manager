@@ -83,6 +83,7 @@ export function QuickAddPanel({
   >(null);
   const [source, setSource] = useState<AiSource | null>(null);
   const [initialForm, setInitialForm] = useState<AiReviewSave | null>(null);
+  const [ocrText, setOcrText] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
@@ -112,11 +113,13 @@ export function QuickAddPanel({
 
   function openReview(
     data: ReceiptExtraction | SmsExtraction | QuickTextExtraction,
-    kind: AiSource
+    kind: AiSource,
+    receiptOcr: string | null = null
   ) {
     stopBusy();
     setExtraction(data);
     setSource(kind);
+    setOcrText(kind === "receipt" ? receiptOcr : null);
     setInitialForm(null);
     setReviewOpen(true);
   }
@@ -127,6 +130,7 @@ export function QuickAddPanel({
       setExtraction(null);
       setInitialForm(null);
       setSource(null);
+      setOcrText(null);
       stopBusy();
     }
   }
@@ -152,7 +156,7 @@ export function QuickAddPanel({
         toast.error(result.error);
         return;
       }
-      openReview(result.data, "receipt");
+      openReview(result.data, "receipt", ocr.text);
     } catch {
       stopBusy();
       toast.error("Something went wrong. Please try again.");
@@ -495,6 +499,7 @@ export function QuickAddPanel({
         categories={categories}
         source={source}
         initialForm={initialForm}
+        ocrText={ocrText}
       />
     </div>
   );

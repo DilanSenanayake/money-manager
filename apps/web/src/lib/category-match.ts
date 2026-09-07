@@ -6,12 +6,14 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
     "dining",
     "restaurant",
     "cafe",
+    "café",
     "coffee",
     "starbucks",
     "food",
     "lunch",
     "dinner",
     "breakfast",
+    "brunch",
     "mcdonald",
     "mcdonalds",
     "kfc",
@@ -24,6 +26,18 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
     "takeaway",
     "takeout",
     "eatery",
+    "latte",
+    "cappuccino",
+    "espresso",
+    "mocha",
+    "bakery",
+    "pastry",
+    "noodles",
+    "buffet",
+    "meal",
+    "kitchen",
+    "grill",
+    "diner",
   ],
   Groceries: [
     "grocery",
@@ -40,7 +54,6 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
     "lyft",
     "taxi",
     "fuel",
-    "gas",
     "petrol",
     "parking",
     "metro",
@@ -95,6 +108,80 @@ const INCOME_ALIASES: Record<string, string[]> = {
 
 const WEAK_LABELS = new Set(["other", "misc", "general", "unknown", "n/a", "na"]);
 
+/** Receipt OCR noise that steals Shopping/Utilities/etc. if left in match hints. */
+const OCR_NOISE = new Set([
+  "total",
+  "subtotal",
+  "tax",
+  "vat",
+  "gst",
+  "cash",
+  "card",
+  "credit",
+  "debit",
+  "change",
+  "thank",
+  "thanks",
+  "you",
+  "visit",
+  "receipt",
+  "invoice",
+  "tel",
+  "phone",
+  "fax",
+  "date",
+  "time",
+  "qty",
+  "quantity",
+  "price",
+  "amount",
+  "paid",
+  "balance",
+  "due",
+  "www",
+  "http",
+  "https",
+  "com",
+  "net",
+  "org",
+  "ltd",
+  "llc",
+  "inc",
+  "pvt",
+  "private",
+  "limited",
+  "table",
+  "server",
+  "guest",
+  "order",
+  "ticket",
+  "ref",
+  "number",
+  "item",
+  "items",
+  "description",
+  "rate",
+  "discount",
+  "service",
+  "charge",
+  "tip",
+  "gratuity",
+  "open",
+  "close",
+  "hours",
+  "address",
+  "street",
+  "road",
+  "avenue",
+  "city",
+  "email",
+  "mail",
+  "store",
+  "bill",
+  "from",
+  "receipt",
+]);
+
 function normalize(s: string) {
   return s.toLowerCase().trim();
 }
@@ -120,7 +207,20 @@ function isOtherCategory(name: string) {
 }
 
 /**
- * Resolve a category id from LLM/user labels and optional merchant text.
+ * Strip receipt boilerplate so OCR can be used for category matching
+ * without "store" / "bill" / "total" hijacking Shopping or Utilities.
+ */
+export function sanitizeOcrForCategoryHints(ocr: string | null | undefined): string {
+  if (!ocr?.trim()) return "";
+  return normalize(ocr)
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 2 && !OCR_NOISE.has(t) && !/^\d+$/.test(t))
+    .slice(0, 80)
+    .join(" ");
+}
+
+/**
+ * Resolve a category id from LLM/user labels and optional merchant / OCR text.
  * "Other" / misc labels never win early — merchant aliases can still map to Dining, etc.
  */
 export function matchCategoryId(
@@ -137,7 +237,11 @@ export function matchCategoryId(
     .filter((h): h is string => Boolean(h && String(h).trim()))
     .map((h) => normalize(String(h)))
     // Ignore OCR dumps that pollute alias matching (e.g. "STORE", "BILL")
-    .filter((h) => !h.startsWith("from receipt:"));
+    .filter((h) => !h.startsWith("from receipt:"))
+    .map((h) =>
+      h.length > 120 || h.includes("\n") ? sanitizeOcrForCategoryHints(h) : h
+    )
+    .filter((h) => h.length > 0);
 
   const joined = cleaned.join(" ");
   if (!joined || cleaned.every(isWeakLabel)) {
