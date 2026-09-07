@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
 namespace Ledgerly.Api.Infrastructure.Supabase;
@@ -19,12 +20,18 @@ public sealed class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICur
     {
         get
         {
-            var user = httpContextAccessor.HttpContext?.User
+            var http = httpContextAccessor.HttpContext
                        ?? throw new UnauthorizedAccessException("No authenticated user.");
+            var user = http.User;
+            if (user.Identity?.IsAuthenticated != true)
+                throw new UnauthorizedAccessException("No authenticated user.");
+
             var sub = user.FindFirstValue("sub")
                       ?? user.FindFirstValue(ClaimTypes.NameIdentifier)
                       ?? throw new UnauthorizedAccessException("Missing subject claim.");
-            return Guid.Parse(sub);
+            if (!Guid.TryParse(sub, out var userId))
+                throw new UnauthorizedAccessException("Invalid subject claim.");
+            return userId;
         }
     }
 
@@ -32,7 +39,16 @@ public sealed class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICur
     {
         get
         {
-            var auth = httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
+            var http = httpContextAccessor.HttpContext
+                       ?? throw new UnauthorizedAccessException("Missing bearer token.");
+
+            // Prefer the token JwtBearer already validated (SaveToken = true).
+            var saved = http.Features.Get<IAuthenticateResultFeature>()
+                ?.AuthenticateResult?.Properties?.GetTokenValue("access_token");
+            if (!string.IsNullOrWhiteSpace(saved))
+                return saved;
+
+            var auth = http.Request.Headers.Authorization.ToString();
             if (string.IsNullOrWhiteSpace(auth) || !auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 throw new UnauthorizedAccessException("Missing bearer token.");
             return auth["Bearer ".Length..].Trim();

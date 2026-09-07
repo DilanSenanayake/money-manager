@@ -15,9 +15,9 @@ Copy values into `src/Ledgerly.Api/appsettings.Development.json` or set env vars
 
 | Env var | Purpose |
 |---------|---------|
-| `Supabase__Url` | Supabase project URL (required; JWKS auth uses this) |
+| `Supabase__Url` | Supabase project URL (required for PostgREST + JWKS) |
 | `Supabase__AnonKey` | Anon/publishable key |
-| `Supabase__JwtSecret` | Optional legacy HS256 secret — skip if using asymmetric signing keys |
+| `Supabase__JwtSecret` | Optional HS256 secret; use with Url when Auth is HS256-only (JWKS empty). Not a signing-key UUID. |
 | `Gemini__ApiKey` | Google Generative AI key |
 | `Cors__Origins__0` | Allowed web origin (e.g. `http://localhost:3000`) |
 
@@ -43,7 +43,7 @@ Clients sign in with **Supabase Auth**, then send:
 Authorization: Bearer <supabase_access_token>
 ```
 
-The API validates the JWT and forwards it to PostgREST so **RLS still applies**.
+The API is **stateless** (no server sessions). It validates the Supabase access JWT (JWKS and/or legacy HS256 secret), requires `role=authenticated`, and forwards the same Bearer token to PostgREST so **RLS still applies**.
 
 ## Endpoints (v1)
 

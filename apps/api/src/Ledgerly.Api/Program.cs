@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using System.Text;
 using Ledgerly.Api.Infrastructure;
+using Ledgerly.Api.Infrastructure.Auth;
 using Ledgerly.Api.Infrastructure.Gemini;
 using Ledgerly.Api.Infrastructure.Supabase;
 using Ledgerly.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -35,6 +38,9 @@ builder.Services.AddScoped<ITransactionsService, TransactionsService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IAiService, AiService>();
+
+builder.Services.AddExceptionHandler<UnauthorizedExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -76,8 +82,9 @@ var authIssuer = string.IsNullOrWhiteSpace(supabaseUrl)
     ? "supabase"
     : $"{supabaseUrl}/auth/v1";
 
-// Asymmetric signing keys (ES256/RS256): validate via JWKS from Supabase Auth.
-// Legacy: optional long HS256 shared secret (not a signing-key UUID/kid).
+// Prefer JWKS (asymmetric ES256/RS256) when Url is set.
+// Also accept legacy HS256 JwtSecret when configured — many projects still use it,
+// and JWKS is empty for HS256-only Auth setups.
 var useJwks = !string.IsNullOrWhiteSpace(supabaseUrl);
 var legacySecret = GetLegacyJwtSecret(supabase.JwtSecret);
 
@@ -86,19 +93,21 @@ if (!useJwks && legacySecret is null)
     Console.WriteLine(
         "WARNING: Supabase:Url is empty and no legacy JwtSecret is set. Auth will reject tokens.");
 }
-else if (useJwks)
-{
-    Console.WriteLine($"Auth: validating JWTs via JWKS ({authIssuer}/.well-known/jwks.json)");
-}
 else
 {
-    Console.WriteLine("Auth: validating JWTs with legacy HS256 JwtSecret");
+    var modes = new List<string>();
+    if (useJwks) modes.Add($"JWKS ({authIssuer}/.well-known/jwks.json)");
+    if (legacySecret is not null) modes.Add("legacy HS256 JwtSecret");
+    Console.WriteLine($"Auth: validating JWTs via {string.Join(" + ", modes)}");
 }
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
+        options.SaveToken = true;
+
         if (useJwks)
         {
             options.MetadataAddress =
@@ -116,20 +125,41 @@ builder.Services
             ValidAudience = "authenticated",
             ValidateIssuerSigningKey = true,
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(2),
+            ClockSkew = TimeSpan.FromMinutes(5),
             NameClaimType = "sub",
+            RoleClaimType = "role",
         };
 
-        if (!useJwks)
+        // Always attach HS256 key when present so Url+legacy secret works
+        // (JWKS alone fails for HS256-only Supabase projects).
+        if (legacySecret is not null)
         {
             options.TokenValidationParameters.IssuerSigningKey =
-                new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(
-                        legacySecret ?? "dev-placeholder-secret-at-least-32-chars!!"));
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(legacySecret));
         }
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var role = context.Principal?.FindFirst("role")?.Value
+                           ?? context.Principal?.FindFirst(ClaimTypes.Role)?.Value;
+                if (!string.Equals(role, "authenticated", StringComparison.Ordinal))
+                {
+                    context.Fail("Token role must be 'authenticated'.");
+                }
+
+                return Task.CompletedTask;
+            },
+        };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 builder.Services.AddCors(options =>
 {
@@ -149,6 +179,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseExceptionHandler();
 app.UseCors("Ledgerly");
 app.UseAuthentication();
 app.UseAuthorization();
