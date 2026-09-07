@@ -25,19 +25,19 @@ Ledgerly is a personal finance product focused on **logging income and expenses 
 | Mobile UI | Flutter + Riverpod + go_router |
 | Auth & DB | Supabase (PostgreSQL, Auth, Row Level Security) |
 | Validation | C# DataAnnotations (API); Zod still used in web transitional layer |
-| AI | Google Gemini Flash free tier via API (`GeminiService`) |
+| AI | Groq free-tier LLM via API (`GroqService`) |
 | Charts (web) | Recharts |
 | Toasts (web) | Sonner |
 | Dates | date-fns (web); `DateHelpers` (API) |
 
 ### AI model constraints
 
-Only free-tier Flash models are allowed:
+Free Groq models (defaults):
 
-- `gemini-2.5-flash` (preferred)
-- `gemini-2.5-flash-lite` / `gemini-flash-latest` (fallback)
+- `openai/gpt-oss-20b` (preferred — fast)
+- `openai/gpt-oss-120b` (fallback)
 
-Configured in `apps/api` under `Gemini:Models`.
+Configured in `apps/api` under `Groq:Models`. Get a key at [console.groq.com/keys](https://console.groq.com/keys).
 
 ---
 
@@ -68,7 +68,7 @@ money-manager/
 2. Client calls `GET/POST …/v1/*` with `Authorization: Bearer <token>`  
 3. API validates JWT (JWKS / optional legacy `Supabase:JwtSecret`)  
 4. API calls Supabase PostgREST with the same JWT → **RLS enforced**  
-5. AI parse endpoints use Gemini; secrets stay on the API  
+5. AI parse endpoints use Groq; secrets stay on the API  
 
 **Migration status**
 
@@ -152,7 +152,7 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 
 | Path | Steps |
 |------|--------|
-| Scan receipt | Tesseract OCR → Gemini text parse → Confirm → Save |
+| Scan receipt | Tesseract OCR → Groq text parse → Confirm → Save |
 | Paste bank SMS | Paste/clipboard → Parse → Confirm → Save |
 | Describe it | One line e.g. `Coffee 450` → Parse → Confirm → Save |
 | Quick manual | Amount + category chip → Save (defaults: today, first account) |
@@ -162,7 +162,7 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 - `/import` redirects to `/add`
 - Components: `quick-add-panel.tsx`, `ai-review-modal.tsx`
 - Actions: `parseReceiptText` (after client OCR), `parseBankSms`, `parseQuickText`, `saveReviewedTransaction`
-- Receipt pipeline: **Tesseract.js** (browser OCR) → Gemini Flash text-only `generateObject` → review modal
+- Receipt pipeline: **Tesseract.js** (browser OCR) → Groq JSON extract → review modal
 - Helper: `src/lib/ocr.ts` (`extractTextFromImage`)
 
 ### 3.10 PWA
@@ -259,9 +259,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5080
 ```env
 Supabase__Url=https://your-project.supabase.co
 Supabase__AnonKey=your-anon-key
-# Optional legacy HS256 only — asymmetric keys use JWKS automatically from Url
-# Supabase__JwtSecret=your-legacy-jwt-secret
-Gemini__ApiKey=your-google-ai-api-key
+Groq__ApiKey=your-groq-api-key
 ```
 
 Never commit secrets. With asymmetric JWT signing keys (default on newer Supabase projects), the API validates tokens via JWKS — do not put a signing-key id in `JwtSecret`.
@@ -273,7 +271,7 @@ Never commit secrets. With asymmetric JWT signing keys (default on newer Supabas
 ### API
 
 1. Install [.NET 9 SDK](https://dotnet.microsoft.com/download)
-2. Configure Supabase + Gemini (see §6 / `apps/api/.env.example`)
+2. Configure Supabase + Groq (see §6 / `apps/api/.env.example`)
 3. `cd apps/api/src/Ledgerly.Api && dotnet run`
 4. Swagger: http://localhost:5080/swagger
 
@@ -349,7 +347,7 @@ docker run -d --name ledgerly-api --restart unless-stopped \
 ```env
 Supabase__Url=https://your-project.supabase.co
 Supabase__AnonKey=your-anon-key
-Gemini__ApiKey=your-google-ai-api-key
+Groq__ApiKey=your-groq-api-key
 Cors__Origins__0=http://localhost:3000
 Cors__Origins__1=http://127.0.0.1:3000
 ```
@@ -378,7 +376,7 @@ See also [`apps/api/README.md`](./apps/api/README.md#redeploy-on-vm-docker).
 2. **30-second add first** — `/add` is the primary daily action; secondary tools live under More.  
 3. **Supabase Auth + JWT to API** — clients login with Supabase; API validates and forwards the token for RLS.  
 4. **Human-in-the-loop AI** — extraction always goes through a review step; nothing saves until the user confirms.  
-5. **Flash-only AI** — keeps cost at free-tier; automatic fallback across Flash models.  
+5. **Groq free-tier AI** — keeps cost at zero; fallback across available Groq models on rate limits.  
 6. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
 7. **RLS by default** — every table is user-scoped; no service-role key in clients.  
 8. **PWA-ready web** — manifest + SW for installable / offline-capable shell.  

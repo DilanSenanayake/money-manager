@@ -9,16 +9,16 @@ public sealed class SupabaseOptions
     public string JwtSecret { get; set; } = "";
 }
 
-public sealed class GeminiOptions
+public sealed class GroqOptions
 {
-    public const string SectionName = "Gemini";
+    public const string SectionName = "Groq";
 
     public string ApiKey { get; set; } = "";
+    public string BaseUrl { get; set; } = "https://api.groq.com/openai/v1";
     public string[] Models { get; set; } =
     [
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-flash-latest"
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b"
     ];
 }
 

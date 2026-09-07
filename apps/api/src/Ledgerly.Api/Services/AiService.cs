@@ -1,5 +1,5 @@
 using Ledgerly.Api.Helpers;
-using Ledgerly.Api.Infrastructure.Gemini;
+using Ledgerly.Api.Infrastructure.Llm;
 using Ledgerly.Api.Infrastructure.Supabase;
 using Ledgerly.Api.Models;
 
@@ -14,7 +14,7 @@ public interface IAiService
 }
 
 public sealed class AiService(
-    IGeminiService gemini,
+    ILlmService llm,
     ISupabaseRestClient supabase,
     ICurrentUser user,
     ICategoriesService categories) : IAiService
@@ -26,7 +26,7 @@ public sealed class AiService(
         string ocrText,
         CancellationToken ct = default)
     {
-        if (!gemini.IsConfigured)
+        if (!llm.IsConfigured)
             return Result<ReceiptExtraction>.Fail(NotConfigured);
 
         var trimmed = ocrText.Replace("\r", "").Trim();
@@ -62,7 +62,7 @@ public sealed class AiService(
                 {"merchant":"string","amount":number,"currency":"USD|EUR|GBP|LKR|INR|JPY|AUD|CAD|CHF|SGD","date":"YYYY-MM-DD","category":"string","line_items":[{"name":"string","quantity":number|null,"price":number|null}],"notes":"string|null"}
                 """;
 
-            var result = await gemini.GenerateObjectAsync<ReceiptExtraction>(prompt, schema, ct);
+            var result = await llm.GenerateObjectAsync<ReceiptExtraction>(prompt, schema, ct);
             var notes = string.IsNullOrWhiteSpace(result.Notes)
                 ? $"From receipt: {text[..Math.Min(240, text.Length)]}{(text.Length > 240 ? "…" : "")}"
                 : result.Notes.Trim();
@@ -73,13 +73,13 @@ public sealed class AiService(
         catch (Exception ex)
         {
             return Result<ReceiptExtraction>.Fail(
-                GeminiService.FormatAiError(ex, "We couldn't understand that receipt. Please try again."));
+                GroqService.FormatAiError(ex, "We couldn't understand that receipt. Please try again."));
         }
     }
 
     public async Task<Result<SmsExtraction>> ParseSmsAsync(string text, CancellationToken ct = default)
     {
-        if (!gemini.IsConfigured)
+        if (!llm.IsConfigured)
             return Result<SmsExtraction>.Fail(NotConfigured);
 
         var trimmed = text.Trim();
@@ -105,14 +105,14 @@ public sealed class AiService(
                 {"amount":number,"type":"Credit|Debit","merchant":"string","date":"YYYY-MM-DD","currency":"string|null","account_hint":"string|null","notes":"string|null"}
                 """;
 
-            var result = await gemini.GenerateObjectAsync<SmsExtraction>(prompt, schema, ct);
+            var result = await llm.GenerateObjectAsync<SmsExtraction>(prompt, schema, ct);
             NormalizeSms(result);
             return Result<SmsExtraction>.Ok(result);
         }
         catch (Exception ex)
         {
             return Result<SmsExtraction>.Fail(
-                GeminiService.FormatAiError(ex, "We couldn't read that message. Please try again."));
+                GroqService.FormatAiError(ex, "We couldn't read that message. Please try again."));
         }
     }
 
@@ -120,7 +120,7 @@ public sealed class AiService(
         string text,
         CancellationToken ct = default)
     {
-        if (!gemini.IsConfigured)
+        if (!llm.IsConfigured)
             return Result<QuickTextExtraction>.Fail(NotConfigured);
 
         var trimmed = text.Trim();
@@ -148,13 +148,13 @@ public sealed class AiService(
                 {"amount":number,"type":"income|expense","merchant":"string","date":"YYYY-MM-DD","category":"string","currency":"string|null","notes":"string|null"}
                 """;
 
-            var result = await gemini.GenerateObjectAsync<QuickTextExtraction>(prompt, schema, ct);
+            var result = await llm.GenerateObjectAsync<QuickTextExtraction>(prompt, schema, ct);
             return Result<QuickTextExtraction>.Ok(result);
         }
         catch (Exception ex)
         {
             return Result<QuickTextExtraction>.Fail(
-                GeminiService.FormatAiError(ex, "We couldn't understand that. Please try again."));
+                GroqService.FormatAiError(ex, "We couldn't understand that. Please try again."));
         }
     }
 

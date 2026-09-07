@@ -1,13 +1,13 @@
 # Ledgerly API — Backend (ASP.NET Core 9)
 
 Shared REST backend for the Next.js web app (`apps/web`) and Flutter mobile app (`apps/mobile`).
-Talks to Supabase (Postgres + Auth JWT + RLS) and Google Gemini Flash for AI parse endpoints.
+Talks to Supabase (Postgres + Auth JWT + RLS) and Groq (free-tier LLM) for AI parse endpoints.
 
 ## Prerequisites
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download)
 - Supabase project (same as web/mobile)
-- Optional: Google AI Studio API key for `/v1/ai/*`
+- Optional: [Groq API key](https://console.groq.com/keys) for `/v1/ai/*`
 
 ## Configuration
 
@@ -18,7 +18,7 @@ Copy values into `src/Ledgerly.Api/appsettings.Development.json` or set env vars
 | `Supabase__Url` | Supabase project URL (required for PostgREST + JWKS) |
 | `Supabase__AnonKey` | Anon/publishable key |
 | `Supabase__JwtSecret` | Optional HS256 secret; use with Url when Auth is HS256-only (JWKS empty). Not a signing-key UUID. |
-| `Gemini__ApiKey` | Google Generative AI key |
+| `Groq__ApiKey` | Groq API key (free tier) |
 | `Cors__Origins__0` | Allowed web origin (e.g. `http://localhost:3000`) |
 
 See [`.env.example`](./.env.example).
@@ -84,12 +84,10 @@ Example `~/ledgerly-api.env`:
 ```env
 Supabase__Url=https://your-project.supabase.co
 Supabase__AnonKey=your-anon-key
-Gemini__ApiKey=your-google-ai-api-key
+Groq__ApiKey=your-groq-api-key
 Cors__Origins__0=http://localhost:3000
 Cors__Origins__1=http://127.0.0.1:3000
 ```
-
-`Supabase__JwtSecret` is optional (legacy HS256 only). Do not set it to a signing-key id — asymmetric keys use JWKS from `Supabase__Url`.
 
 ## Deploy
 
@@ -117,4 +115,4 @@ curl http://127.0.0.1:8080/health
 
 From your PC: `curl http://<vm-host>:8080/health`. Firewall must allow TCP **8080**.
 
-Full notes (Windows SSH key ACL, `scp` fallback): [`DOCUMENTATION.md`](../../DOCUMENTATION.md#redeploy-api-on-a-docker-vm).
+Full notes: [`DOCUMENTATION.md`](../../DOCUMENTATION.md#redeploy-api-on-a-docker-vm).

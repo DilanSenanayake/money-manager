@@ -19,7 +19,7 @@ money-manager/
 
 | App | Path | Stack |
 |-----|------|--------|
-| **Backend** | [`apps/api`](./apps/api) | ASP.NET Core 9, JWT, Gemini, Swagger |
+| **Backend** | [`apps/api`](./apps/api) | ASP.NET Core 9, JWT, Groq AI, Swagger |
 | **Frontend** | [`apps/web`](./apps/web) | Next.js 15, TypeScript, Tailwind |
 | **Mobile** | [`apps/mobile`](./apps/mobile) | Flutter, Riverpod |
 | **Database** | [`supabase`](./supabase) | Postgres migrations + RLS |
@@ -85,7 +85,7 @@ See [`apps/mobile/README.md`](./apps/mobile/README.md).
 
 ## Features
 
-- Quick Add: receipt OCR → Gemini, bank SMS, one-line text, or manual
+- Quick Add: receipt OCR → Groq, bank SMS, one-line text, or manual
 - Multi-account wallets with live balances (DB triggers)
 - Income / expense / transfer CRUD
 - Category budgets with 80% / 100% alerts

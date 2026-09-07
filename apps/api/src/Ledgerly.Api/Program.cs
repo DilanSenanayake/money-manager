@@ -2,7 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using Ledgerly.Api.Infrastructure;
 using Ledgerly.Api.Infrastructure.Auth;
-using Ledgerly.Api.Infrastructure.Gemini;
+using Ledgerly.Api.Infrastructure.Llm;
 using Ledgerly.Api.Infrastructure.Supabase;
 using Ledgerly.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -14,8 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<SupabaseOptions>(
     builder.Configuration.GetSection(SupabaseOptions.SectionName));
-builder.Services.Configure<GeminiOptions>(
-    builder.Configuration.GetSection(GeminiOptions.SectionName));
+builder.Services.Configure<GroqOptions>(
+    builder.Configuration.GetSection(GroqOptions.SectionName));
 builder.Services.Configure<LedgerlyCorsOptions>(
     builder.Configuration.GetSection(LedgerlyCorsOptions.SectionName));
 
@@ -26,11 +26,11 @@ var cors = builder.Configuration.GetSection(LedgerlyCorsOptions.SectionName).Get
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient("supabase");
-builder.Services.AddHttpClient("gemini");
+builder.Services.AddHttpClient("groq");
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ISupabaseRestClient, SupabaseRestClient>();
-builder.Services.AddSingleton<IGeminiService, GeminiService>();
+builder.Services.AddSingleton<ILlmService, GroqService>();
 
 builder.Services.AddScoped<IAccountsService, AccountsService>();
 builder.Services.AddScoped<ICategoriesService, CategoriesService>();

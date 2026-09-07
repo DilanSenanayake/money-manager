@@ -10,7 +10,7 @@
     "AnonKey": "",
     "JwtSecret": ""
   },
-  "Gemini": {
+  "Groq": {
     "ApiKey": ""
   },
   "Cors": {
