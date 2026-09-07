@@ -33,12 +33,12 @@ export function BudgetBars({
 
         return (
           <div key={b.category.id} className="space-y-2">
-            <div className="flex items-center justify-between gap-2 text-sm">
+            <div className="flex items-center justify-between gap-2 text-sm sm:gap-3">
               <span className="flex min-w-0 items-center gap-2 font-medium">
                 <CategoryIcon icon={b.category.icon} name={b.category.name} framed />
                 <span className="truncate">{b.category.name}</span>
               </span>
-              <span className="shrink-0 tabular-nums text-[var(--muted)]">
+              <span className="shrink-0 text-xs tabular-nums text-[var(--muted)] sm:text-sm">
                 {formatMoney(b.spent, currency)} /{" "}
                 {formatMoney(b.limit, currency)}
               </span>

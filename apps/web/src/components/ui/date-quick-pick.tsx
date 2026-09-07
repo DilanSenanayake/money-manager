@@ -82,7 +82,7 @@ export function DateQuickPick({
           disabled={disabled}
           onClick={pickToday}
           className={cn(
-            "rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
+            "min-h-10 rounded-full border px-3.5 py-2 text-sm font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
             preset === "today"
               ? "border-teal-700 bg-teal-700 text-white"
               : "border-slate-200 text-slate-600 hover:border-teal-600/40"
@@ -95,7 +95,7 @@ export function DateQuickPick({
           disabled={disabled}
           onClick={pickYesterday}
           className={cn(
-            "rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
+            "min-h-10 rounded-full border px-3.5 py-2 text-sm font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
             preset === "yesterday"
               ? "border-teal-700 bg-teal-700 text-white"
               : "border-slate-200 text-slate-600 hover:border-teal-600/40"
@@ -108,7 +108,7 @@ export function DateQuickPick({
           disabled={disabled}
           onClick={openCalendar}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
+            "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
             preset === "custom"
               ? "border-teal-700 bg-teal-700 text-white"
               : "border-slate-200 text-slate-600 hover:border-teal-600/40"

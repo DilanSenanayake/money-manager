@@ -15,6 +15,14 @@ export const CURRENCIES = [
 
 export const currencySchema = z.enum(CURRENCIES);
 
+export const authCredentialsSchema = z.object({
+  email: z.string().trim().email("Enter a valid email"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password is too long"),
+});
+
 export const accountTypeSchema = z.enum([
   "cash",
   "checking",

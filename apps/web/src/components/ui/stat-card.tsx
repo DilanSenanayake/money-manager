@@ -26,7 +26,7 @@ export function StatCard({
       </p>
       <p
         className={cn(
-          "font-display text-[1.75rem] leading-none tracking-tight tabular-nums md:text-[2rem]",
+          "font-display text-xl leading-tight tracking-tight tabular-nums break-all sm:text-[1.75rem] md:text-[2rem] md:leading-none",
           tone === "positive" && "text-[var(--success)]",
           tone === "negative" && "text-[var(--danger)]"
         )}

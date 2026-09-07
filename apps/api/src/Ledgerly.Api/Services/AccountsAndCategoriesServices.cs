@@ -39,9 +39,9 @@ public sealed class AccountsService(ISupabaseRestClient supabase, ICurrentUser u
             }, ct);
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 
@@ -79,9 +79,9 @@ public sealed class AccountsService(ISupabaseRestClient supabase, ICurrentUser u
                 ct);
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 
@@ -92,9 +92,9 @@ public sealed class AccountsService(ISupabaseRestClient supabase, ICurrentUser u
             await supabase.DeleteAsync("accounts", $"id=eq.{id}&user_id=eq.{user.UserId}", ct);
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 }
@@ -132,9 +132,9 @@ public sealed class CategoriesService(ISupabaseRestClient supabase, ICurrentUser
             }, ct);
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 
@@ -158,9 +158,9 @@ public sealed class CategoriesService(ISupabaseRestClient supabase, ICurrentUser
                 ct);
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 
@@ -171,9 +171,9 @@ public sealed class CategoriesService(ISupabaseRestClient supabase, ICurrentUser
             await supabase.DeleteAsync("categories", $"id=eq.{id}&user_id=eq.{user.UserId}", ct);
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 }

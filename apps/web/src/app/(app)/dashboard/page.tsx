@@ -31,7 +31,7 @@ export default async function DashboardPage() {
         }
       />
 
-      <div className="stagger grid gap-3 sm:grid-cols-3">
+      <div className="stagger grid gap-3 md:grid-cols-3">
         <Link
           href="/add?type=expense"
           className="surface surface-interactive pressable flex items-center gap-3 p-4"
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
 
       <BudgetAlerts budgets={data.budgets} />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3">
         <StatCard
           label="Net worth"
           value={formatMoney(data.netWorth, data.baseCurrency)}

@@ -131,7 +131,7 @@ export function AccountsManager({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>
                     {editing ? "Current balance" : "Starting balance"}
@@ -196,9 +196,8 @@ export function AccountsManager({
                   {account.type}
                 </Badge>
               </div>
-              <div className="flex gap-1">
+              <div className="flex shrink-0 gap-1">
                 <Button
-                  size="sm"
                   variant="outline"
                   onClick={() => openEdit(account)}
                 >
@@ -207,6 +206,7 @@ export function AccountsManager({
                 <Button
                   size="icon"
                   variant="ghost"
+                  aria-label={`Delete ${account.name}`}
                   onClick={() =>
                     startTransition(async () => {
                       const result = await deleteAccount(account.id);
@@ -220,7 +220,7 @@ export function AccountsManager({
               </div>
             </CardHeader>
             <CardContent>
-              <p className="font-display text-[1.75rem] tabular-nums">
+              <p className="font-display text-xl tabular-nums break-all sm:text-[1.75rem]">
                 {formatMoney(Number(account.balance), account.currency)}
               </p>
             </CardContent>

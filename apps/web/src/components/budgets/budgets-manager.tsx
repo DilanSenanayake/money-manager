@@ -84,7 +84,7 @@ export function BudgetsManager({
                       title={opt.label}
                       onClick={() => setForm({ ...form, icon: opt.id })}
                       className={cn(
-                        "inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-[color,background-color,border-color,transform] duration-200 active:scale-95",
+                        "inline-flex h-10 w-10 items-center justify-center rounded-lg border transition-[color,background-color,border-color,transform] duration-200 active:scale-95",
                         form.icon === opt.id
                           ? color.chipSelected
                           : cn(color.chip, "hover:opacity-90")
@@ -185,7 +185,7 @@ export function BudgetsManager({
               {cat.type === "expense" && (
                 <div className="flex items-center gap-2">
                   <Input
-                    className="w-28"
+                    className="w-full max-w-[8rem] sm:w-28"
                     type="number"
                     defaultValue={cat.monthly_budget ?? ""}
                     placeholder="Budget"

@@ -87,6 +87,12 @@ Supabase__AnonKey=your-anon-key
 Groq__ApiKey=your-groq-api-key
 Cors__Origins__0=http://localhost:3000
 Cors__Origins__1=http://127.0.0.1:3000
+# Production: also add your Vercel / custom domain
+# Cors__Origins__2=https://your-app.vercel.app
+
+# Health checks
+# GET /health       — liveness
+# GET /health/ready — Supabase reachability
 ```
 
 ## Deploy

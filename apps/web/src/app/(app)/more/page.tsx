@@ -56,7 +56,7 @@ export default function MorePage() {
             <Link
               key={href}
               href={href}
-              className="group flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-[var(--background)] active:bg-[var(--background)]"
+              className="group flex min-h-14 items-center gap-3 px-4 py-3.5 transition-colors hover:bg-[var(--background)] active:bg-[var(--background)]"
             >
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
                 <Icon className="h-5 w-5" aria-hidden />

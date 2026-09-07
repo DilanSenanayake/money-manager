@@ -259,7 +259,7 @@ export function QuickAddPanel({
         description="Let AI fill the details — scan, paste, describe, or enter manually"
       />
 
-      <div className="stagger grid gap-3 sm:grid-cols-3">
+      <div className="stagger grid gap-3 md:grid-cols-3">
         <button
           type="button"
           disabled={busy}
@@ -348,10 +348,11 @@ export function QuickAddPanel({
               rows={4}
               autoFocus
             />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 type="button"
                 variant="outline"
+                className="w-full sm:w-auto"
                 disabled={busy}
                 onClick={async () => {
                   try {
@@ -370,6 +371,7 @@ export function QuickAddPanel({
                 Paste from clipboard
               </Button>
               <Button
+                className="w-full sm:w-auto"
                 disabled={busy || !smsText.trim()}
                 onClick={() => void runSmsParse()}
               >

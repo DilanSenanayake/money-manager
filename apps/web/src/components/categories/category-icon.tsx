@@ -282,7 +282,7 @@ export function CategoryChip({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
+        "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
         selected ? color.chipSelected : color.chip,
         className
       )}

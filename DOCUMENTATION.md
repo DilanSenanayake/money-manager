@@ -280,7 +280,7 @@ Never commit secrets. With asymmetric JWT signing keys (default on newer Supabas
 
 1. `cd apps/web && npm install`
 2. Configure `apps/web/.env.local` (see §6) — set `NEXT_PUBLIC_API_URL` to local API or VM
-3. In Supabase SQL Editor, run `supabase/migrations/001_initial.sql`
+3. In Supabase SQL Editor, run migrations in order: `001_initial.sql`, `002_other_budget.sql`, `003_credit_balance_polarity.sql`, `004_production_hardening.sql`
 4. Enable Email provider in Supabase Auth
 5. `npm run dev` → http://localhost:3000
 
@@ -371,7 +371,67 @@ See also [`apps/api/README.md`](./apps/api/README.md#redeploy-on-vm-docker).
 
 ---
 
-## 8. Key Design Decisions
+## 8. Production readiness
+
+### Security (implemented)
+
+| Control | Notes |
+|---------|--------|
+| JWT + RLS | All `/v1/*` require auth; PostgREST uses user JWT |
+| Ownership trigger | Migration `004` rejects cross-user `account_id` / `category_id` |
+| API ownership checks | Create/update + AI save verify account/category belong to caller |
+| Rate limits | Global 120/min/user; AI endpoints 20/min/user |
+| AI input caps | Receipt 8KB, SMS 4KB, quick text 2KB |
+| Safe errors | Clients get generic messages; details logged server-side |
+| Web headers | CSP, nosniff, frame deny, referrer policy via `next.config.ts` |
+| CORS | Explicit origins; **required in Production** (`Cors__Origins__*`) |
+
+### Health
+
+- `GET /health` — liveness
+- `GET /health/ready` — Supabase reachability
+
+### Backups & migrations
+
+1. **Supabase** — enable Point-in-Time Recovery / daily backups on the paid plan (or export `pg_dump` on a schedule for free tier).
+2. **Migrations** — always apply `001` → `004` in order on every environment; never edit applied files — add `005_…sql` instead.
+3. **Secrets** — rotate Groq and Supabase keys if they ever appear in logs, screenshots, or git history.
+
+### Deploy matrix
+
+| Layer | Recommended host |
+|-------|------------------|
+| Web (`apps/web`) | **Vercel** — Root Directory `apps/web`, set `NEXT_PUBLIC_*` env vars |
+| API (`apps/api`) | **Docker VM** / Railway / Fly.io / Azure Container Apps with TLS |
+| DB / Auth | **Supabase** (same project for web + API) |
+
+Put TLS in front of the API (Caddy/Nginx/cloud load balancer). Prefer `https://` for `NEXT_PUBLIC_API_URL` in production.
+
+### Error monitoring (manual setup)
+
+Recommended: [Sentry](https://sentry.io) for Next.js + ASP.NET Core. Not wired by default — add when you have a production DSN.
+
+### Tests
+
+```bash
+# API unit tests (currency, budget, dates)
+cd apps/api && dotnet test
+
+# Web unit tests (currency, category match)
+cd apps/web && npm test
+```
+
+### Manual / legal checklist (you own these)
+
+- [ ] Privacy policy & terms (financial personal data)
+- [ ] Supabase Auth email templates + redirect URLs for production domain
+- [ ] CAPTCHA / bot protection on signup if abuse appears
+- [ ] Rotate any keys that lived in local `.env` files shared outside your machine
+- [ ] Confirm FX rates are set when using multi-currency (missing rate currently falls back to 1:1)
+
+---
+
+## 9. Key Design Decisions
 
 1. **Shared .NET API** — web and mobile share one REST backend (`apps/api`); business logic lives once.  
 2. **30-second add first** — `/add` is the primary daily action; secondary tools live under More.  
@@ -385,7 +445,7 @@ See also [`apps/api/README.md`](./apps/api/README.md#redeploy-on-vm-docker).
 
 ---
 
-## 9. Routes Map
+## 10. Routes Map
 
 | Path | Access | Description |
 |------|--------|-------------|
@@ -405,7 +465,7 @@ See also [`apps/api/README.md`](./apps/api/README.md#redeploy-on-vm-docker).
 
 ---
 
-## 10. What Was Built (Checklist)
+## 11. What Was Built (Checklist)
 
 - [x] ASP.NET Core 9 shared API (`apps/api`) with JWT + `/v1` resources + AI  
 - [x] Docker support for API deploy  
@@ -418,11 +478,12 @@ See also [`apps/api/README.md`](./apps/api/README.md#redeploy-on-vm-docker).
 - [x] Flutter mobile scaffold (direct Supabase CRUD; API next)  
 - [x] PWA manifest, icons, service worker  
 - [x] Wire Next.js UI to Ledgerly.Api (`NEXT_PUBLIC_API_URL`)  
+- [x] Production hardening: ownership trigger, rate limits, safe errors, security headers, tests  
 - [ ] Wire Flutter repositories to Ledgerly.Api  
 
 ---
 
-## 11. Possible Next Steps
+## 12. Possible Next Steps
 
 - Point Flutter repositories at the same REST API (keep Supabase only for auth)  
 - Optionally call Ledgerly.Api from the browser (drop Server Action proxy)  

@@ -163,14 +163,14 @@ public sealed class UpsertExchangeRateRequest
 
 public sealed class ParseTextRequest
 {
-    [Required]
+    [Required, MaxLength(4000)]
     [JsonPropertyName("text")]
     public string Text { get; set; } = "";
 }
 
 public sealed class ParseReceiptRequest
 {
-    [Required]
+    [Required, MaxLength(8000)]
     [JsonPropertyName("ocr_text")]
     public string OcrText { get; set; } = "";
 }

@@ -2,6 +2,9 @@ using Ledgerly.Api.Models;
 using Ledgerly.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
+using Ledgerly.Api.Infrastructure;
 
 namespace Ledgerly.Api.Controllers;
 
@@ -67,6 +70,7 @@ public sealed class SettingsController(ISettingsService settings) : ControllerBa
 
 [ApiController]
 [Authorize]
+[EnableRateLimiting("ai")]
 [Route("v1/ai")]
 public sealed class AiController(IAiService ai) : ControllerBase
 {
@@ -113,9 +117,54 @@ public sealed class AiController(IAiService ai) : ControllerBase
 
 [ApiController]
 [Route("health")]
-public sealed class HealthController : ControllerBase
+public sealed class HealthController(
+    IHttpClientFactory httpClientFactory,
+    IOptions<SupabaseOptions> supabaseOptions) : ControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
     public IActionResult Get() => Ok(new { status = "ok" });
+
+    /// <summary>Readiness: process is up and Supabase is reachable.</summary>
+    [HttpGet("ready")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Ready(CancellationToken ct)
+    {
+        var url = (supabaseOptions.Value.Url ?? "").TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                status = "not_ready",
+                supabase = "unconfigured",
+            });
+        }
+
+        try
+        {
+            var client = httpClientFactory.CreateClient("supabase");
+            using var request = new HttpRequestMessage(HttpMethod.Head, $"{url}/rest/v1/");
+            using var response = await client.SendAsync(request, ct);
+            // 401/404 still means the host is reachable
+            var reachable = (int)response.StatusCode is >= 200 and < 500;
+            if (!reachable)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    status = "not_ready",
+                    supabase = "unreachable",
+                });
+            }
+
+            return Ok(new { status = "ready", supabase = "ok" });
+        }
+        catch
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                status = "not_ready",
+                supabase = "error",
+            });
+        }
+    }
 }

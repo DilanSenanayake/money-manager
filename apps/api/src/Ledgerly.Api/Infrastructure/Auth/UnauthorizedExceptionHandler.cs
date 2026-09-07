@@ -18,7 +18,7 @@ public sealed class UnauthorizedExceptionHandler : IExceptionHandler
 
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         await httpContext.Response.WriteAsJsonAsync(
-            new ErrorResponse(exception.Message),
+            new ErrorResponse("Unauthorized"),
             cancellationToken);
         return true;
     }

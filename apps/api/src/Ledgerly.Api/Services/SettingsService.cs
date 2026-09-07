@@ -1,3 +1,4 @@
+using Ledgerly.Api.Helpers;
 using Ledgerly.Api.Infrastructure.Supabase;
 using Ledgerly.Api.Models;
 
@@ -39,9 +40,9 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
 
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 
@@ -79,9 +80,9 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
                 ct);
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 
@@ -95,9 +96,9 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
                 ct);
             return Result.Ok();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Result.Fail(ex.Message);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 }

@@ -63,7 +63,7 @@ export default async function RecurringPage() {
           {items.map((tx) => (
             <div
               key={tx.id}
-              className="flex items-center justify-between gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-[var(--background)]"
+              className="flex flex-col gap-2 rounded-xl px-2 py-3 transition-colors hover:bg-[var(--background)] sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">
@@ -77,7 +77,7 @@ export default async function RecurringPage() {
                   {tx.account && <span>{tx.account.name}</span>}
                 </div>
               </div>
-              <p className="shrink-0 font-semibold tabular-nums text-[var(--danger)]">
+              <p className="shrink-0 text-sm font-semibold tabular-nums text-[var(--danger)] sm:text-base">
                 {formatMoney(
                   Number(tx.amount),
                   tx.account?.currency ?? baseCurrency

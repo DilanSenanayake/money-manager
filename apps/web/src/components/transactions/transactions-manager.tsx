@@ -182,13 +182,13 @@ export function TransactionsManager({
                 Add
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
+            <DialogContent className="gap-0 p-0 sm:p-0">
+              <DialogHeader className="shrink-0 border-b border-[var(--border)] px-5 py-4 pr-12 sm:px-6">
                 <DialogTitle>
                   {isEditing ? "Edit transaction" : "New transaction"}
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-3">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
                 <div className="space-y-2">
                   <Label>Type</Label>
                   <Select
@@ -319,10 +319,11 @@ export function TransactionsManager({
                   />
                 </div>
                 {form.type !== "transfer" && (
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 text-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <label className="flex min-h-10 items-center gap-2 text-sm">
                       <input
                         type="checkbox"
+                        className="h-4 w-4"
                         checked={form.is_recurring}
                         onChange={(e) =>
                           setForm({
@@ -347,7 +348,7 @@ export function TransactionsManager({
                           })
                         }
                       >
-                        <SelectTrigger className="w-32">
+                        <SelectTrigger className="w-full sm:w-36">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -360,8 +361,8 @@ export function TransactionsManager({
                   </div>
                 )}
               </div>
-              <DialogFooter>
-                <Button onClick={submit} disabled={pending}>
+              <DialogFooter className="shrink-0 border-t border-[var(--border)] px-5 py-4 sm:px-6">
+                <Button className="w-full sm:w-auto" onClick={submit} disabled={pending}>
                   {pending ? "Saving…" : isEditing ? "Update" : "Save"}
                 </Button>
               </DialogFooter>
@@ -371,7 +372,7 @@ export function TransactionsManager({
       />
 
       <Card>
-        <CardContent className="grid gap-3 pt-5 md:grid-cols-6">
+        <CardContent className="grid gap-3 pt-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <Input
             placeholder="Search description…"
             value={filters.q ?? ""}
@@ -444,7 +445,7 @@ export function TransactionsManager({
           return (
             <div
               key={tx.id}
-              className="surface flex items-center justify-between gap-3 px-4 py-3"
+              className="surface flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <CategoryIcon
@@ -477,9 +478,9 @@ export function TransactionsManager({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
                 <p
-                  className={`font-semibold tabular-nums ${
+                  className={`shrink-0 text-sm font-semibold tabular-nums sm:text-base ${
                     sign === "+"
                       ? "text-[var(--success)]"
                       : "text-[var(--danger)]"
@@ -488,33 +489,35 @@ export function TransactionsManager({
                   {sign}
                   {formatMoney(Number(tx.amount), currency)}
                 </p>
-                {canEdit && (
+                <div className="flex items-center gap-1">
+                  {canEdit && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Edit transaction"
+                      onClick={() => openEdit(tx)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     variant="ghost"
-                    aria-label="Edit transaction"
-                    onClick={() => openEdit(tx)}
+                    aria-label="Delete transaction"
+                    onClick={() =>
+                      startTransition(async () => {
+                        const result = await deleteTransaction(tx.id);
+                        if (result.error) toast.error(result.error);
+                        else {
+                          toast.success("Deleted");
+                          router.refresh();
+                        }
+                      })
+                    }
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                )}
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  aria-label="Delete transaction"
-                  onClick={() =>
-                    startTransition(async () => {
-                      const result = await deleteTransaction(tx.id);
-                      if (result.error) toast.error(result.error);
-                      else {
-                        toast.success("Deleted");
-                        router.refresh();
-                      }
-                    })
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                </div>
               </div>
             </div>
           );

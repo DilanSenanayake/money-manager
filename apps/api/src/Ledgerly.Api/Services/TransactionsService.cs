@@ -16,7 +16,8 @@ public interface ITransactionsService
 public sealed class TransactionsService(
     ISupabaseRestClient supabase,
     ICurrentUser user,
-    ICategoriesService categories) : ITransactionsService
+    ICategoriesService categories,
+    ILogger<TransactionsService> logger) : ITransactionsService
 {
     private const string SelectWithJoins = "*,account:accounts(*),category:categories(*)";
 
@@ -37,13 +38,22 @@ public sealed class TransactionsService(
         if (!string.IsNullOrWhiteSpace(filter.Type) && TransactionTypes.All.Contains(filter.Type))
             parts.Add($"type=eq.{filter.Type}");
         if (!string.IsNullOrWhiteSpace(filter.From))
-            parts.Add($"date=gte.{filter.From}");
+        {
+            if (!OwnershipGuards.IsValidIsoDate(filter.From))
+                return [];
+            parts.Add($"date=gte.{Uri.EscapeDataString(filter.From.Trim())}");
+        }
         if (!string.IsNullOrWhiteSpace(filter.To))
-            parts.Add($"date=lte.{filter.To}");
+        {
+            if (!OwnershipGuards.IsValidIsoDate(filter.To))
+                return [];
+            parts.Add($"date=lte.{Uri.EscapeDataString(filter.To.Trim())}");
+        }
         if (!string.IsNullOrWhiteSpace(filter.Q))
         {
             var safe = filter.Q.Replace("%", "").Replace("_", "").Replace(",", "")
                 .Replace("(", "").Replace(")", "").Replace(".", "").Trim();
+            if (safe.Length > 100) safe = safe[..100];
             if (!string.IsNullOrWhiteSpace(safe))
             {
                 var encoded = Uri.EscapeDataString($"merchant.ilike.%{safe}%,notes.ilike.%{safe}%");
@@ -66,6 +76,12 @@ public sealed class TransactionsService(
             return Result.Fail("Invalid transaction type");
         if (request.Amount <= 0)
             return Result.Fail("Amount must be positive");
+        if (!OwnershipGuards.IsValidIsoDate(request.Date))
+            return Result.Fail("Invalid date");
+        if (request.IsRecurring
+            && request.RecurringFrequency is not null
+            && !RecurringFrequencies.All.Contains(request.RecurringFrequency))
+            return Result.Fail("Invalid recurring frequency");
 
         try
         {
@@ -93,9 +109,9 @@ public sealed class TransactionsService(
                     ["user_id"] = user.UserId,
                     ["amount"] = request.Amount,
                     ["type"] = TransactionTypes.Transfer,
-                    ["date"] = request.Date,
-                    ["merchant"] = request.Merchant ?? "Transfer",
-                    ["notes"] = request.Notes,
+                    ["date"] = request.Date.Trim(),
+                    ["merchant"] = OwnershipGuards.ClampNullable(request.Merchant, 200) ?? "Transfer",
+                    ["notes"] = OwnershipGuards.ClampNullable(request.Notes, 1000),
                     ["is_recurring"] = false,
                     ["recurring_frequency"] = null,
                     ["transfer_pair_id"] = pairId,
@@ -117,6 +133,14 @@ public sealed class TransactionsService(
                 return Result.Ok();
             }
 
+            var accountCheck = await OwnershipGuards.EnsureOwnedAccountAsync(
+                supabase, user.UserId, request.AccountId, ct);
+            if (!accountCheck.Success) return accountCheck;
+
+            var categoryCheck = await OwnershipGuards.EnsureOwnedCategoryAsync(
+                supabase, user.UserId, request.CategoryId, ct);
+            if (!categoryCheck.Success) return categoryCheck;
+
             Guid? categoryId = request.CategoryId;
             if (categoryId is null &&
                 (request.Type is TransactionTypes.Expense or TransactionTypes.Income))
@@ -136,9 +160,9 @@ public sealed class TransactionsService(
                 category_id = categoryId,
                 amount = request.Amount,
                 type = request.Type,
-                date = request.Date,
-                merchant = request.Merchant,
-                notes = request.Notes,
+                date = request.Date.Trim(),
+                merchant = OwnershipGuards.ClampNullable(request.Merchant, 200),
+                notes = OwnershipGuards.ClampNullable(request.Notes, 1000),
                 is_recurring = request.IsRecurring,
                 recurring_frequency = request.IsRecurring
                     ? request.RecurringFrequency ?? RecurringFrequencies.Monthly
@@ -149,7 +173,8 @@ public sealed class TransactionsService(
         }
         catch (Exception ex)
         {
-            return Result.Fail(ex.Message);
+            logger.LogError(ex, "Failed to create transaction for user {UserId}", user.UserId);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 
@@ -159,11 +184,19 @@ public sealed class TransactionsService(
             return Result.Fail("Edit transfers by deleting and recreating them");
         if (!TransactionTypes.All.Contains(request.Type))
             return Result.Fail("Invalid transaction type");
-        if (request.AccountId == Guid.Empty)
-            return Result.Fail("Choose an account");
+        if (!OwnershipGuards.IsValidIsoDate(request.Date))
+            return Result.Fail("Invalid date");
 
         try
         {
+            var accountCheck = await OwnershipGuards.EnsureOwnedAccountAsync(
+                supabase, user.UserId, request.AccountId, ct);
+            if (!accountCheck.Success) return accountCheck;
+
+            var categoryCheck = await OwnershipGuards.EnsureOwnedCategoryAsync(
+                supabase, user.UserId, request.CategoryId, ct);
+            if (!categoryCheck.Success) return categoryCheck;
+
             var existing = await supabase.GetSingleAsync<Transaction>(
                 "transactions",
                 $"select=id,transfer_pair_id,type&id=eq.{id}&user_id=eq.{user.UserId}",
@@ -182,9 +215,9 @@ public sealed class TransactionsService(
                     category_id = request.CategoryId,
                     amount = request.Amount,
                     type = request.Type,
-                    date = request.Date,
-                    merchant = request.Merchant,
-                    notes = request.Notes,
+                    date = request.Date.Trim(),
+                    merchant = OwnershipGuards.ClampNullable(request.Merchant, 200),
+                    notes = OwnershipGuards.ClampNullable(request.Notes, 1000),
                     is_recurring = request.IsRecurring,
                     recurring_frequency = request.IsRecurring
                         ? request.RecurringFrequency ?? RecurringFrequencies.Monthly
@@ -195,7 +228,8 @@ public sealed class TransactionsService(
         }
         catch (Exception ex)
         {
-            return Result.Fail(ex.Message);
+            logger.LogError(ex, "Failed to update transaction {Id} for user {UserId}", id, user.UserId);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 
@@ -230,7 +264,8 @@ public sealed class TransactionsService(
         }
         catch (Exception ex)
         {
-            return Result.Fail(ex.Message);
+            logger.LogError(ex, "Failed to delete transaction {Id} for user {UserId}", id, user.UserId);
+            return Result.Fail(OwnershipGuards.GenericError);
         }
     }
 }

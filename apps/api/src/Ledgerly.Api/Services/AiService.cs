@@ -17,10 +17,14 @@ public sealed class AiService(
     ILlmService llm,
     ISupabaseRestClient supabase,
     ICurrentUser user,
-    ICategoriesService categories) : IAiService
+    ICategoriesService categories,
+    ILogger<AiService> logger) : IAiService
 {
     private const string NotConfigured =
         "Smart add isn't set up yet. You can still add expenses manually.";
+    private const int MaxSmsTextLength = 4000;
+    private const int MaxQuickTextLength = 2000;
+    private const int MaxReceiptOcrLength = 8000;
 
     public async Task<Result<ReceiptExtraction>> ParseReceiptAsync(
         string ocrText,
@@ -36,7 +40,7 @@ public sealed class AiService(
                 "We couldn't read enough from that photo. Try a clearer picture, or add it manually.");
         }
 
-        var text = trimmed.Length > 8000 ? trimmed[..8000] : trimmed;
+        var text = trimmed.Length > MaxReceiptOcrLength ? trimmed[..MaxReceiptOcrLength] : trimmed;
         var expenseCategories = (await categories.GetAllAsync(ct))
             .Where(c => c.Type == CategoryTypes.Expense)
             .ToList();
@@ -64,14 +68,12 @@ public sealed class AiService(
                 """;
 
             var result = await llm.GenerateObjectAsync<ReceiptExtraction>(prompt, schema, ct);
+            SanitizeReceipt(result);
+
             if (string.IsNullOrWhiteSpace(result.Notes)
                 || result.Notes.Trim().StartsWith("From receipt:", StringComparison.OrdinalIgnoreCase))
             {
                 result.Notes = null;
-            }
-            else
-            {
-                result.Notes = result.Notes.Trim();
             }
 
             // Resolve category from merchant / line items when the model returns Other or a vague label
@@ -97,6 +99,7 @@ public sealed class AiService(
         }
         catch (Exception ex)
         {
+            logger.LogWarning(ex, "Receipt parse failed for user {UserId}", user.UserId);
             return Result<ReceiptExtraction>.Fail(
                 GroqService.FormatAiError(ex, "We couldn't understand that receipt. Please try again."));
         }
@@ -110,6 +113,8 @@ public sealed class AiService(
         var trimmed = text.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))
             return Result<SmsExtraction>.Fail("Paste a bank message first");
+        if (trimmed.Length > MaxSmsTextLength)
+            return Result<SmsExtraction>.Fail("That message is too long. Paste a single bank alert.");
 
         try
         {
@@ -136,6 +141,7 @@ public sealed class AiService(
         }
         catch (Exception ex)
         {
+            logger.LogWarning(ex, "SMS parse failed for user {UserId}", user.UserId);
             return Result<SmsExtraction>.Fail(
                 GroqService.FormatAiError(ex, "We couldn't read that message. Please try again."));
         }
@@ -151,6 +157,8 @@ public sealed class AiService(
         var trimmed = text.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))
             return Result<QuickTextExtraction>.Fail("Type something like \"Coffee 450 at Starbucks\"");
+        if (trimmed.Length > MaxQuickTextLength)
+            return Result<QuickTextExtraction>.Fail("That note is too long. Keep it to one short sentence.");
 
         var cats = await categories.GetAllAsync(ct);
         var expenseNames = string.Join(", ", cats.Where(c => c.Type == CategoryTypes.Expense).Select(c => c.Name));
@@ -174,10 +182,12 @@ public sealed class AiService(
                 """;
 
             var result = await llm.GenerateObjectAsync<QuickTextExtraction>(prompt, schema, ct);
+            SanitizeQuickText(result);
             return Result<QuickTextExtraction>.Ok(result);
         }
         catch (Exception ex)
         {
+            logger.LogWarning(ex, "Quick-text parse failed for user {UserId}", user.UserId);
             return Result<QuickTextExtraction>.Fail(
                 GroqService.FormatAiError(ex, "We couldn't understand that. Please try again."));
         }
@@ -191,9 +201,21 @@ public sealed class AiService(
             return Result<Guid?>.Fail("Type must be income or expense");
         if (request.Amount <= 0)
             return Result<Guid?>.Fail("Amount must be positive");
+        if (!OwnershipGuards.IsValidIsoDate(request.Date) && !string.IsNullOrWhiteSpace(request.Date))
+            return Result<Guid?>.Fail("Invalid date");
 
         try
         {
+            var accountCheck = await OwnershipGuards.EnsureOwnedAccountAsync(
+                supabase, user.UserId, request.AccountId, ct);
+            if (!accountCheck.Success)
+                return Result<Guid?>.Fail(accountCheck.Error!);
+
+            var categoryCheck = await OwnershipGuards.EnsureOwnedCategoryAsync(
+                supabase, user.UserId, request.CategoryId, ct);
+            if (!categoryCheck.Success)
+                return Result<Guid?>.Fail(categoryCheck.Error!);
+
             var cats = (await categories.GetAllAsync(ct))
                 .Where(c => c.Type == request.Type)
                 .ToList();
@@ -232,9 +254,9 @@ public sealed class AiService(
                 type = request.Type,
                 date = string.IsNullOrWhiteSpace(request.Date)
                     ? DateHelpers.LocalDateYyyyMmDd()
-                    : request.Date,
-                merchant = request.Merchant,
-                notes = request.Notes,
+                    : request.Date.Trim(),
+                merchant = OwnershipGuards.ClampNullable(request.Merchant, 200),
+                notes = OwnershipGuards.ClampNullable(request.Notes, 1000),
                 is_recurring = request.IsRecurring,
                 recurring_frequency = request.IsRecurring
                     ? request.RecurringFrequency ?? RecurringFrequencies.Monthly
@@ -245,8 +267,42 @@ public sealed class AiService(
         }
         catch (Exception ex)
         {
-            return Result<Guid?>.Fail(ex.Message);
+            logger.LogError(ex, "AI save-reviewed failed for user {UserId}", user.UserId);
+            return Result<Guid?>.Fail(OwnershipGuards.GenericError);
         }
+    }
+
+    private static void SanitizeReceipt(ReceiptExtraction result)
+    {
+        if (result.Amount < 0) result.Amount = Math.Abs(result.Amount);
+        result.Merchant = OwnershipGuards.Clamp(result.Merchant, 200);
+        result.Category = OwnershipGuards.Clamp(result.Category, 100);
+        result.Notes = OwnershipGuards.ClampNullable(result.Notes, 1000);
+        result.Currency = Currencies.All.Contains(result.Currency ?? "")
+            ? result.Currency!
+            : "USD";
+        if (!OwnershipGuards.IsValidIsoDate(result.Date))
+            result.Date = DateHelpers.LocalDateYyyyMmDd();
+        foreach (var item in result.LineItems)
+        {
+            item.Name = OwnershipGuards.Clamp(item.Name, 200);
+        }
+        if (result.LineItems.Count > 50)
+            result.LineItems = result.LineItems.Take(50).ToList();
+    }
+
+    private static void SanitizeQuickText(QuickTextExtraction result)
+    {
+        if (result.Amount < 0) result.Amount = Math.Abs(result.Amount);
+        result.Merchant = OwnershipGuards.Clamp(result.Merchant, 200);
+        result.Category = OwnershipGuards.Clamp(result.Category, 100);
+        result.Notes = OwnershipGuards.ClampNullable(result.Notes, 1000);
+        var type = (result.Type ?? "").Trim().ToLowerInvariant();
+        result.Type = type == TransactionTypes.Income
+            ? TransactionTypes.Income
+            : TransactionTypes.Expense;
+        if (!OwnershipGuards.IsValidIsoDate(result.Date))
+            result.Date = DateHelpers.LocalDateYyyyMmDd();
     }
 
     private static void NormalizeSms(SmsExtraction result)
@@ -265,10 +321,13 @@ public sealed class AiService(
             result.Type = "Debit";
         }
 
-        if (string.IsNullOrWhiteSpace(result.Merchant))
-            result.Merchant = "Unknown";
+        result.Merchant = string.IsNullOrWhiteSpace(result.Merchant)
+            ? "Unknown"
+            : OwnershipGuards.Clamp(result.Merchant, 200);
+        result.Notes = OwnershipGuards.ClampNullable(result.Notes, 1000);
+        result.AccountHint = OwnershipGuards.ClampNullable(result.AccountHint, 100);
 
-        if (string.IsNullOrWhiteSpace(result.Date))
+        if (!OwnershipGuards.IsValidIsoDate(result.Date))
             result.Date = DateHelpers.LocalDateYyyyMmDd();
     }
 }

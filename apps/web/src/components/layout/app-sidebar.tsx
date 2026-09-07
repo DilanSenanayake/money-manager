@@ -138,7 +138,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Mobile"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
     >
       <div className="mx-auto flex max-w-lg items-end">
         {mobileTabs.map(({ href, label, icon: Icon, emphasize }) => {
@@ -168,7 +168,7 @@ export function MobileNav() {
                 </span>
                 <span
                   className={cn(
-                    "text-[10px] font-semibold",
+                    "text-[11px] font-semibold",
                     active ? "text-[var(--accent-hover)]" : "text-[var(--muted)]"
                   )}
                 >
@@ -184,13 +184,13 @@ export function MobileNav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold transition-colors",
+                "flex min-h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-semibold transition-colors",
                 active
                   ? "text-[var(--accent-hover)]"
                   : "text-[var(--muted)]"
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-5 w-5" />
               {label}
             </Link>
           );

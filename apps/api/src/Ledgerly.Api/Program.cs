@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using Ledgerly.Api.Infrastructure;
 using Ledgerly.Api.Infrastructure.Auth;
 using Ledgerly.Api.Infrastructure.Llm;
@@ -7,6 +8,7 @@ using Ledgerly.Api.Infrastructure.Supabase;
 using Ledgerly.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -24,9 +26,21 @@ var supabase = builder.Configuration.GetSection(SupabaseOptions.SectionName).Get
 var cors = builder.Configuration.GetSection(LedgerlyCorsOptions.SectionName).Get<LedgerlyCorsOptions>()
            ?? new LedgerlyCorsOptions();
 
+if (builder.Environment.IsProduction() && (cors.Origins is null || cors.Origins.Length == 0))
+{
+    throw new InvalidOperationException(
+        "Cors:Origins must be set in production (e.g. Cors__Origins__0=https://your-app.vercel.app).");
+}
+
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHttpClient("supabase");
-builder.Services.AddHttpClient("groq");
+builder.Services.AddHttpClient("supabase", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+builder.Services.AddHttpClient("groq", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ISupabaseRestClient, SupabaseRestClient>();
@@ -40,7 +54,50 @@ builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IAiService, AiService>();
 
 builder.Services.AddExceptionHandler<UnauthorizedExceptionHandler>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { error = "Too many requests. Please wait a moment and try again." },
+            ct);
+    };
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var key = httpContext.User.FindFirst("sub")?.Value
+                  ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                  ?? "anon";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            key,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            });
+    });
+
+    options.AddPolicy("ai", httpContext =>
+    {
+        var key = httpContext.User.FindFirst("sub")?.Value
+                  ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                  ?? "anon";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            $"ai:{key}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            });
+    });
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -166,8 +223,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Ledgerly", policy =>
     {
         policy.WithOrigins(cors.Origins.Length > 0 ? cors.Origins : ["http://localhost:3000"])
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+            .WithHeaders("Authorization", "Content-Type", "Accept")
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
     });
 });
 
@@ -181,6 +238,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 app.UseCors("Ledgerly");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

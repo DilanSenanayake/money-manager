@@ -99,7 +99,7 @@ export function SettingsForm({
           <CardTitle>Exchange rates</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label>From</Label>
               <Select value={from} onValueChange={setFrom}>
@@ -164,14 +164,14 @@ export function SettingsForm({
             {rates.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center justify-between rounded-xl border border-slate-200/80 px-3 py-2 text-sm dark:border-slate-800"
+                className="flex flex-col items-start gap-2 rounded-xl border border-slate-200/80 px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
               >
-                <span>
+                <span className="min-w-0 break-words">
                   1 {r.from_currency} = {Number(r.rate)} {r.to_currency}
                 </span>
                 <Button
-                  size="sm"
                   variant="ghost"
+                  className="w-full sm:w-auto"
                   onClick={() =>
                     startTransition(async () => {
                       const result = await deleteExchangeRate(r.id);
