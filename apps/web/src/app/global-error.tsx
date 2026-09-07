@@ -26,6 +26,8 @@ export default function GlobalError({
             Try again
           </Button>
           <Button type="button" variant="outline" asChild>
+            {/* Plain <a>: Link may be unavailable when the root error boundary renders */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/">Home</a>
           </Button>
         </div>
