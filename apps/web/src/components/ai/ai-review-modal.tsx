@@ -13,8 +13,14 @@ import type {
 } from "@/lib/schemas";
 import { matchCategoryId } from "@/lib/category-match";
 import { localDateYYYYMMDD } from "@/lib/dates";
+import {
+  fromMerchantAndNotes,
+  toMerchantAndNotes,
+} from "@/lib/transaction-description";
 import { cn } from "@/lib/utils";
+import { CategoryChip } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
+import { DateQuickPick } from "@/components/ui/date-quick-pick";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,8 +81,8 @@ function toReviewForm(
       amount: Number(text.amount ?? 0),
       type,
       date: text.date || today,
-      merchant: text.merchant ?? "",
-      notes: text.notes ?? "",
+      merchant: fromMerchantAndNotes(text.merchant, text.notes),
+      notes: null,
       is_recurring: false,
       recurring_frequency: null,
     };
@@ -106,8 +112,8 @@ function toReviewForm(
       amount: Number(sms.amount ?? 0),
       type,
       date: sms.date || today,
-      merchant: sms.merchant ?? "",
-      notes: sms.notes ?? "",
+      merchant: fromMerchantAndNotes(sms.merchant, sms.notes),
+      notes: null,
       is_recurring: false,
       recurring_frequency: null,
     };
@@ -115,6 +121,12 @@ function toReviewForm(
 
   const receipt = extraction as ReceiptExtraction | null;
   const type = "expense" as const;
+  const lineNotes =
+    receipt?.line_items?.length
+      ? receipt.line_items
+          .map((i) => `${i.name}${i.price != null ? ` (${i.price})` : ""}`)
+          .join(", ")
+      : "";
   return {
     account_id: defaultAccount,
     category_id: matchCategoryId(
@@ -127,14 +139,11 @@ function toReviewForm(
     amount: Number(receipt?.amount ?? 0),
     type,
     date: receipt?.date || today,
-    merchant: receipt?.merchant ?? "",
-    notes:
-      receipt?.notes ||
-      (receipt?.line_items?.length
-        ? receipt.line_items
-            .map((i) => `${i.name}${i.price != null ? ` (${i.price})` : ""}`)
-            .join(", ")
-        : ""),
+    merchant: fromMerchantAndNotes(
+      receipt?.merchant,
+      receipt?.notes || lineNotes || null
+    ),
+    notes: null,
     is_recurring: false,
     recurring_frequency: null,
   };
@@ -151,21 +160,25 @@ export function AiReviewModal({
 }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<AiReviewSave | null>(null);
-  const [showMore, setShowMore] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setForm(null);
-      setShowMore(false);
       return;
     }
     if (initialForm) {
-      setForm(initialForm);
+      setForm({
+        ...initialForm,
+        merchant: fromMerchantAndNotes(
+          initialForm.merchant,
+          initialForm.notes
+        ),
+        notes: null,
+      });
     } else if (extraction) {
       setForm(toReviewForm(extraction, accounts, categories, source));
     }
-    setShowMore(false);
   }, [open, extraction, accounts, categories, source, initialForm]);
 
   const relevantCategories = form
@@ -236,94 +249,61 @@ export function AiReviewModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="review-merchant">Merchant / description</Label>
-                  <Input
-                    id="review-merchant"
+                  <Label htmlFor="review-description">Description</Label>
+                  <Textarea
+                    id="review-description"
                     value={form.merchant ?? ""}
-                    placeholder="Where or what"
+                    placeholder="What was this for?"
+                    rows={2}
+                    maxLength={1000}
                     onChange={(e) =>
                       setForm({ ...form, merchant: e.target.value })
                     }
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="review-date">Date</Label>
-                    <Input
-                      id="review-date"
-                      type="date"
-                      value={form.date}
-                      onChange={(e) =>
-                        setForm({ ...form, date: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Account</Label>
-                    <Select
-                      value={form.account_id}
-                      onValueChange={(v) =>
-                        setForm({ ...form, account_id: v })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <DateQuickPick
+                  id="review-date"
+                  value={form.date}
+                  onChange={(date) => setForm({ ...form, date })}
+                />
+                <div className="space-y-2">
+                  <Label>Account</Label>
+                  <Select
+                    value={form.account_id}
+                    onValueChange={(v) =>
+                      setForm({ ...form, account_id: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <div className="flex flex-wrap gap-2">
                     {relevantCategories.map((c) => (
-                      <button
+                      <CategoryChip
                         key={c.id}
-                        type="button"
+                        icon={c.icon}
+                        name={c.name}
+                        selected={form.category_id === c.id}
                         onClick={() =>
                           setForm({ ...form, category_id: c.id })
                         }
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95",
-                          form.category_id === c.id
-                            ? "border-teal-700 bg-teal-700 text-white"
-                            : "border-slate-200 text-slate-600 hover:border-teal-600/40"
-                        )}
-                      >
-                        {c.name}
-                      </button>
+                      />
                     ))}
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  className="text-xs font-medium text-teal-700 hover:underline"
-                  onClick={() => setShowMore((v) => !v)}
-                >
-                  {showMore ? "Hide notes" : "Add notes"}
-                </button>
-
-                {showMore && (
-                  <div className="space-y-2">
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={form.notes ?? ""}
-                      onChange={(e) =>
-                        setForm({ ...form, notes: e.target.value })
-                      }
-                      rows={2}
-                    />
-                  </div>
-                )}
               </div>
 
               <DialogFooter className="shrink-0 gap-2 border-t border-[var(--border)] px-5 py-4 sm:gap-2">
@@ -337,7 +317,14 @@ export function AiReviewModal({
                   onClick={async () => {
                     setSaving(true);
                     try {
-                      const result = await saveReviewedTransaction(form);
+                      const { merchant, notes } = toMerchantAndNotes(
+                        form.merchant ?? ""
+                      );
+                      const result = await saveReviewedTransaction({
+                        ...form,
+                        merchant,
+                        notes,
+                      });
                       if (result.error) {
                         toast.error(result.error);
                         setSaving(false);

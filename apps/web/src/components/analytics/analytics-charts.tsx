@@ -14,18 +14,8 @@ import {
   YAxis,
 } from "recharts";
 import { formatMoney } from "@/lib/utils";
+import { getCategoryHex } from "@/components/categories/category-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const PIE_COLORS = [
-  "#0f766e",
-  "#0891b2",
-  "#0369a1",
-  "#4d7c0f",
-  "#b45309",
-  "#be123c",
-  "#6d28d9",
-  "#0e7490",
-];
 
 export function AnalyticsCharts({
   trend,
@@ -94,10 +84,10 @@ export function AnalyticsCharts({
                     `${name}: ${money(Number(value))}`
                   }
                 >
-                  {categorySpend.map((_, index) => (
+                  {categorySpend.map((entry) => (
                     <Cell
-                      key={`cell-${index}`}
-                      fill={PIE_COLORS[index % PIE_COLORS.length]}
+                      key={entry.name}
+                      fill={getCategoryHex(null, entry.name)}
                     />
                   ))}
                 </Pie>

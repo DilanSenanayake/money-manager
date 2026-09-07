@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import type { BudgetProgress } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
+import { CategoryIcon } from "@/components/categories/category-icon";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -33,8 +34,11 @@ export function BudgetBars({
         return (
           <div key={b.category.id} className="space-y-2">
             <div className="flex items-center justify-between gap-2 text-sm">
-              <span className="font-medium">{b.category.name}</span>
-              <span className="tabular-nums text-[var(--muted)]">
+              <span className="flex min-w-0 items-center gap-2 font-medium">
+                <CategoryIcon icon={b.category.icon} name={b.category.name} framed />
+                <span className="truncate">{b.category.name}</span>
+              </span>
+              <span className="shrink-0 tabular-nums text-[var(--muted)]">
                 {formatMoney(b.spent, currency)} /{" "}
                 {formatMoney(b.limit, currency)}
               </span>
@@ -77,10 +81,16 @@ export function BudgetAlerts({ budgets }: { budgets: BudgetProgress[] }) {
       </CardHeader>
       <CardContent className="space-y-1 text-sm text-[var(--foreground)]">
         {alerts.map((b) => (
-          <p key={b.category.id}>
-            <strong>{b.category.name}</strong>:{" "}
-            {b.status === "over" ? "over budget" : "at 80%+ of limit"} (
-            {Math.round(b.ratio * 100)}%)
+          <p key={b.category.id} className="flex items-center gap-2">
+            <CategoryIcon
+              icon={b.category.icon}
+              name={b.category.name}
+            />
+            <span>
+              <strong>{b.category.name}</strong>:{" "}
+              {b.status === "over" ? "over budget" : "at 80%+ of limit"} (
+              {Math.round(b.ratio * 100)}%)
+            </span>
           </p>
         ))}
       </CardContent>

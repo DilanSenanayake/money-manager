@@ -2,6 +2,7 @@ import { addDays, addMonths, addYears, format, parseISO } from "date-fns";
 import { getRecurringTransactions } from "@/app/actions/transactions";
 import { getProfile } from "@/app/actions/settings";
 import { localDateYYYYMMDD } from "@/lib/dates";
+import { transactionTitle } from "@/lib/transaction-description";
 import { formatMoney } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -66,7 +67,7 @@ export default async function RecurringPage() {
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">
-                  {tx.merchant || tx.category?.name || "Recurring"}
+                  {transactionTitle(tx)}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
                   <Badge variant="accent" className="capitalize">

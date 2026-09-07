@@ -4,7 +4,13 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createCategory, updateCategory } from "@/app/actions/categories";
 import type { BudgetProgress, Category } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { BudgetBars } from "@/components/budgets/budget-bars";
+import {
+  CATEGORY_ICON_OPTIONS,
+  CategoryIcon,
+  getCategoryColor,
+} from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +71,30 @@ export function BudgetsManager({
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORY_ICON_OPTIONS.map((opt) => {
+                    const color = getCategoryColor(opt.id, opt.label);
+                    return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      title={opt.label}
+                      onClick={() => setForm({ ...form, icon: opt.id })}
+                      className={cn(
+                        "inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-[color,background-color,border-color,transform] duration-200 active:scale-95",
+                        form.icon === opt.id
+                          ? color.chipSelected
+                          : cn(color.chip, "hover:opacity-90")
+                      )}
+                    >
+                      <CategoryIcon icon={opt.id} name={opt.label} />
+                    </button>
+                    );
+                  })}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Type</Label>
@@ -145,9 +175,12 @@ export function BudgetsManager({
               key={cat.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 px-3 py-2 dark:border-slate-800"
             >
-              <div>
-                <p className="font-medium">{cat.name}</p>
-                <p className="text-xs capitalize text-slate-500">{cat.type}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <CategoryIcon icon={cat.icon} name={cat.name} framed />
+                <div className="min-w-0">
+                  <p className="font-medium">{cat.name}</p>
+                  <p className="text-xs capitalize text-slate-500">{cat.type}</p>
+                </div>
               </div>
               {cat.type === "expense" && (
                 <div className="flex items-center gap-2">

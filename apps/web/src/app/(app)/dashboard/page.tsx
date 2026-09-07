@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Camera, ClipboardPaste, Plus, Wallet } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
+import { transactionTitle } from "@/lib/transaction-description";
 import { getDashboardData } from "@/app/actions/dashboard";
 import { BudgetAlerts, BudgetBars } from "@/components/budgets/budget-bars";
 import { PageHeader } from "@/components/layout/page-header";
@@ -183,7 +184,7 @@ export default async function DashboardPage() {
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">
-                  {tx.merchant || tx.category?.name || tx.type}
+                  {transactionTitle(tx)}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
                   <span>{tx.date}</span>

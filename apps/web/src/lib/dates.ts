@@ -6,6 +6,13 @@ export function localDateYYYYMMDD(d = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Yesterday in local calendar as YYYY-MM-DD. */
+export function localYesterdayYYYYMMDD(d = new Date()): string {
+  const y = new Date(d);
+  y.setDate(y.getDate() - 1);
+  return localDateYYYYMMDD(y);
+}
+
 export function localMonthStartYYYYMMDD(d = new Date()): string {
   return localDateYYYYMMDD(new Date(d.getFullYear(), d.getMonth(), 1));
 }

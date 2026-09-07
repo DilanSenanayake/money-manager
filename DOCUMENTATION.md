@@ -304,6 +304,72 @@ Local FE against a VM API: set `NEXT_PUBLIC_API_URL=http://<vm-host>:8080` and k
 | `dotnet build` | Build |
 | `docker build -t ledgerly-api .` | From `apps/api/` |
 
+### Redeploy API on a Docker VM
+
+Typical layout: repo at `~/money-manager`, env file at `~/ledgerly-api.env`, container `ledgerly-api` on port **8080**.
+
+**1. SSH in** (from your machine):
+
+```bash
+ssh -i /path/to/your-ssh-key ubuntu@<vm-host>
+```
+
+On Windows, if SSH rejects an unprotected private key:
+
+```powershell
+icacls "path\to\your-ssh-key" /inheritance:r
+icacls "path\to\your-ssh-key" /grant:r "$($env:USERNAME):(R)"
+```
+
+**2. Update code on the VM**
+
+```bash
+cd ~/money-manager
+git pull
+cd apps/api
+```
+
+If the repo is not cloned (or is private without git access), copy `apps/api` from your PC with `scp`/`rsync` instead.
+
+**3. Rebuild and recreate the container**
+
+```bash
+cd ~/money-manager/apps/api
+docker build -t ledgerly-api .
+docker stop ledgerly-api
+docker rm ledgerly-api
+docker run -d --name ledgerly-api --restart unless-stopped \
+  -p 8080:8080 \
+  --env-file ~/ledgerly-api.env \
+  ledgerly-api
+```
+
+`~/ledgerly-api.env` should include at least:
+
+```env
+Supabase__Url=https://your-project.supabase.co
+Supabase__AnonKey=your-anon-key
+Gemini__ApiKey=your-google-ai-api-key
+Cors__Origins__0=http://localhost:3000
+Cors__Origins__1=http://127.0.0.1:3000
+```
+
+Do **not** set `Supabase__JwtSecret` to a signing-key id (UUID). Newer Supabase projects use asymmetric JWTs; the API validates via JWKS from `Supabase__Url`.
+
+**4. Verify**
+
+```bash
+curl http://127.0.0.1:8080/health
+# from your PC:
+curl http://<vm-host>:8080/health
+```
+
+Then point local web at the VM (`NEXT_PUBLIC_API_URL=http://<vm-host>:8080`) and refresh.
+
+Ensure the cloud firewall / security list allows inbound **TCP 8080** (same pattern as any other open API port on the VM).
+
+See also [`apps/api/README.md`](./apps/api/README.md#redeploy-on-vm-docker).
+
 ---
 
 ## 8. Key Design Decisions

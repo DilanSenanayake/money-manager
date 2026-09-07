@@ -73,15 +73,48 @@ The API is **stateless** (no server sessions). It validates the Supabase access 
 ```bash
 cd apps/api
 docker build -t ledgerly-api .
-docker run -p 8080:8080 \
-  -e Supabase__Url=... \
-  -e Supabase__AnonKey=... \
-  -e Supabase__JwtSecret=... \
-  -e Gemini__ApiKey=... \
+docker run -d --name ledgerly-api --restart unless-stopped \
+  -p 8080:8080 \
+  --env-file ~/ledgerly-api.env \
   ledgerly-api
 ```
 
+Example `~/ledgerly-api.env`:
+
+```env
+Supabase__Url=https://your-project.supabase.co
+Supabase__AnonKey=your-anon-key
+Gemini__ApiKey=your-google-ai-api-key
+Cors__Origins__0=http://localhost:3000
+Cors__Origins__1=http://127.0.0.1:3000
+```
+
+`Supabase__JwtSecret` is optional (legacy HS256 only). Do not set it to a signing-key id — asymmetric keys use JWKS from `Supabase__Url`.
+
 ## Deploy
 
-Any Docker host works (Railway, Render, Fly.io, Azure Container Apps).
+Any Docker host works (Railway, Render, Fly.io, Azure Container Apps, Oracle Cloud VM).
 Set the env vars above and point web/mobile at the public API URL.
+
+### Redeploy on VM (Docker)
+
+Assumes: repo at `~/money-manager`, env at `~/ledgerly-api.env`, container name `ledgerly-api`, port **8080**.
+
+```bash
+ssh -i /path/to/your-ssh-key ubuntu@<vm-host>
+
+cd ~/money-manager && git pull
+cd apps/api
+docker build -t ledgerly-api .
+docker stop ledgerly-api && docker rm ledgerly-api
+docker run -d --name ledgerly-api --restart unless-stopped \
+  -p 8080:8080 \
+  --env-file ~/ledgerly-api.env \
+  ledgerly-api
+
+curl http://127.0.0.1:8080/health
+```
+
+From your PC: `curl http://<vm-host>:8080/health`. Firewall must allow TCP **8080**.
+
+Full notes (Windows SSH key ACL, `scp` fallback): [`DOCUMENTATION.md`](../../DOCUMENTATION.md#redeploy-api-on-a-docker-vm).

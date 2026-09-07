@@ -18,6 +18,7 @@ import {
 import { createTransaction } from "@/app/actions/transactions";
 import { extractTextFromImage } from "@/lib/ocr";
 import { localDateYYYYMMDD } from "@/lib/dates";
+import { toMerchantAndNotes } from "@/lib/transaction-description";
 import type { Account, Category } from "@/lib/types";
 import type {
   AiReviewSave,
@@ -30,7 +31,9 @@ import {
   AiReviewModal,
   type AiSource,
 } from "@/components/ai/ai-review-modal";
+import { CategoryChip } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
+import { DateQuickPick } from "@/components/ui/date-quick-pick";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -72,6 +75,8 @@ export function QuickAddPanel({
   );
   const [manualAmount, setManualAmount] = useState("");
   const [manualCategoryId, setManualCategoryId] = useState<string | null>(null);
+  const [manualDate, setManualDate] = useState(localDateYYYYMMDD());
+  const [manualDescription, setManualDescription] = useState("");
 
   const [extraction, setExtraction] = useState<
     ReceiptExtraction | SmsExtraction | QuickTextExtraction | null
@@ -203,9 +208,8 @@ export function QuickAddPanel({
         category_id: manualCategoryId,
         amount,
         type: manualType,
-        date: localDateYYYYMMDD(),
-        merchant: "",
-        notes: "",
+        date: manualDate,
+        ...toMerchantAndNotes(manualDescription),
         is_recurring: false,
         recurring_frequency: null,
         transfer_to_account_id: null,
@@ -218,6 +222,8 @@ export function QuickAddPanel({
       toast.success("Saved");
       setManualAmount("");
       setManualCategoryId(null);
+      setManualDate(localDateYYYYMMDD());
+      setManualDescription("");
       stopBusy();
       router.push("/dashboard");
       router.refresh();
@@ -395,7 +401,9 @@ export function QuickAddPanel({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Add manually</CardTitle>
-          <CardDescription>Enter the amount, pick a category, and save</CardDescription>
+          <CardDescription>
+            Amount, description, category, and save
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -431,22 +439,29 @@ export function QuickAddPanel({
             disabled={busy}
             onChange={(e) => setManualAmount(e.target.value)}
           />
+          <Textarea
+            placeholder="What was this for? (optional)"
+            rows={2}
+            maxLength={1000}
+            value={manualDescription}
+            disabled={busy}
+            onChange={(e) => setManualDescription(e.target.value)}
+          />
+          <DateQuickPick
+            value={manualDate}
+            onChange={setManualDate}
+            disabled={busy}
+          />
           <div className="flex flex-wrap gap-2">
             {manualCategories.map((c) => (
-              <button
+              <CategoryChip
                 key={c.id}
-                type="button"
+                icon={c.icon}
+                name={c.name}
+                selected={manualCategoryId === c.id}
                 disabled={busy}
                 onClick={() => setManualCategoryId(c.id)}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-[color,background-color,border-color,transform] duration-200 active:scale-95 disabled:opacity-60",
-                  manualCategoryId === c.id
-                    ? "border-teal-700 bg-teal-700 text-white"
-                    : "border-slate-200 text-slate-600 hover:border-teal-600/40"
-                )}
-              >
-                {c.name}
-              </button>
+              />
             ))}
           </div>
           <Button
