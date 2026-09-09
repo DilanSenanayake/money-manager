@@ -98,13 +98,13 @@ export function AccountsManager({
                 Add account
               </Button>
             </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
+          <DialogContent className="gap-0 overflow-hidden p-0 sm:p-0">
+            <DialogHeader className="shrink-0 border-b border-[var(--border)] px-5 py-4 pr-12 sm:px-6">
               <DialogTitle>
                 {editing ? "Edit account" : "New account"}
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-3">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input
@@ -146,7 +146,7 @@ export function AccountsManager({
                     }
                   />
                   {editing && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[var(--muted)]">
                       Balance updates automatically when you add transactions
                     </p>
                   )}
@@ -176,8 +176,8 @@ export function AccountsManager({
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button onClick={submit} disabled={pending}>
+            <DialogFooter className="shrink-0 border-t border-[var(--border)] px-5 py-4 sm:px-6">
+              <Button className="w-full sm:w-auto" onClick={submit} disabled={pending}>
                 {pending ? "Saving…" : "Save"}
               </Button>
             </DialogFooter>
