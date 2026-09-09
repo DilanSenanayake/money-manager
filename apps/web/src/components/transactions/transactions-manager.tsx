@@ -361,7 +361,7 @@ export function TransactionsManager({
                   </div>
                 )}
               </div>
-              <DialogFooter className="shrink-0 border-t border-[var(--border)] px-5 py-4 sm:px-6">
+              <DialogFooter className="shrink-0 border-t border-[var(--border)] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-4">
                 <Button className="w-full sm:w-auto" onClick={submit} disabled={pending}>
                   {pending ? "Saving…" : isEditing ? "Update" : "Save"}
                 </Button>

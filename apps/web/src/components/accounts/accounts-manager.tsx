@@ -21,7 +21,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -71,6 +70,11 @@ export function AccountsManager({
     setOpen(true);
   }
 
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) setEditing(null);
+  }
+
   function submit() {
     startTransition(async () => {
       const result = editing
@@ -82,6 +86,7 @@ export function AccountsManager({
       }
       toast.success(editing ? "Account updated" : "Account created");
       setOpen(false);
+      setEditing(null);
     });
   }
 
@@ -91,14 +96,16 @@ export function AccountsManager({
         title="Accounts"
         description="Cash, checking, savings, and credit cards"
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreate}>
-                <Plus className="h-4 w-4" />
-                Add account
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="gap-0 overflow-hidden p-0 sm:p-0">
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            Add account
+          </Button>
+        }
+      />
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:p-0">
+          <div className="flex max-h-[min(92dvh,100svh)] min-h-0 flex-col sm:max-h-[min(84vh,720px)]">
             <DialogHeader className="shrink-0 border-b border-[var(--border)] px-5 py-4 pr-12 sm:px-6">
               <DialogTitle>
                 {editing ? "Edit account" : "New account"}
@@ -176,15 +183,18 @@ export function AccountsManager({
                 </div>
               </div>
             </div>
-            <DialogFooter className="shrink-0 border-t border-[var(--border)] px-5 py-4 sm:px-6">
-              <Button className="w-full sm:w-auto" onClick={submit} disabled={pending}>
+            <DialogFooter className="shrink-0 border-t border-[var(--border)] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-4">
+              <Button
+                className="w-full sm:w-auto"
+                onClick={submit}
+                disabled={pending}
+              >
                 {pending ? "Saving…" : "Save"}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        }
-      />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {accounts.map((account) => (
@@ -197,10 +207,7 @@ export function AccountsManager({
                 </Badge>
               </div>
               <div className="flex shrink-0 gap-1">
-                <Button
-                  variant="outline"
-                  onClick={() => openEdit(account)}
-                >
+                <Button variant="outline" onClick={() => openEdit(account)}>
                   Edit
                 </Button>
                 <Button
@@ -227,7 +234,9 @@ export function AccountsManager({
           </Card>
         ))}
         {accounts.length === 0 && (
-          <p className="text-sm text-[var(--muted)] sm:col-span-2">No accounts yet.</p>
+          <p className="text-sm text-[var(--muted)] sm:col-span-2">
+            No accounts yet.
+          </p>
         )}
       </div>
     </div>
