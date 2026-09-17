@@ -555,15 +555,17 @@ function AppPreview({
           <p className="mb-3 px-2 text-[11px] font-semibold text-[var(--muted-fg)]">
             Menu
           </p>
-          {[
-            [LayoutDashboard, "Home", true],
-            [Plus, "Add", false],
-            [ArrowLeftRight, "Activity", false],
-            [Wallet, "Accounts", false],
-            [PiggyBank, "Budgets", false],
-          ].map(([Icon, label, active]) => (
+          {(
+            [
+              { Icon: LayoutDashboard, label: "Home", active: true },
+              { Icon: Plus, label: "Add", active: false },
+              { Icon: ArrowLeftRight, label: "Activity", active: false },
+              { Icon: Wallet, label: "Accounts", active: false },
+              { Icon: PiggyBank, label: "Budgets", active: false },
+            ] as const
+          ).map(({ Icon, label, active }) => (
             <div
-              key={String(label)}
+              key={label}
               className={cn(
                 "mb-1 flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium",
                 active
