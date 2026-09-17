@@ -220,13 +220,6 @@ public sealed class GroqService(
             return "We couldn't understand that message. Try a clearer bank SMS, or add it manually.";
         }
 
-        if (msg.StartsWith("Groq HTTP", StringComparison.OrdinalIgnoreCase)
-            || msg.StartsWith("Groq API", StringComparison.OrdinalIgnoreCase)
-            || msg.StartsWith("Groq ", StringComparison.OrdinalIgnoreCase))
-        {
-            return msg.Length > 180 ? msg[..180] + "..." : msg;
-        }
-
-        return string.IsNullOrWhiteSpace(msg) ? fallback : msg;
+        return fallback;
     }
 }

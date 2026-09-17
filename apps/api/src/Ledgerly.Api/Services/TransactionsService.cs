@@ -67,7 +67,7 @@ public sealed class TransactionsService(
     public Task<List<Transaction>> GetRecurringAsync(CancellationToken ct = default) =>
         supabase.GetListAsync<Transaction>(
             "transactions",
-            $"select={Uri.EscapeDataString(SelectWithJoins)}&user_id=eq.{user.UserId}&is_recurring=eq.true&order=date.desc",
+            $"select={Uri.EscapeDataString(SelectWithJoins)}&user_id=eq.{user.UserId}&is_recurring=eq.true&order=date.desc&limit=200",
             ct);
 
     public async Task<Result> CreateAsync(CreateTransactionRequest request, CancellationToken ct = default)

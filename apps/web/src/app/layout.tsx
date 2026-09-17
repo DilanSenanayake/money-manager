@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
+import { getSiteUrl } from "@/lib/env";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -11,10 +12,15 @@ const sans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Smart Money Manager",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "Smart Money Manager",
+    template: "%s · Smart Money Manager",
+  },
   description:
     "Spend smarter. Save better. Live better. An intelligent money manager with AI-assisted tracking and insights.",
   manifest: "/manifest.webmanifest",
+  robots: { index: false, follow: false },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

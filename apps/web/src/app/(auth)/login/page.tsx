@@ -64,7 +64,7 @@ export default function LoginPage() {
                 type="password"
                 required
                 autoComplete="current-password"
-                minLength={6}
+                minLength={8}
               />
             </div>
             {error && (

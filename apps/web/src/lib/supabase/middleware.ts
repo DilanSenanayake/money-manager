@@ -1,12 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/env";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabaseAnonKey(),
     {
       cookies: {
         getAll() {
@@ -34,18 +35,19 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/manifest") ||
     path === "/sw.js" ||
     path.startsWith("/icons/") ||
-    path === "/favicon.ico";
+    path === "/favicon.ico" ||
+    path === "/robots.txt";
 
-  // Fast session check from cookie; server actions still validate with getUser().
+  // Validate the JWT with Supabase Auth (do not trust cookie-only getSession()).
   let user = null;
   try {
     const result = await Promise.race([
-      supabase.auth.getSession(),
+      supabase.auth.getUser(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Supabase auth timeout")), 2000)
+        setTimeout(() => reject(new Error("Supabase auth timeout")), 8000)
       ),
     ]);
-    user = result.data.session?.user ?? null;
+    user = result.data.user ?? null;
   } catch {
     if (!isPublic && !path.startsWith("/_next")) {
       const url = request.nextUrl.clone();

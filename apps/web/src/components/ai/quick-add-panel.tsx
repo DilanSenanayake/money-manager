@@ -151,6 +151,16 @@ export function QuickAddPanel({
   }
 
   async function handleReceiptFile(file: File) {
+    const maxBytes = 8 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error("That photo is too large. Use one under 8 MB.");
+      return;
+    }
+    if (file.type && !file.type.startsWith("image/")) {
+      toast.error("Please choose a photo of the receipt.");
+      return;
+    }
+
     startBusy("Reading receipt", "Looking at your photo…", 0);
     try {
       const ocr = await extractTextFromImage(file, (info) => {

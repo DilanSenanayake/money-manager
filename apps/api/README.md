@@ -19,9 +19,9 @@ Copy values into `src/Ledgerly.Api/appsettings.Development.json` or set env vars
 | `Supabase__AnonKey` | Anon/publishable key |
 | `Supabase__JwtSecret` | Optional HS256 secret; use with Url when Auth is HS256-only (JWKS empty). Not a signing-key UUID. |
 | `Groq__ApiKey` | Groq API key (free tier) |
-| `Cors__Origins__0` | Allowed web origin (e.g. `http://localhost:3000`) |
+| `Cors__Origins__0` | Allowed web origin (required in Production, e.g. `https://your-app.vercel.app`) |
 
-See [`.env.example`](./.env.example).
+See [`.env.example`](./.env.example) and the repo [PRODUCTION.md](../../PRODUCTION.md).
 
 ## Run locally
 
@@ -74,7 +74,7 @@ The API is **stateless** (no server sessions). It validates the Supabase access 
 cd apps/api
 docker build -t ledgerly-api .
 docker run -d --name ledgerly-api --restart unless-stopped \
-  -p 8080:8080 \
+  -p 127.0.0.1:8080:8080 \
   --env-file ~/ledgerly-api.env \
   ledgerly-api
 ```
@@ -112,7 +112,7 @@ cd apps/api
 docker build -t ledgerly-api .
 docker stop ledgerly-api && docker rm ledgerly-api
 docker run -d --name ledgerly-api --restart unless-stopped \
-  -p 8080:8080 \
+  -p 127.0.0.1:8080:8080 \
   --env-file ~/ledgerly-api.env \
   ledgerly-api
 

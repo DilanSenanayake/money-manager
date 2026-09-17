@@ -116,18 +116,19 @@ public sealed class AiController(IAiService ai) : ControllerBase
 }
 
 [ApiController]
+[AllowAnonymous]
+[DisableRateLimiting]
 [Route("health")]
 public sealed class HealthController(
     IHttpClientFactory httpClientFactory,
-    IOptions<SupabaseOptions> supabaseOptions) : ControllerBase
+    IOptions<SupabaseOptions> supabaseOptions,
+    ILogger<HealthController> logger) : ControllerBase
 {
     [HttpGet]
-    [AllowAnonymous]
     public IActionResult Get() => Ok(new { status = "ok" });
 
     /// <summary>Readiness: process is up and Supabase is reachable.</summary>
     [HttpGet("ready")]
-    [AllowAnonymous]
     public async Task<IActionResult> Ready(CancellationToken ct)
     {
         var url = (supabaseOptions.Value.Url ?? "").TrimEnd('/');
@@ -144,6 +145,14 @@ public sealed class HealthController(
         {
             var client = httpClientFactory.CreateClient("supabase");
             using var request = new HttpRequestMessage(HttpMethod.Head, $"{url}/rest/v1/");
+            if (!string.IsNullOrWhiteSpace(supabaseOptions.Value.AnonKey))
+            {
+                request.Headers.TryAddWithoutValidation("apikey", supabaseOptions.Value.AnonKey);
+                request.Headers.TryAddWithoutValidation(
+                    "Authorization",
+                    $"Bearer {supabaseOptions.Value.AnonKey}");
+            }
+
             using var response = await client.SendAsync(request, ct);
             // 401/404 still means the host is reachable
             var reachable = (int)response.StatusCode is >= 200 and < 500;
@@ -158,8 +167,9 @@ public sealed class HealthController(
 
             return Ok(new { status = "ready", supabase = "ok" });
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Readiness check could not reach Supabase");
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new
             {
                 status = "not_ready",

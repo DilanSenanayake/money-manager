@@ -338,7 +338,7 @@ docker build -t ledgerly-api .
 docker stop ledgerly-api
 docker rm ledgerly-api
 docker run -d --name ledgerly-api --restart unless-stopped \
-  -p 8080:8080 \
+  -p 127.0.0.1:8080:8080 \
   --env-file ~/ledgerly-api.env \
   ledgerly-api
 ```
@@ -405,7 +405,9 @@ See also [`apps/api/README.md`](./apps/api/README.md#redeploy-on-vm-docker).
 | API (`apps/api`) | **Docker VM** / Railway / Fly.io / Azure Container Apps with TLS |
 | DB / Auth | **Supabase** (same project for web + API) |
 
-Put TLS in front of the API (Caddy/Nginx/cloud load balancer). Prefer `https://` for `NEXT_PUBLIC_API_URL` in production.
+Put TLS in front of the API (Caddy/Nginx/cloud load balancer). Prefer `https://` for `API_URL` / `NEXT_PUBLIC_API_URL` in production.
+
+Full cutover steps: **[PRODUCTION.md](./PRODUCTION.md)** and **[PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md)**.
 
 ### Error monitoring (manual setup)
 

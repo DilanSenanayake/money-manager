@@ -1,4 +1,5 @@
 using Ledgerly.Api.Helpers;
+using Ledgerly.Api.Infrastructure.Llm;
 using Ledgerly.Api.Models;
 using Xunit;
 
@@ -103,5 +104,28 @@ public class OwnershipGuardsTests
         Assert.Equal("abc", OwnershipGuards.Clamp("  abcdef  ", 3));
         Assert.Equal("", OwnershipGuards.Clamp("   ", 10));
         Assert.Null(OwnershipGuards.ClampNullable(null, 10));
+    }
+}
+
+public class GroqErrorFormattingTests
+{
+    [Fact]
+    public void FormatAiError_does_not_leak_provider_details()
+    {
+        var message = GroqService.FormatAiError(
+            new InvalidOperationException("Groq HTTP 500: internal stack / secret"),
+            "fallback");
+        Assert.Equal("fallback", message);
+        Assert.DoesNotContain("HTTP 500", message);
+        Assert.DoesNotContain("secret", message);
+    }
+
+    [Fact]
+    public void FormatAiError_maps_rate_limit_to_busy_message()
+    {
+        var message = GroqService.FormatAiError(
+            new InvalidOperationException("Groq rate limit (429): too many requests"),
+            "fallback");
+        Assert.Equal("We're a bit busy right now. Please wait a minute and try again.", message);
     }
 }

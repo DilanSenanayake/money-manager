@@ -16,9 +16,10 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         if (exception is UnauthorizedAccessException)
             return false;
 
-        logger.LogError(exception, "Unhandled exception on {Method} {Path}",
+        logger.LogError(exception, "Unhandled exception on {Method} {Path} {RequestId}",
             httpContext.Request.Method,
-            httpContext.Request.Path);
+            httpContext.Request.Path,
+            httpContext.TraceIdentifier);
 
         if (httpContext.Response.HasStarted)
             return false;

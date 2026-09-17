@@ -8,11 +8,17 @@ using Ledgerly.Api.Infrastructure.Supabase;
 using Ledgerly.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 1_048_576;
+});
 
 builder.Services.Configure<SupabaseOptions>(
     builder.Configuration.GetSection(SupabaseOptions.SectionName));
@@ -26,11 +32,29 @@ var supabase = builder.Configuration.GetSection(SupabaseOptions.SectionName).Get
 var cors = builder.Configuration.GetSection(LedgerlyCorsOptions.SectionName).Get<LedgerlyCorsOptions>()
            ?? new LedgerlyCorsOptions();
 
-if (builder.Environment.IsProduction() && (cors.Origins is null || cors.Origins.Length == 0))
+if (builder.Environment.IsProduction())
 {
-    throw new InvalidOperationException(
-        "Cors:Origins must be set in production (e.g. Cors__Origins__0=https://your-app.vercel.app).");
+    if (string.IsNullOrWhiteSpace(supabase.Url) || string.IsNullOrWhiteSpace(supabase.AnonKey))
+    {
+        throw new InvalidOperationException(
+            "Supabase:Url and Supabase:AnonKey must be set in production (Supabase__Url, Supabase__AnonKey).");
+    }
+
+    if (cors.Origins is null || cors.Origins.Length == 0)
+    {
+        throw new InvalidOperationException(
+            "Cors:Origins must be set in production (e.g. Cors__Origins__0=https://your-app.vercel.app).");
+    }
 }
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Trust the reverse proxy sitting in front of this process (Caddy, Nginx, cloud LB).
+    // The proxy MUST overwrite client-supplied X-Forwarded-* headers.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient("supabase", client =>
@@ -237,10 +261,45 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+app.UseForwardedHeaders();
+app.Use(async (context, next) =>
+{
+    var requestId = context.Request.Headers["X-Request-Id"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(requestId) || requestId.Length > 64)
+        requestId = context.TraceIdentifier;
+    context.TraceIdentifier = requestId;
+    context.Response.Headers["X-Request-Id"] = requestId;
+
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Ledgerly.Api.Request");
+    using (logger.BeginScope(new Dictionary<string, object> { ["RequestId"] = requestId }))
+    {
+        await next();
+    }
+});
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+        headers["X-Permitted-Cross-Domain-Policies"] = "none";
+        headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+        if (context.Request.IsHttps)
+        {
+            headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+        }
+
+        return Task.CompletedTask;
+    });
+    await next();
+});
 app.UseCors("Ledgerly");
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

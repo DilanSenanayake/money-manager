@@ -36,7 +36,7 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
 
         var monthTx = await supabase.GetListAsync<Transaction>(
             "transactions",
-            $"user_id=eq.{user.UserId}&date=gte.{monthStart}&date=lte.{monthEnd}",
+            $"user_id=eq.{user.UserId}&date=gte.{monthStart}&date=lte.{monthEnd}&order=date.desc&limit=2000",
             ct);
 
         var recent = await supabase.GetListAsync<Transaction>(
@@ -118,7 +118,7 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
 
         var txTask = supabase.GetListAsync<Transaction>(
             "transactions",
-            $"user_id=eq.{user.UserId}&date=gte.{rangeFrom}&date=lte.{rangeTo}",
+            $"user_id=eq.{user.UserId}&date=gte.{rangeFrom}&date=lte.{rangeTo}&order=date.desc&limit=5000",
             ct);
         var categoriesTask = supabase.GetListAsync<Category>(
             "categories",

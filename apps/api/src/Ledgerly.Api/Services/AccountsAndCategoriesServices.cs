@@ -12,7 +12,10 @@ public interface IAccountsService
     Task<Result> DeleteAsync(Guid id, CancellationToken ct = default);
 }
 
-public sealed class AccountsService(ISupabaseRestClient supabase, ICurrentUser user) : IAccountsService
+public sealed class AccountsService(
+    ISupabaseRestClient supabase,
+    ICurrentUser user,
+    ILogger<AccountsService> logger) : IAccountsService
 {
     public Task<List<Account>> GetAllAsync(CancellationToken ct = default) =>
         supabase.GetListAsync<Account>(
@@ -39,8 +42,9 @@ public sealed class AccountsService(ISupabaseRestClient supabase, ICurrentUser u
             }, ct);
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to create account for user {UserId}", user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }
@@ -79,8 +83,9 @@ public sealed class AccountsService(ISupabaseRestClient supabase, ICurrentUser u
                 ct);
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to update account {Id} for user {UserId}", id, user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }
@@ -89,11 +94,19 @@ public sealed class AccountsService(ISupabaseRestClient supabase, ICurrentUser u
     {
         try
         {
+            var existing = await supabase.GetSingleAsync<Account>(
+                "accounts",
+                $"select=id&id=eq.{id}&user_id=eq.{user.UserId}",
+                ct);
+            if (existing is null)
+                return Result.Fail("Account not found");
+
             await supabase.DeleteAsync("accounts", $"id=eq.{id}&user_id=eq.{user.UserId}", ct);
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to delete account {Id} for user {UserId}", id, user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }
@@ -107,7 +120,10 @@ public interface ICategoriesService
     Task<Result> DeleteAsync(Guid id, CancellationToken ct = default);
 }
 
-public sealed class CategoriesService(ISupabaseRestClient supabase, ICurrentUser user) : ICategoriesService
+public sealed class CategoriesService(
+    ISupabaseRestClient supabase,
+    ICurrentUser user,
+    ILogger<CategoriesService> logger) : ICategoriesService
 {
     public Task<List<Category>> GetAllAsync(CancellationToken ct = default) =>
         supabase.GetListAsync<Category>(
@@ -132,8 +148,9 @@ public sealed class CategoriesService(ISupabaseRestClient supabase, ICurrentUser
             }, ct);
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to create category for user {UserId}", user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }
@@ -145,6 +162,13 @@ public sealed class CategoriesService(ISupabaseRestClient supabase, ICurrentUser
 
         try
         {
+            var existing = await supabase.GetSingleAsync<Category>(
+                "categories",
+                $"select=id&id=eq.{id}&user_id=eq.{user.UserId}",
+                ct);
+            if (existing is null)
+                return Result.Fail("Category not found");
+
             await supabase.UpdateAsync(
                 "categories",
                 $"id=eq.{id}&user_id=eq.{user.UserId}",
@@ -158,8 +182,9 @@ public sealed class CategoriesService(ISupabaseRestClient supabase, ICurrentUser
                 ct);
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to update category {Id} for user {UserId}", id, user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }
@@ -168,11 +193,19 @@ public sealed class CategoriesService(ISupabaseRestClient supabase, ICurrentUser
     {
         try
         {
+            var existing = await supabase.GetSingleAsync<Category>(
+                "categories",
+                $"select=id&id=eq.{id}&user_id=eq.{user.UserId}",
+                ct);
+            if (existing is null)
+                return Result.Fail("Category not found");
+
             await supabase.DeleteAsync("categories", $"id=eq.{id}&user_id=eq.{user.UserId}", ct);
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to delete category {Id} for user {UserId}", id, user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }

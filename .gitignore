@@ -36,6 +36,21 @@ yarn-error.log*
 **/.env.*
 !**/.env.example
 
+# logs
+*.log
+logs/
+
+# local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
 # .NET local secrets (do not commit)
 **/appsettings.Development.json
 **/appsettings.*.local.json

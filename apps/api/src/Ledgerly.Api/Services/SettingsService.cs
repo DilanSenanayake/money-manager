@@ -13,7 +13,10 @@ public interface ISettingsService
     Task<Result> DeleteExchangeRateAsync(Guid id, CancellationToken ct = default);
 }
 
-public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser user) : ISettingsService
+public sealed class SettingsService(
+    ISupabaseRestClient supabase,
+    ICurrentUser user,
+    ILogger<SettingsService> logger) : ISettingsService
 {
     public Task<Profile?> GetProfileAsync(CancellationToken ct = default) =>
         supabase.GetSingleAsync<Profile>("profiles", $"id=eq.{user.UserId}", ct);
@@ -31,7 +34,7 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
                 new
                 {
                     base_currency = request.BaseCurrency,
-                    display_name = request.DisplayName,
+                    display_name = OwnershipGuards.ClampNullable(request.DisplayName, 100),
                 },
                 ct);
 
@@ -40,8 +43,9 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
 
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to update profile for user {UserId}", user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }
@@ -80,8 +84,9 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
                 ct);
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to upsert exchange rate for user {UserId}", user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }
@@ -90,14 +95,22 @@ public sealed class SettingsService(ISupabaseRestClient supabase, ICurrentUser u
     {
         try
         {
+            var existing = await supabase.GetSingleAsync<ExchangeRate>(
+                "exchange_rates",
+                $"select=id&id=eq.{id}&user_id=eq.{user.UserId}",
+                ct);
+            if (existing is null)
+                return Result.Fail("Exchange rate not found");
+
             await supabase.DeleteAsync(
                 "exchange_rates",
                 $"id=eq.{id}&user_id=eq.{user.UserId}",
                 ct);
             return Result.Ok();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to delete exchange rate {Id} for user {UserId}", id, user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
         }
     }

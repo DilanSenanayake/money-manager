@@ -1,14 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { getApiBaseUrl } from "@/lib/env";
 
-export function getApiBaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
-  if (!url) {
-    throw new Error(
-      "NEXT_PUBLIC_API_URL is not set. Point it at Ledgerly.Api (e.g. http://localhost:5080 or http://<vm-host>:8080)."
-    );
-  }
-  return url;
-}
+export { getApiBaseUrl };
 
 async function getAccessToken(): Promise<string> {
   const supabase = await createClient();
@@ -82,6 +75,7 @@ export async function apiRequest<T>(
     },
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     cache: "no-store",
+    signal: AbortSignal.timeout(40_000),
   });
 
   const text = await res.text();
