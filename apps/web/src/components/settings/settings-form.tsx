@@ -10,6 +10,7 @@ import {
 import type { ExchangeRate, Profile } from "@/lib/types";
 import { CURRENCIES } from "@/lib/schemas";
 import { PageHeader } from "@/components/layout/page-header";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -192,6 +193,11 @@ export function SettingsForm({
           </div>
         </CardContent>
       </Card>
+
+      <SignOutButton
+        wide
+        className="text-[var(--muted)] hover:text-[var(--foreground)]"
+      />
     </div>
   );
 }

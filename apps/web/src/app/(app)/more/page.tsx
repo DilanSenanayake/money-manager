@@ -8,6 +8,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const links = [
@@ -72,6 +73,10 @@ export default function MorePage() {
           ))}
         </CardContent>
       </Card>
+      <SignOutButton
+        wide
+        className="text-[var(--muted)] hover:text-[var(--foreground)]"
+      />
     </div>
   );
 }

@@ -8,7 +8,6 @@ import {
   ArrowLeftRight,
   Plus,
   Menu,
-  LogOut,
   Wallet,
   PiggyBank,
   PieChart,
@@ -16,8 +15,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { signOut } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const primary = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -113,16 +111,9 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <form action={signOut} className="mt-4 border-t border-[var(--border)] pt-3">
-        <Button
-          type="submit"
-          variant="ghost"
-          className="w-full justify-start gap-2.5 font-medium"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign out
-        </Button>
-      </form>
+      <div className="mt-4 border-t border-[var(--border)] pt-3">
+        <SignOutButton wide />
+      </div>
     </aside>
   );
 }

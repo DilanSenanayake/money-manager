@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Camera, ClipboardPaste, Plus, Wallet } from "lucide-react";
+import { Camera, ClipboardPaste, MessageSquareText, PenLine, Wallet } from "lucide-react";
+import { ActionTiles } from "@/components/layout/action-tiles";
 import { formatMoney } from "@/lib/utils";
 import { transactionTitle } from "@/lib/transaction-description";
 import { getDashboardData } from "@/app/actions/dashboard";
@@ -21,60 +22,36 @@ export default async function DashboardPage() {
       <PageHeader
         title={firstName ? `Welcome back, ${firstName}` : "Welcome back"}
         description="Spend smarter. Save better. Live better."
-        actions={
-          <Button asChild>
-            <Link href="/add">
-              <Plus className="h-4 w-4" />
-              Add expense
-            </Link>
-          </Button>
-        }
       />
 
-      <div className="stagger grid gap-3 md:grid-cols-3">
-        <Link
-          href="/add?type=expense"
-          className="surface surface-interactive pressable flex items-center gap-3 p-4"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--accent-fg)]">
-            <Plus className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="block text-sm font-semibold">Quick add</span>
-            <span className="block text-xs text-[var(--muted)]">
-              Amount, category, done
-            </span>
-          </span>
-        </Link>
-        <Link
-          href="/add?mode=receipt"
-          className="surface surface-interactive pressable flex items-center gap-3 p-4"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
-            <Camera className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="block text-sm font-semibold">Scan receipt</span>
-            <span className="block text-xs text-[var(--muted)]">
-              Photo → review → save
-            </span>
-          </span>
-        </Link>
-        <Link
-          href="/add?mode=sms"
-          className="surface surface-interactive pressable flex items-center gap-3 p-4"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
-            <ClipboardPaste className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="block text-sm font-semibold">Paste SMS</span>
-            <span className="block text-xs text-[var(--muted)]">
-              Bank alert → confirm
-            </span>
-          </span>
-        </Link>
-      </div>
+      <ActionTiles
+        tiles={[
+          {
+            key: "manual",
+            label: "Manual",
+            icon: PenLine,
+            href: "/add?mode=manual",
+          },
+          {
+            key: "receipt",
+            label: "Scan",
+            icon: Camera,
+            href: "/add?mode=receipt",
+          },
+          {
+            key: "sms",
+            label: "SMS",
+            icon: ClipboardPaste,
+            href: "/add?mode=sms",
+          },
+          {
+            key: "text",
+            label: "Type",
+            icon: MessageSquareText,
+            href: "/add?mode=text",
+          },
+        ]}
+      />
 
       {isEmpty && (
         <EmptyState
@@ -84,7 +61,7 @@ export default async function DashboardPage() {
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild>
-                <Link href="/add">Open Quick Add</Link>
+                <Link href="/add?mode=manual">Add manually</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/add?type=income">Log income</Link>

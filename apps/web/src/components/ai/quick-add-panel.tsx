@@ -8,8 +8,10 @@ import {
   Camera,
   ClipboardPaste,
   MessageSquareText,
+  PenLine,
   Sparkles,
 } from "lucide-react";
+import { ActionTiles } from "@/components/layout/action-tiles";
 import {
   parseBankSms,
   parseQuickText,
@@ -73,8 +75,8 @@ export function QuickAddPanel({
   const [busyMessage, setBusyMessage] = useState("Please wait…");
   const [busyProgress, setBusyProgress] = useState<number | null>(null);
   const [active, setActive] = useState<
-    "receipt" | "sms" | "text" | "manual" | null
-  >(initialMode === "receipt" ? null : (initialMode ?? null));
+    "receipt" | "sms" | "text" | "manual"
+  >(initialMode === "receipt" ? "receipt" : (initialMode ?? "manual"));
 
   const [smsText, setSmsText] = useState("");
   const [quickText, setQuickText] = useState("");
@@ -269,61 +271,45 @@ export function QuickAddPanel({
         description="Let AI fill the details — scan, paste, describe, or enter manually"
       />
 
-      <div className="stagger grid gap-3 md:grid-cols-3">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            setActive("receipt");
-            fileRef.current?.click();
-          }}
-          className="surface surface-interactive pressable p-4 text-left disabled:opacity-60"
-        >
-          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
-            <Camera className="h-5 w-5" />
-          </span>
-          <p className="font-semibold">Scan receipt</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            Photo → check → save
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActive("sms")}
-          className={cn(
-            "surface surface-interactive pressable p-4 text-left",
-            active === "sms" &&
-              "border-[var(--accent)] ring-2 ring-[var(--accent-ring)]"
-          )}
-        >
-          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
-            <ClipboardPaste className="h-5 w-5" />
-          </span>
-          <p className="font-semibold">Paste bank SMS</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            Clipboard or type → confirm
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActive("text")}
-          className={cn(
-            "surface surface-interactive pressable p-4 text-left",
-            active === "text" &&
-              "border-[var(--accent)] ring-2 ring-[var(--accent-ring)]"
-          )}
-        >
-          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-hover)]">
-            <MessageSquareText className="h-5 w-5" />
-          </span>
-          <p className="font-semibold">Describe it</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            “Coffee 450 at Starbucks”
-          </p>
-        </button>
-      </div>
+      <ActionTiles
+        tiles={[
+          {
+            key: "receipt",
+            label: "Scan",
+            icon: Camera,
+            active: active === "receipt",
+            disabled: busy,
+            onClick: () => {
+              setActive("receipt");
+              fileRef.current?.click();
+            },
+          },
+          {
+            key: "sms",
+            label: "SMS",
+            icon: ClipboardPaste,
+            active: active === "sms",
+            disabled: busy,
+            onClick: () => setActive("sms"),
+          },
+          {
+            key: "text",
+            label: "Type",
+            icon: MessageSquareText,
+            active: active === "text",
+            disabled: busy,
+            onClick: () => setActive("text"),
+          },
+          {
+            key: "manual",
+            label: "Manual",
+            icon: PenLine,
+            active: active === "manual",
+            disabled: busy,
+            onClick: () => setActive("manual"),
+          },
+        ]}
+      />
 
       <input
         ref={fileRef}
@@ -338,6 +324,30 @@ export function QuickAddPanel({
           void handleReceiptFile(file);
         }}
       />
+
+      {active === "receipt" && (
+        <Card className="animate-slide-down">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Camera className="h-4 w-4" />
+              Scan receipt
+            </CardTitle>
+            <CardDescription>
+              Take or upload a photo — we’ll fill the form for you to confirm
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full sm:w-auto"
+              disabled={busy}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Camera className="h-4 w-4" />
+              Choose photo
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {active === "sms" && (
         <Card className="animate-slide-down">
@@ -429,13 +439,14 @@ export function QuickAddPanel({
         </Card>
       )}
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Add manually</CardTitle>
-          <CardDescription>
-            Account, amount, description, category, and save
-          </CardDescription>
-        </CardHeader>
+      {active === "manual" && (
+        <Card className="animate-slide-down">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Add manually</CardTitle>
+            <CardDescription>
+              Account, amount, description, category, and save
+            </CardDescription>
+          </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
             {(["expense", "income"] as const).map((t) => (
@@ -529,6 +540,7 @@ export function QuickAddPanel({
           )}
         </CardContent>
       </Card>
+      )}
 
       <LoadingOverlay
         open={busy}
