@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
+import { SiteAnalytics } from "@/components/telemetry/site-analytics";
 import { getSiteUrl } from "@/lib/env";
 import "./globals.css";
 
@@ -55,6 +56,7 @@ export default function RootLayout({
         {children}
         <Toaster />
         <ServiceWorkerRegister />
+        <SiteAnalytics />
       </body>
     </html>
   );

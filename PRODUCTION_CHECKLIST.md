@@ -30,6 +30,8 @@ Use this before the first production cutover and after each release. Details: [P
 
 - [ ] `API_URL` (or `NEXT_PUBLIC_API_URL`) is `https://` and reachable from Vercel
 - [ ] `NEXT_PUBLIC_SITE_URL` is the public web origin
+- [ ] Vercel Web Analytics enabled on the project
+- [ ] `NEXT_PUBLIC_GA_MEASUREMENT_ID` set if using Google Analytics (`G-…`)
 - [ ] Supabase Auth redirect URLs include the production domain
 - [ ] `Supabase__JwtSecret` is **unset** unless Auth is still HS256 (never a signing-key UUID)
 - [ ] Groq key set if Smart Add (receipt / SMS / text) is required

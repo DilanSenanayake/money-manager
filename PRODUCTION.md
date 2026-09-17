@@ -38,6 +38,7 @@ Never put real secrets in git. Copy from the example files:
 | `API_URL` | Yes (preferred) | Server-only origin of Ledgerly.Api, no trailing slash, **HTTPS in production** |
 | `NEXT_PUBLIC_API_URL` | Fallback | Still read if `API_URL` is unset (existing Vercel setups) |
 | `NEXT_PUBLIC_SITE_URL` | Recommended | Canonical site origin, e.g. `https://app.example.com` |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Optional | GA4 ID (`G-…`). Vercel Web Analytics needs the dashboard toggle; the app already injects the script. |
 
 ### API (`apps/api`)
 
@@ -215,6 +216,7 @@ curl -fsS https://api.yourdomain.com/health/ready
 - Do not log JWTs, Groq keys, or raw bank SMS / OCR in new code. Groq failures are logged server-side; clients get generic AI messages.
 - Add Sentry (or equivalent) for Next.js + ASP.NET when you have a production DSN. Error boundaries today only `console.error`.
 - Watch 429s (global 120 req/min/user, AI 20/min/user), 401 spikes, and `/health/ready` 503s.
+- Web traffic: Vercel Web Analytics (enable in the project) plus optional GA4 via `NEXT_PUBLIC_GA_MEASUREMENT_ID`.
 - `npm audit` on Next 15.5.25 still reports a nested `postcss` advisory. Fixing it requires Next 16 (breaking). Do not `npm audit fix --force`. Vitest's `@vitest/mocker` advisory is **dev-only**.
 
 ## 11. Backup recommendations
