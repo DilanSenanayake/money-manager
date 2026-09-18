@@ -37,6 +37,7 @@ class ShellPage extends StatelessWidget {
       body: navigationShell,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
+        tooltip: 'Add',
         onPressed: () {
           HapticFeedback.mediumImpact();
           context.go(RoutePaths.add);

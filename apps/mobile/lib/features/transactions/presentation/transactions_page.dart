@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,8 +15,7 @@ import '../../budgets/data/categories_repository.dart';
 import '../../dashboard/data/dashboard_repository.dart';
 import '../data/transactions_repository.dart';
 
-final _txFilterProvider =
-    StateProvider.autoDispose<TransactionFilter>((ref) {
+final _txFilterProvider = StateProvider.autoDispose<TransactionFilter>((ref) {
   return const TransactionFilter();
 });
 
@@ -27,22 +28,33 @@ class TransactionsPage extends ConsumerStatefulWidget {
 
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   final _search = TextEditingController();
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _search.dispose();
     super.dispose();
   }
 
-  Future<void> _openCreateSheet() async {
+  Future<void> _openEditor({Transaction? tx}) async {
+    if (tx != null && tx.isTransfer) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Edit transfers by deleting and recreating them'),
+        ),
+      );
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _CreateTransactionSheet(),
+      builder: (_) => _TransactionEditorSheet(existing: tx),
     );
     ref.invalidate(transactionsProvider);
     ref.invalidate(dashboardProvider);
     ref.invalidate(accountsProvider);
+    ref.invalidate(analyticsProvider);
   }
 
   @override
@@ -57,7 +69,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         title: const Text('Activity'),
         actions: [
           IconButton(
-            onPressed: _openCreateSheet,
+            onPressed: () => _openEditor(),
             icon: const Icon(Icons.add_rounded),
           ),
         ],
@@ -71,8 +83,11 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               label: 'Search merchant or notes',
               prefixIcon: Icons.search_rounded,
               onChanged: (v) {
-                ref.read(_txFilterProvider.notifier).state =
-                    filter.copyWith(q: v);
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 400), () {
+                  ref.read(_txFilterProvider.notifier).state =
+                      filter.copyWith(q: v, clearQ: v.trim().isEmpty);
+                });
               },
             ),
           ),
@@ -109,7 +124,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
           const SizedBox(height: 8),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const SkeletonList(),
               error: (e, _) => ErrorView(
                 message: e is Failure ? e.message : e.toString(),
                 onRetry: () => ref.invalidate(transactionsProvider),
@@ -130,16 +145,26 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   },
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    itemCount: txs.length,
+                    itemCount: txs.length +
+                        (txs.length >= AppConstants.transactionLimit ? 1 : 0),
                     separatorBuilder: (_, __) => const SizedBox(height: 4),
                     itemBuilder: (context, i) {
+                      if (i == txs.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            'Showing the latest 200 transactions. Narrow with search or filters.',
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
                       final t = txs[i];
                       return AppCard(
                         padding: EdgeInsets.zero,
                         child: TxTile(
                           transaction: t,
-                          currency:
-                              t.account?.currency ?? profileCurrency,
+                          currency: t.account?.currency ?? profileCurrency,
+                          onTap: () => _openEditor(tx: t),
                           onDelete: () async {
                             await ref
                                 .read(transactionsRepositoryProvider)
@@ -162,19 +187,23 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   }
 }
 
-class _CreateTransactionSheet extends ConsumerStatefulWidget {
-  const _CreateTransactionSheet();
+class _TransactionEditorSheet extends ConsumerStatefulWidget {
+  const _TransactionEditorSheet({this.existing});
+
+  final Transaction? existing;
 
   @override
-  ConsumerState<_CreateTransactionSheet> createState() =>
-      _CreateTransactionSheetState();
+  ConsumerState<_TransactionEditorSheet> createState() =>
+      _TransactionEditorSheetState();
 }
 
-class _CreateTransactionSheetState
-    extends ConsumerState<_CreateTransactionSheet> {
-  final _amount = TextEditingController();
-  final _merchant = TextEditingController();
-  String _type = 'expense';
+class _TransactionEditorSheetState
+    extends ConsumerState<_TransactionEditorSheet> {
+  late final TextEditingController _amount;
+  late final TextEditingController _merchant;
+  late final TextEditingController _notes;
+  late String _type;
+  late String _date;
   String? _accountId;
   String? _toAccountId;
   String? _categoryId;
@@ -183,32 +212,80 @@ class _CreateTransactionSheetState
   bool _loading = false;
 
   @override
+  void initState() {
+    super.initState();
+    final tx = widget.existing;
+    _amount = TextEditingController(
+      text: tx == null ? '' : tx.amount.toString(),
+    );
+    _merchant = TextEditingController(text: tx?.merchant ?? '');
+    _notes = TextEditingController(text: tx?.notes ?? '');
+    _type = tx?.type ?? 'expense';
+    _date = tx?.date ?? localDateYYYYMMDD();
+    _accountId = tx?.accountId;
+    _categoryId = tx?.categoryId;
+    _recurring = tx?.isRecurring ?? false;
+    _frequency = tx?.recurringFrequency ?? 'monthly';
+  }
+
+  @override
   void dispose() {
     _amount.dispose();
     _merchant.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     final amount = double.tryParse(_amount.text.trim());
-    if (amount == null || amount <= 0 || _accountId == null) return;
+    if (amount == null || amount <= 0 || _accountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid amount and account')),
+      );
+      return;
+    }
+    if (_type == 'transfer') {
+      if (_toAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Choose where the money should go')),
+        );
+        return;
+      }
+      final accounts = ref.read(accountsProvider).valueOrNull ?? [];
+      final from = accounts.where((a) => a.id == _accountId).firstOrNull;
+      final to = accounts.where((a) => a.id == _toAccountId).firstOrNull;
+      if (from != null && to != null && from.currency != to.currency) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Transfers must be between accounts that share the same currency',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _loading = true);
     try {
-      await ref.read(transactionsRepositoryProvider).createTransaction(
-            TransactionInput(
-              accountId: _accountId!,
-              categoryId: _categoryId,
-              amount: amount,
-              type: _type,
-              date: localDateYYYYMMDD(),
-              merchant: _merchant.text.trim().isEmpty
-                  ? null
-                  : _merchant.text.trim(),
-              isRecurring: _recurring,
-              recurringFrequency: _frequency,
-              transferToAccountId: _toAccountId,
-            ),
-          );
+      final input = TransactionInput(
+        accountId: _accountId!,
+        categoryId: _type == 'transfer' ? null : _categoryId,
+        amount: amount,
+        type: _type,
+        date: _date,
+        merchant: _merchant.text.trim().isEmpty ? null : _merchant.text.trim(),
+        notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+        isRecurring: _type == 'transfer' ? false : _recurring,
+        recurringFrequency: _frequency,
+        transferToAccountId: _toAccountId,
+      );
+      final repo = ref.read(transactionsRepositoryProvider);
+      if (widget.existing == null) {
+        await repo.createTransaction(input);
+      } else {
+        await repo.updateTransaction(widget.existing!.id, input);
+      }
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
@@ -226,6 +303,8 @@ class _CreateTransactionSheetState
     final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
     _accountId ??= accounts.isNotEmpty ? accounts.first.id : null;
     final filtered = categories.where((c) => c.type == _type).toList();
+    final fromCurrency =
+        accounts.where((a) => a.id == _accountId).firstOrNull?.currency;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -240,27 +319,36 @@ class _CreateTransactionSheetState
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'New transaction',
+              widget.existing == null ? 'New transaction' : 'Edit transaction',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
             ),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'expense', label: Text('Expense')),
-                ButtonSegment(value: 'income', label: Text('Income')),
-                ButtonSegment(value: 'transfer', label: Text('Transfer')),
-              ],
-              selected: {_type},
-              onSelectionChanged: (s) => setState(() => _type = s.first),
-            ),
+            if (widget.existing == null)
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'expense', label: Text('Expense')),
+                  ButtonSegment(value: 'income', label: Text('Income')),
+                  ButtonSegment(value: 'transfer', label: Text('Transfer')),
+                ],
+                selected: {_type},
+                onSelectionChanged: (s) => setState(() {
+                  _type = s.first;
+                  _categoryId = null;
+                }),
+              ),
             const SizedBox(height: 12),
             AppTextField(
               controller: _amount,
               label: 'Amount',
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 12),
+            DateField(
+              value: _date,
+              onChanged: (v) => setState(() => _date = v),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
@@ -270,7 +358,10 @@ class _CreateTransactionSheetState
               ),
               items: accounts
                   .map(
-                    (a) => DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    (a) => DropdownMenuItem(
+                      value: a.id,
+                      child: Text('${a.name} (${a.currency})'),
+                    ),
                   )
                   .toList(),
               onChanged: (v) => setState(() => _accountId = v),
@@ -281,10 +372,16 @@ class _CreateTransactionSheetState
                 initialValue: _toAccountId,
                 decoration: const InputDecoration(labelText: 'To account'),
                 items: accounts
-                    .where((a) => a.id != _accountId)
-                    .map(
+                    .where(
                       (a) =>
-                          DropdownMenuItem(value: a.id, child: Text(a.name)),
+                          a.id != _accountId &&
+                          (fromCurrency == null || a.currency == fromCurrency),
+                    )
+                    .map(
+                      (a) => DropdownMenuItem(
+                        value: a.id,
+                        child: Text('${a.name} (${a.currency})'),
+                      ),
                     )
                     .toList(),
                 onChanged: (v) => setState(() => _toAccountId = v),
@@ -308,6 +405,12 @@ class _CreateTransactionSheetState
                 controller: _merchant,
                 label: 'Merchant',
               ),
+              const SizedBox(height: 12),
+              AppTextField(
+                controller: _notes,
+                label: 'Notes (optional)',
+                maxLines: 2,
+              ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Recurring'),
@@ -328,7 +431,11 @@ class _CreateTransactionSheetState
                 ),
             ],
             const SizedBox(height: 16),
-            AppButton(label: 'Save', loading: _loading, onPressed: _save),
+            AppButton(
+              label: widget.existing == null ? 'Save' : 'Update',
+              loading: _loading,
+              onPressed: _save,
+            ),
           ],
         ),
       ),

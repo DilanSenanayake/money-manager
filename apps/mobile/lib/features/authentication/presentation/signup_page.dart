@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/open_url.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/auth_repository.dart';
 
@@ -24,6 +26,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   String _currency = 'USD';
   bool _loading = false;
   bool _obscure = true;
+  bool _agreed = false;
   String? _error;
   String? _message;
 
@@ -38,6 +41,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
+    if (!_agreed) {
+      setState(() => _error = 'Please agree to the Terms and Privacy Policy.');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -159,8 +166,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                           ),
                         ),
                         validator: (v) {
-                          if (v == null || v.length < 6) {
-                            return 'Password must be at least 6 characters';
+                          if (v == null ||
+                              v.length < AppConstants.minPasswordLength) {
+                            return 'Password must be at least ${AppConstants.minPasswordLength} characters';
                           }
                           return null;
                         },
@@ -180,6 +188,43 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                             .toList(),
                         onChanged: (v) =>
                             setState(() => _currency = v ?? 'USD'),
+                      ),
+                      const SizedBox(height: 16),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _agreed,
+                        onChanged: (v) =>
+                            setState(() => _agreed = v ?? false),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Wrap(
+                          children: [
+                            const Text('I agree to the '),
+                            GestureDetector(
+                              onTap: () =>
+                                  openExternalUrl(AppConfig.termsUrl),
+                              child: Text(
+                                'Terms of Use',
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const Text(' and '),
+                            GestureDetector(
+                              onTap: () =>
+                                  openExternalUrl(AppConfig.privacyUrl),
+                              child: Text(
+                                'Privacy Policy',
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const Text('.'),
+                          ],
+                        ),
                       ),
                       if (_error != null) ...[
                         const SizedBox(height: 12),

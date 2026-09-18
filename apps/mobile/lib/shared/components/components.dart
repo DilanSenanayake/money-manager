@@ -72,9 +72,14 @@ class AccountChip extends StatelessWidget {
 }
 
 class BudgetBar extends StatelessWidget {
-  const BudgetBar({super.key, required this.progress});
+  const BudgetBar({
+    super.key,
+    required this.progress,
+    this.currency = 'USD',
+  });
 
   final BudgetProgress progress;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +102,7 @@ class BudgetBar extends StatelessWidget {
                 ),
               ),
               Text(
-                '${formatMoney(progress.spent)} / ${formatMoney(progress.limit)}',
+                '${formatMoney(progress.spent, currency)} / ${formatMoney(progress.limit, currency)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

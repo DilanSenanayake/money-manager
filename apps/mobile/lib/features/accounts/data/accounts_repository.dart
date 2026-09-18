@@ -1,12 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/exception_mapper.dart';
-import '../../../core/network/supabase_client.dart';
+import '../../../core/network/api_client.dart';
 import '../../../shared/models/models.dart';
 
 final accountsRepositoryProvider = Provider<AccountsRepository>((ref) {
-  return AccountsRepository(SupabaseBootstrap.client);
+  return AccountsRepository(ref.watch(ledgerlyApiProvider));
 });
 
 final accountsProvider = FutureProvider.autoDispose<List<Account>>((ref) {
@@ -14,26 +13,16 @@ final accountsProvider = FutureProvider.autoDispose<List<Account>>((ref) {
 });
 
 class AccountsRepository {
-  AccountsRepository(this._client);
+  AccountsRepository(this._api);
 
-  final SupabaseClient _client;
-
-  String get _uid {
-    final id = _client.auth.currentUser?.id;
-    if (id == null) throw StateError('Unauthorized');
-    return id;
-  }
+  final LedgerlyApi _api;
 
   Future<List<Account>> getAccounts() async {
     try {
-      final data = await _client
-          .from('accounts')
-          .select()
-          .eq('user_id', _uid)
-          .order('created_at');
-      return (data as List)
-          .map((e) => Account.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList();
+      return await _api.get<List<Account>>(
+        '/v1/accounts',
+        parse: (json) => parseList(json, Account.fromJson),
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -46,13 +35,15 @@ class AccountsRepository {
     required String currency,
   }) async {
     try {
-      await _client.from('accounts').insert({
-        'user_id': _uid,
-        'name': name,
-        'type': type,
-        'balance': balance,
-        'currency': currency,
-      });
+      await _api.mutate(
+        '/v1/accounts',
+        body: {
+          'name': name,
+          'type': type,
+          'balance': balance,
+          'currency': currency,
+        },
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -65,11 +56,15 @@ class AccountsRepository {
     required String currency,
   }) async {
     try {
-      await _client.from('accounts').update({
-        'name': name,
-        'type': type,
-        'currency': currency,
-      }).eq('id', id).eq('user_id', _uid);
+      await _api.mutate(
+        '/v1/accounts/$id',
+        method: 'PATCH',
+        body: {
+          'name': name,
+          'type': type,
+          'currency': currency,
+        },
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -77,7 +72,7 @@ class AccountsRepository {
 
   Future<void> deleteAccount(String id) async {
     try {
-      await _client.from('accounts').delete().eq('id', id).eq('user_id', _uid);
+      await _api.mutate('/v1/accounts/$id', method: 'DELETE');
     } catch (e) {
       throw mapException(e);
     }

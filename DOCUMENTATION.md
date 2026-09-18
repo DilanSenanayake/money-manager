@@ -78,7 +78,7 @@ money-manager/
 | Shared REST API | ✅ Implemented in `apps/api` |
 | Folder split BE / FE / mobile | ✅ `apps/api`, `apps/web`, `apps/mobile` |
 | Web → API | ✅ Web Server Actions call Ledgerly.Api (`NEXT_PUBLIC_API_URL`) |
-| Mobile → API | ⏳ Mobile still uses Supabase client for CRUD |
+| Mobile → API | ✅ Flutter repositories call Ledgerly.Api (`API_BASE_URL`); Supabase is auth-only |
 | Auth | ✅ Clients keep Supabase Auth |
 | DB / RLS | ✅ Unchanged |
 
@@ -477,11 +477,11 @@ cd apps/web && npm test
 - [x] Full SQL migration (tables, RLS, signup seed, balance triggers)  
 - [x] Accounts / transactions / budgets / dashboard / analytics / settings (web)  
 - [x] Quick Add hub: receipt, SMS, one-line text, manual  
-- [x] Flutter mobile scaffold (direct Supabase CRUD; API next)  
+- [x] Flutter mobile app (Supabase Auth + Ledgerly.Api REST)  
 - [x] PWA manifest, icons, service worker  
 - [x] Wire Next.js UI to Ledgerly.Api (`NEXT_PUBLIC_API_URL`)  
 - [x] Production hardening: ownership trigger, rate limits, safe errors, security headers, tests  
-- [ ] Wire Flutter repositories to Ledgerly.Api  
+- [x] Wire Flutter repositories to Ledgerly.Api  
 
 ---
 

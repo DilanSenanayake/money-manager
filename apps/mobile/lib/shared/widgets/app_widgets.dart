@@ -244,6 +244,70 @@ class ErrorView extends StatelessWidget {
   }
 }
 
+class SkeletonList extends StatelessWidget {
+  const SkeletonList({super.key, this.count = 4});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.outlineVariant;
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: count,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, __) => Container(
+        height: 76,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    );
+  }
+}
+
+class DateField extends StatelessWidget {
+  const DateField({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.label = 'Date',
+  });
+
+  final String value;
+  final ValueChanged<String> onChanged;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () async {
+        final parsed = DateTime.tryParse(value) ?? DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: parsed,
+          firstDate: DateTime(2000),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
+        );
+        if (picked == null) return;
+        final y = picked.year.toString().padLeft(4, '0');
+        final m = picked.month.toString().padLeft(2, '0');
+        final d = picked.day.toString().padLeft(2, '0');
+        onChanged('$y-$m-$d');
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.event_outlined),
+        ),
+        child: Text(value),
+      ),
+    );
+  }
+}
+
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
     super.key,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/currency.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -29,15 +30,20 @@ class DashboardPage extends ConsumerWidget {
         ],
       ),
       body: async.when(
-        loading: () => const LoadingView(),
+        loading: () => const SkeletonList(count: 6),
         error: (e, _) => ErrorView(
           message: e is Failure ? e.message : e.toString(),
           onRetry: () => ref.invalidate(dashboardProvider),
         ),
         data: (data) {
-          final name = data.profile.displayName?.isNotEmpty == true
-              ? data.profile.displayName!
+          final name = data.profile?.displayName?.trim().isNotEmpty == true
+              ? data.profile!.displayName!.split(' ').first
               : 'there';
+          final missingFx = hasMissingExchangeRate(
+            data.accounts,
+            data.baseCurrency,
+            data.rates,
+          );
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(dashboardProvider),
             child: ListView(
@@ -51,12 +57,21 @@ class DashboardPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Here’s your money at a glance',
+                  'Spend smarter. Save better. Live better.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.slate,
                       ),
                 ),
                 const SizedBox(height: 20),
+                if (missingFx) ...[
+                  AppCard(
+                    onTap: () => context.push(RoutePaths.settings),
+                    child: const Text(
+                      'Some wallets use a different currency. Add an exchange rate in Settings, or amounts will convert 1:1.',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 AppCard(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -140,6 +155,14 @@ class DashboardPage extends ConsumerWidget {
                         onTap: () => context.go('${RoutePaths.add}?mode=sms'),
                       ),
                     ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _QuickAction(
+                        icon: Icons.short_text_rounded,
+                        label: 'Type',
+                        onTap: () => context.go('${RoutePaths.add}?mode=text'),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -202,7 +225,10 @@ class DashboardPage extends ConsumerWidget {
                   ...data.budgets.take(3).map(
                         (b) => Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: BudgetBar(progress: b),
+                          child: BudgetBar(
+                            progress: b,
+                            currency: data.baseCurrency,
+                          ),
                         ),
                       ),
                 const SizedBox(height: 16),

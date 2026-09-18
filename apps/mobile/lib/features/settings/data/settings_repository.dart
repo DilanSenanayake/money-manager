@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/exception_mapper.dart';
-import '../../../core/network/supabase_client.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/utils/json.dart';
 import '../../../shared/models/models.dart';
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return SettingsRepository(SupabaseBootstrap.client);
+  return SettingsRepository(ref.watch(ledgerlyApiProvider));
 });
 
 final profileProvider = FutureProvider.autoDispose<Profile>((ref) {
@@ -19,24 +19,16 @@ final exchangeRatesProvider =
 });
 
 class SettingsRepository {
-  SettingsRepository(this._client);
+  SettingsRepository(this._api);
 
-  final SupabaseClient _client;
-
-  String get _uid {
-    final id = _client.auth.currentUser?.id;
-    if (id == null) throw StateError('Unauthorized');
-    return id;
-  }
+  final LedgerlyApi _api;
 
   Future<Profile> getProfile() async {
     try {
-      final data = await _client
-          .from('profiles')
-          .select()
-          .eq('id', _uid)
-          .single();
-      return Profile.fromJson(Map<String, dynamic>.from(data));
+      return await _api.get<Profile>(
+        '/v1/settings/profile',
+        parse: (json) => Profile.fromJson(asMap(json)),
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -47,20 +39,14 @@ class SettingsRepository {
     required String baseCurrency,
   }) async {
     try {
-      final current = await getProfile();
-      await _client.from('profiles').update({
-        'display_name': displayName,
-        'base_currency': baseCurrency,
-      }).eq('id', _uid);
-
-      // Keep accounts on the previous base currency in sync (matches web).
-      if (current.baseCurrency != baseCurrency) {
-        await _client
-            .from('accounts')
-            .update({'currency': baseCurrency})
-            .eq('user_id', _uid)
-            .eq('currency', current.baseCurrency);
-      }
+      await _api.mutate(
+        '/v1/settings/profile',
+        method: 'PATCH',
+        body: {
+          'display_name': displayName,
+          'base_currency': baseCurrency,
+        },
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -68,16 +54,10 @@ class SettingsRepository {
 
   Future<List<ExchangeRate>> getExchangeRates() async {
     try {
-      final data = await _client
-          .from('exchange_rates')
-          .select()
-          .eq('user_id', _uid)
-          .order('from_currency');
-      return (data as List)
-          .map(
-            (e) => ExchangeRate.fromJson(Map<String, dynamic>.from(e as Map)),
-          )
-          .toList();
+      return await _api.get<List<ExchangeRate>>(
+        '/v1/settings/exchange-rates',
+        parse: (json) => parseList(json, ExchangeRate.fromJson),
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -89,12 +69,15 @@ class SettingsRepository {
     required double rate,
   }) async {
     try {
-      await _client.from('exchange_rates').upsert({
-        'user_id': _uid,
-        'from_currency': fromCurrency,
-        'to_currency': toCurrency,
-        'rate': rate,
-      }, onConflict: 'user_id,from_currency,to_currency');
+      await _api.mutate(
+        '/v1/settings/exchange-rates',
+        method: 'PUT',
+        body: {
+          'from_currency': fromCurrency,
+          'to_currency': toCurrency,
+          'rate': rate,
+        },
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -102,11 +85,10 @@ class SettingsRepository {
 
   Future<void> deleteExchangeRate(String id) async {
     try {
-      await _client
-          .from('exchange_rates')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', _uid);
+      await _api.mutate(
+        '/v1/settings/exchange-rates/$id',
+        method: 'DELETE',
+      );
     } catch (e) {
       throw mapException(e);
     }

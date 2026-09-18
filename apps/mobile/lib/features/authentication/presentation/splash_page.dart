@@ -6,6 +6,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/app_widgets.dart';
 import '../data/auth_repository.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -16,6 +17,9 @@ class SplashPage extends ConsumerStatefulWidget {
 }
 
 class _SplashPageState extends ConsumerState<SplashPage> {
+  bool _needsUnlock = false;
+  bool _unlocking = false;
+
   @override
   void initState() {
     super.initState();
@@ -32,29 +36,46 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       return;
     }
 
-    // Biometrics are mobile-only; skip on web/desktop to avoid hangs.
-    if (!kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS)) {
-      try {
-        final auth = LocalAuthentication();
-        final canCheck =
-            await auth.canCheckBiometrics || await auth.isDeviceSupported();
-        if (canCheck) {
-          await auth.authenticate(
-            localizedReason: 'Unlock ${AppConstants.appName}',
-            options: const AuthenticationOptions(
-              biometricOnly: false,
-              stickyAuth: true,
-            ),
-          );
-        }
-      } catch (_) {
-        // Continue with existing session.
-      }
+    final unlocked = await _authenticate();
+    if (!mounted) return;
+    if (!unlocked) {
+      setState(() => _needsUnlock = true);
+      return;
     }
+    context.go(RoutePaths.home);
+  }
 
-    if (mounted) context.go(RoutePaths.home);
+  Future<bool> _authenticate() async {
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.android &&
+            defaultTargetPlatform != TargetPlatform.iOS)) {
+      return true;
+    }
+    try {
+      final auth = LocalAuthentication();
+      final canCheck =
+          await auth.canCheckBiometrics || await auth.isDeviceSupported();
+      if (!canCheck) return true;
+      return auth.authenticate(
+        localizedReason: 'Unlock ${AppConstants.appName}',
+        options: const AuthenticationOptions(
+          biometricOnly: false,
+          stickyAuth: true,
+        ),
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _retryUnlock() async {
+    setState(() => _unlocking = true);
+    final unlocked = await _authenticate();
+    if (!mounted) return;
+    setState(() => _unlocking = false);
+    if (unlocked) {
+      context.go(RoutePaths.home);
+    }
   }
 
   @override
@@ -70,33 +91,56 @@ class _SplashPageState extends ConsumerState<SplashPage> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/icons/logo.png',
-                width: 88,
-                height: 88,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                AppConstants.appName,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.teal700,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/icons/logo.png',
+                  width: 88,
+                  height: 88,
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Spend smarter. Save better. Live better.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.slate),
-              ),
-              const SizedBox(height: 32),
-              const CircularProgressIndicator(),
-            ],
+                const SizedBox(height: 20),
+                const Text(
+                  AppConstants.appName,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.teal700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  AppConstants.tagline,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.slate),
+                ),
+                const SizedBox(height: 32),
+                if (_needsUnlock) ...[
+                  const Text(
+                    'Unlock to continue',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 16),
+                  AppButton(
+                    label: 'Unlock',
+                    loading: _unlocking,
+                    onPressed: _retryUnlock,
+                    icon: Icons.lock_open_rounded,
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await ref.read(authRepositoryProvider).signOut();
+                      if (context.mounted) context.go(RoutePaths.login);
+                    },
+                    child: const Text('Sign out'),
+                  ),
+                ] else
+                  const CircularProgressIndicator(),
+              ],
+            ),
           ),
         ),
       ),

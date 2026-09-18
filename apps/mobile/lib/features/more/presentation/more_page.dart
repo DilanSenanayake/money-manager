@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/open_url.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../authentication/data/auth_repository.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -100,6 +102,15 @@ class MorePage extends ConsumerWidget {
               ref.invalidate(dashboardProvider);
               if (context.mounted) context.go(RoutePaths.login);
             },
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => openExternalUrl(AppConfig.termsUrl),
+            child: const Text('Terms'),
+          ),
+          TextButton(
+            onPressed: () => openExternalUrl(AppConfig.privacyUrl),
+            child: const Text('Privacy'),
           ),
         ],
       ),

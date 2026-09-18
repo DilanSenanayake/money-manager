@@ -18,7 +18,7 @@ final recurringProvider =
 
   for (final tx in txs) {
     final key =
-        '${tx.merchant ?? ''}|${tx.amount}|${tx.recurringFrequency}|${tx.accountId}';
+        '${tx.merchant ?? ''}|${tx.amount}|${tx.recurringFrequency}|${tx.categoryId}';
     if (!seen.add(key)) continue;
 
     var next = tx.date;

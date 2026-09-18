@@ -187,7 +187,10 @@ class BudgetsPage extends ConsumerWidget {
                   ...data.budgets.map(
                     (b) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: BudgetBar(progress: b),
+                      child: BudgetBar(
+                        progress: b,
+                        currency: data.baseCurrency,
+                      ),
                     ),
                   ),
                 const SizedBox(height: 20),

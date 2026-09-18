@@ -1,12 +1,14 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json.dart';
+
 class Profile extends Equatable {
   const Profile({
     required this.id,
     required this.baseCurrency,
     this.displayName,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt = '',
+    this.updatedAt = '',
   });
 
   final String id;
@@ -17,15 +19,15 @@ class Profile extends Equatable {
 
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
-      id: json['id'] as String,
-      baseCurrency: json['base_currency'] as String? ?? 'USD',
-      displayName: json['display_name'] as String?,
-      createdAt: json['created_at'] as String? ?? '',
-      updatedAt: json['updated_at'] as String? ?? '',
+      id: asString(json['id']),
+      baseCurrency: asString(json['base_currency'], 'USD'),
+      displayName: asNullableString(json['display_name']),
+      createdAt: asString(json['created_at']),
+      updatedAt: asString(json['updated_at']),
     );
   }
 
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toUpdateJson() => {
         'base_currency': baseCurrency,
         'display_name': displayName,
       };
@@ -67,30 +69,16 @@ class Account extends Equatable {
 
   factory Account.fromJson(Map<String, dynamic> json) {
     return Account(
-      id: json['id'] as String,
-      userId: json['user_id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      type: json['type'] as String? ?? 'cash',
-      balance: (json['balance'] as num?)?.toDouble() ?? 0,
-      currency: json['currency'] as String? ?? 'USD',
-      createdAt: json['created_at'] as String? ?? '',
-      updatedAt: json['updated_at'] as String? ?? '',
+      id: asString(json['id']),
+      userId: asString(json['user_id']),
+      name: asString(json['name']),
+      type: asString(json['type'], 'cash'),
+      balance: asDouble(json['balance']),
+      currency: asString(json['currency'], 'USD'),
+      createdAt: asString(json['created_at']),
+      updatedAt: asString(json['updated_at']),
     );
   }
-
-  Map<String, dynamic> toInsertJson(String userId) => {
-        'user_id': userId,
-        'name': name,
-        'type': type,
-        'balance': balance,
-        'currency': currency,
-      };
-
-  Map<String, dynamic> toUpdateJson() => {
-        'name': name,
-        'type': type,
-        'currency': currency,
-      };
 
   @override
   List<Object?> get props => [id, name, type, balance, currency];
@@ -117,30 +105,17 @@ class Category extends Equatable {
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      id: json['id'] as String,
-      userId: json['user_id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      icon: json['icon'] as String? ?? 'circle',
-      type: json['type'] as String? ?? 'expense',
-      monthlyBudget: (json['monthly_budget'] as num?)?.toDouble(),
-      createdAt: json['created_at'] as String? ?? '',
+      id: asString(json['id']),
+      userId: asString(json['user_id']),
+      name: asString(json['name']),
+      icon: asString(json['icon'], 'circle'),
+      type: asString(json['type'], 'expense'),
+      monthlyBudget: json['monthly_budget'] == null
+          ? null
+          : asDouble(json['monthly_budget']),
+      createdAt: asString(json['created_at']),
     );
   }
-
-  Map<String, dynamic> toInsertJson(String userId) => {
-        'user_id': userId,
-        'name': name,
-        'icon': icon,
-        'type': type,
-        'monthly_budget': monthlyBudget,
-      };
-
-  Map<String, dynamic> toUpdateJson() => {
-        'name': name,
-        'icon': icon,
-        'type': type,
-        'monthly_budget': monthlyBudget,
-      };
 
   @override
   List<Object?> get props => [id, name, icon, type, monthlyBudget];
@@ -183,27 +158,29 @@ class Transaction extends Equatable {
   final Account? account;
   final Category? category;
 
+  bool get isTransfer => type == 'transfer' || transferPairId != null;
+
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
-      id: json['id'] as String,
-      userId: json['user_id'] as String? ?? '',
-      accountId: json['account_id'] as String,
-      categoryId: json['category_id'] as String?,
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
-      type: json['type'] as String? ?? 'expense',
-      date: json['date'] as String? ?? '',
-      merchant: json['merchant'] as String?,
-      notes: json['notes'] as String?,
-      isRecurring: json['is_recurring'] as bool? ?? false,
-      recurringFrequency: json['recurring_frequency'] as String?,
-      transferPairId: json['transfer_pair_id'] as String?,
-      transferDirection: json['transfer_direction'] as String?,
-      createdAt: json['created_at'] as String? ?? '',
-      account: json['account'] is Map<String, dynamic>
-          ? Account.fromJson(json['account'] as Map<String, dynamic>)
+      id: asString(json['id']),
+      userId: asString(json['user_id']),
+      accountId: asString(json['account_id']),
+      categoryId: asNullableString(json['category_id']),
+      amount: asDouble(json['amount']),
+      type: asString(json['type'], 'expense'),
+      date: asString(json['date']),
+      merchant: asNullableString(json['merchant']),
+      notes: asNullableString(json['notes']),
+      isRecurring: asBool(json['is_recurring']),
+      recurringFrequency: asNullableString(json['recurring_frequency']),
+      transferPairId: asNullableString(json['transfer_pair_id']),
+      transferDirection: asNullableString(json['transfer_direction']),
+      createdAt: asString(json['created_at']),
+      account: json['account'] is Map
+          ? Account.fromJson(asMap(json['account']))
           : null,
-      category: json['category'] is Map<String, dynamic>
-          ? Category.fromJson(json['category'] as Map<String, dynamic>)
+      category: json['category'] is Map
+          ? Category.fromJson(asMap(json['category']))
           : null,
     );
   }
@@ -231,12 +208,12 @@ class ExchangeRate extends Equatable {
 
   factory ExchangeRate.fromJson(Map<String, dynamic> json) {
     return ExchangeRate(
-      id: json['id'] as String,
-      userId: json['user_id'] as String? ?? '',
-      fromCurrency: json['from_currency'] as String,
-      toCurrency: json['to_currency'] as String,
-      rate: (json['rate'] as num?)?.toDouble() ?? 1,
-      updatedAt: json['updated_at'] as String? ?? '',
+      id: asString(json['id']),
+      userId: asString(json['user_id']),
+      fromCurrency: asString(json['from_currency']),
+      toCurrency: asString(json['to_currency']),
+      rate: asDouble(json['rate'], 1),
+      updatedAt: asString(json['updated_at']),
     );
   }
 
@@ -259,8 +236,158 @@ class BudgetProgress extends Equatable {
   final double ratio;
   final String status;
 
+  factory BudgetProgress.fromJson(Map<String, dynamic> json) {
+    return BudgetProgress(
+      category: Category.fromJson(asMap(json['category'])),
+      spent: asDouble(json['spent']),
+      limit: asDouble(json['limit']),
+      ratio: asDouble(json['ratio']),
+      status: asString(json['status'], 'none'),
+    );
+  }
+
   @override
   List<Object?> get props => [category, spent, limit, ratio, status];
+}
+
+class TrendPoint extends Equatable {
+  const TrendPoint({
+    required this.month,
+    required this.income,
+    required this.expense,
+  });
+
+  final String month;
+  final double income;
+  final double expense;
+
+  factory TrendPoint.fromJson(Map<String, dynamic> json) {
+    return TrendPoint(
+      month: asString(json['month']),
+      income: asDouble(json['income']),
+      expense: asDouble(json['expense']),
+    );
+  }
+
+  @override
+  List<Object?> get props => [month, income, expense];
+}
+
+class CategorySpendPoint extends Equatable {
+  const CategorySpendPoint({
+    required this.name,
+    required this.value,
+  });
+
+  final String name;
+  final double value;
+
+  factory CategorySpendPoint.fromJson(Map<String, dynamic> json) {
+    return CategorySpendPoint(
+      name: asString(json['name']),
+      value: asDouble(json['value']),
+    );
+  }
+
+  @override
+  List<Object?> get props => [name, value];
+}
+
+class DashboardData extends Equatable {
+  const DashboardData({
+    this.profile,
+    required this.accounts,
+    required this.rates,
+    required this.netWorth,
+    required this.income,
+    required this.expense,
+    required this.budgets,
+    required this.recent,
+    required this.baseCurrency,
+    this.monthStart = '',
+    this.monthEnd = '',
+  });
+
+  final Profile? profile;
+  final List<Account> accounts;
+  final List<ExchangeRate> rates;
+  final double netWorth;
+  final double income;
+  final double expense;
+  final List<BudgetProgress> budgets;
+  final List<Transaction> recent;
+  final String baseCurrency;
+  final String monthStart;
+  final String monthEnd;
+
+  factory DashboardData.fromJson(Map<String, dynamic> json) {
+    return DashboardData(
+      profile: json['profile'] is Map
+          ? Profile.fromJson(asMap(json['profile']))
+          : null,
+      accounts: asList(json['accounts'])
+          .whereType<Map>()
+          .map((e) => Account.fromJson(asMap(e)))
+          .toList(),
+      rates: asList(json['rates'])
+          .whereType<Map>()
+          .map((e) => ExchangeRate.fromJson(asMap(e)))
+          .toList(),
+      netWorth: asDouble(json['netWorth'] ?? json['net_worth']),
+      income: asDouble(json['income']),
+      expense: asDouble(json['expense']),
+      budgets: asList(json['budgets'])
+          .whereType<Map>()
+          .map((e) => BudgetProgress.fromJson(asMap(e)))
+          .toList(),
+      recent: asList(json['recent'])
+          .whereType<Map>()
+          .map((e) => Transaction.fromJson(asMap(e)))
+          .toList(),
+      baseCurrency: asString(
+        json['baseCurrency'] ?? json['base_currency'],
+        'USD',
+      ),
+      monthStart: asString(json['monthStart'] ?? json['month_start']),
+      monthEnd: asString(json['monthEnd'] ?? json['month_end']),
+    );
+  }
+
+  @override
+  List<Object?> get props =>
+      [profile, accounts, netWorth, income, expense, baseCurrency];
+}
+
+class AnalyticsData extends Equatable {
+  const AnalyticsData({
+    required this.trend,
+    required this.categorySpend,
+    required this.baseCurrency,
+  });
+
+  final List<TrendPoint> trend;
+  final List<CategorySpendPoint> categorySpend;
+  final String baseCurrency;
+
+  factory AnalyticsData.fromJson(Map<String, dynamic> json) {
+    return AnalyticsData(
+      trend: asList(json['trend'])
+          .whereType<Map>()
+          .map((e) => TrendPoint.fromJson(asMap(e)))
+          .toList(),
+      categorySpend: asList(json['categorySpend'] ?? json['category_spend'])
+          .whereType<Map>()
+          .map((e) => CategorySpendPoint.fromJson(asMap(e)))
+          .toList(),
+      baseCurrency: asString(
+        json['baseCurrency'] ?? json['base_currency'],
+        'USD',
+      ),
+    );
+  }
+
+  @override
+  List<Object?> get props => [trend, categorySpend, baseCurrency];
 }
 
 class TransactionInput {
@@ -287,6 +414,21 @@ class TransactionInput {
   final bool isRecurring;
   final String? recurringFrequency;
   final String? transferToAccountId;
+
+  Map<String, dynamic> toJson() => {
+        'account_id': accountId,
+        'category_id': categoryId,
+        'amount': amount,
+        'type': type,
+        'date': date,
+        'merchant': merchant,
+        'notes': notes,
+        'is_recurring': isRecurring,
+        'recurring_frequency':
+            isRecurring ? (recurringFrequency ?? 'monthly') : null,
+        if (transferToAccountId != null)
+          'transfer_to_account_id': transferToAccountId,
+      };
 }
 
 class TransactionFilter {
@@ -306,6 +448,15 @@ class TransactionFilter {
   final String? from;
   final String? to;
 
+  Map<String, dynamic> toQuery() => {
+        'q': q,
+        'account_id': accountId,
+        'category_id': categoryId,
+        'type': type,
+        'from': from,
+        'to': to,
+      };
+
   TransactionFilter copyWith({
     String? q,
     String? accountId,
@@ -316,14 +467,192 @@ class TransactionFilter {
     bool clearAccount = false,
     bool clearCategory = false,
     bool clearType = false,
+    bool clearFrom = false,
+    bool clearTo = false,
+    bool clearQ = false,
   }) {
     return TransactionFilter(
-      q: q ?? this.q,
+      q: clearQ ? null : (q ?? this.q),
       accountId: clearAccount ? null : (accountId ?? this.accountId),
       categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
       type: clearType ? null : (type ?? this.type),
-      from: from ?? this.from,
-      to: to ?? this.to,
+      from: clearFrom ? null : (from ?? this.from),
+      to: clearTo ? null : (to ?? this.to),
     );
   }
+}
+
+class ReceiptLineItem {
+  const ReceiptLineItem({
+    required this.name,
+    this.quantity,
+    this.price,
+  });
+
+  final String name;
+  final double? quantity;
+  final double? price;
+
+  factory ReceiptLineItem.fromJson(Map<String, dynamic> json) {
+    return ReceiptLineItem(
+      name: asString(json['name']),
+      quantity: json['quantity'] == null ? null : asDouble(json['quantity']),
+      price: json['price'] == null ? null : asDouble(json['price']),
+    );
+  }
+}
+
+class ReceiptExtraction {
+  const ReceiptExtraction({
+    required this.merchant,
+    required this.amount,
+    required this.currency,
+    required this.date,
+    required this.category,
+    this.lineItems = const [],
+    this.notes,
+  });
+
+  final String merchant;
+  final double amount;
+  final String currency;
+  final String date;
+  final String category;
+  final List<ReceiptLineItem> lineItems;
+  final String? notes;
+
+  factory ReceiptExtraction.fromJson(Map<String, dynamic> json) {
+    return ReceiptExtraction(
+      merchant: asString(json['merchant']),
+      amount: asDouble(json['amount']),
+      currency: asString(json['currency'], 'USD'),
+      date: asString(json['date']),
+      category: asString(json['category'], 'Other'),
+      lineItems: asList(json['line_items'])
+          .whereType<Map>()
+          .map((e) => ReceiptLineItem.fromJson(asMap(e)))
+          .toList(),
+      notes: asNullableString(json['notes']),
+    );
+  }
+}
+
+class SmsExtraction {
+  const SmsExtraction({
+    required this.amount,
+    required this.type,
+    required this.merchant,
+    required this.date,
+    this.currency,
+    this.accountHint,
+    this.notes,
+  });
+
+  final double amount;
+  final String type;
+  final String merchant;
+  final String date;
+  final String? currency;
+  final String? accountHint;
+  final String? notes;
+
+  bool get isIncome {
+    final value = type.toLowerCase();
+    return value == 'credit' || value == 'income' || value == 'cr';
+  }
+
+  factory SmsExtraction.fromJson(Map<String, dynamic> json) {
+    return SmsExtraction(
+      amount: asDouble(json['amount']),
+      type: asString(json['type'], 'Debit'),
+      merchant: asString(json['merchant'], 'Unknown'),
+      date: asString(json['date']),
+      currency: asNullableString(json['currency']),
+      accountHint: asNullableString(json['account_hint']),
+      notes: asNullableString(json['notes']),
+    );
+  }
+}
+
+class QuickTextExtraction {
+  const QuickTextExtraction({
+    required this.amount,
+    required this.type,
+    required this.merchant,
+    required this.date,
+    required this.category,
+    this.currency,
+    this.notes,
+  });
+
+  final double amount;
+  final String type;
+  final String merchant;
+  final String date;
+  final String category;
+  final String? currency;
+  final String? notes;
+
+  factory QuickTextExtraction.fromJson(Map<String, dynamic> json) {
+    return QuickTextExtraction(
+      amount: asDouble(json['amount']),
+      type: asString(json['type'], 'expense'),
+      merchant: asString(json['merchant']),
+      date: asString(json['date']),
+      category: asString(json['category'], 'Other'),
+      currency: asNullableString(json['currency']),
+      notes: asNullableString(json['notes']),
+    );
+  }
+}
+
+class AiReviewSave {
+  const AiReviewSave({
+    required this.accountId,
+    this.categoryId,
+    required this.amount,
+    required this.type,
+    required this.date,
+    this.merchant,
+    this.notes,
+    this.isRecurring = false,
+    this.recurringFrequency,
+  });
+
+  final String accountId;
+  final String? categoryId;
+  final double amount;
+  final String type;
+  final String date;
+  final String? merchant;
+  final String? notes;
+  final bool isRecurring;
+  final String? recurringFrequency;
+
+  Map<String, dynamic> toJson() => {
+        'account_id': accountId,
+        'category_id': categoryId,
+        'amount': amount,
+        'type': type,
+        'date': date,
+        'merchant': merchant,
+        'notes': notes,
+        'is_recurring': isRecurring,
+        'recurring_frequency':
+            isRecurring ? (recurringFrequency ?? 'monthly') : null,
+      };
+}
+
+T parseDataEnvelope<T>(dynamic json, T Function(Map<String, dynamic>) fromJson) {
+  final map = asMap(json);
+  final data = map['data'];
+  if (data is Map) return fromJson(asMap(data));
+  throw const FormatException('Smart add returned an empty result.');
+}
+
+List<T> parseList<T>(dynamic json, T Function(Map<String, dynamic>) fromJson) {
+  return asList(json)
+      .whereType<Map>()
+      .map((e) => fromJson(asMap(e)))
+      .toList();
 }

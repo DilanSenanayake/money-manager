@@ -174,6 +174,12 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
           currency: _currency,
         );
       } else {
+        if (_currency != widget.initialCurrency &&
+            widget.initialBalance != 0) {
+          throw const ValidationFailure(
+            'Change currency only when the balance is zero, or transfer funds out first',
+          );
+        }
         await repo.updateAccount(
           id: widget.id!,
           name: _name.text.trim(),

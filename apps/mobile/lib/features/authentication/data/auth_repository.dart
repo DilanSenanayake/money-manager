@@ -95,4 +95,55 @@ class AuthRepository {
       throw mapException(e);
     }
   }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      throw const ValidationFailure('Password must be at least 8 characters');
+    }
+    if (currentPassword == newPassword) {
+      throw const ValidationFailure('New password must be different');
+    }
+    final email = currentUser?.email;
+    if (email == null || email.isEmpty) {
+      throw const AuthFailure('Unauthorized');
+    }
+    try {
+      final confirm = await _client.auth.signInWithPassword(
+        email: email,
+        password: currentPassword,
+      );
+      if (confirm.session == null) {
+        throw const AuthFailure('Current password is incorrect');
+      }
+      await _client.auth.updateUser(UserAttributes(password: newPassword));
+    } catch (e) {
+      throw mapException(e);
+    }
+  }
+
+  Future<void> deleteAccount({required String password}) async {
+    final email = currentUser?.email;
+    if (email == null || email.isEmpty) {
+      throw const AuthFailure('Unauthorized');
+    }
+    if (password.isEmpty) {
+      throw const ValidationFailure('Enter your password to confirm');
+    }
+    try {
+      final confirm = await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      if (confirm.session == null) {
+        throw const AuthFailure('Password is incorrect');
+      }
+      await _client.rpc('delete_own_account');
+      await _client.auth.signOut();
+    } catch (e) {
+      throw mapException(e);
+    }
+  }
 }

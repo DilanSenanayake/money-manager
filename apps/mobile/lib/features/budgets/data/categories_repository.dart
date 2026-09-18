@@ -1,12 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/exception_mapper.dart';
-import '../../../core/network/supabase_client.dart';
+import '../../../core/network/api_client.dart';
 import '../../../shared/models/models.dart';
 
 final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
-  return CategoriesRepository(SupabaseBootstrap.client);
+  return CategoriesRepository(ref.watch(ledgerlyApiProvider));
 });
 
 final categoriesProvider = FutureProvider.autoDispose<List<Category>>((ref) {
@@ -14,26 +13,16 @@ final categoriesProvider = FutureProvider.autoDispose<List<Category>>((ref) {
 });
 
 class CategoriesRepository {
-  CategoriesRepository(this._client);
+  CategoriesRepository(this._api);
 
-  final SupabaseClient _client;
-
-  String get _uid {
-    final id = _client.auth.currentUser?.id;
-    if (id == null) throw StateError('Unauthorized');
-    return id;
-  }
+  final LedgerlyApi _api;
 
   Future<List<Category>> getCategories() async {
     try {
-      final data = await _client
-          .from('categories')
-          .select()
-          .eq('user_id', _uid)
-          .order('name');
-      return (data as List)
-          .map((e) => Category.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList();
+      return await _api.get<List<Category>>(
+        '/v1/categories',
+        parse: (json) => parseList(json, Category.fromJson),
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -46,13 +35,15 @@ class CategoriesRepository {
     double? monthlyBudget,
   }) async {
     try {
-      await _client.from('categories').insert({
-        'user_id': _uid,
-        'name': name,
-        'icon': icon,
-        'type': type,
-        'monthly_budget': monthlyBudget,
-      });
+      await _api.mutate(
+        '/v1/categories',
+        body: {
+          'name': name,
+          'icon': icon,
+          'type': type,
+          'monthly_budget': monthlyBudget,
+        },
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -66,12 +57,16 @@ class CategoriesRepository {
     double? monthlyBudget,
   }) async {
     try {
-      await _client.from('categories').update({
-        'name': name,
-        'icon': icon,
-        'type': type,
-        'monthly_budget': monthlyBudget,
-      }).eq('id', id).eq('user_id', _uid);
+      await _api.mutate(
+        '/v1/categories/$id',
+        method: 'PATCH',
+        body: {
+          'name': name,
+          'icon': icon,
+          'type': type,
+          'monthly_budget': monthlyBudget,
+        },
+      );
     } catch (e) {
       throw mapException(e);
     }
@@ -79,7 +74,7 @@ class CategoriesRepository {
 
   Future<void> deleteCategory(String id) async {
     try {
-      await _client.from('categories').delete().eq('id', id).eq('user_id', _uid);
+      await _api.mutate('/v1/categories/$id', method: 'DELETE');
     } catch (e) {
       throw mapException(e);
     }

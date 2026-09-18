@@ -133,8 +133,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                         ),
                         validator: (v) {
-                          if (v == null || v.length < 6) {
-                            return 'Password must be at least 6 characters';
+                          if (v == null ||
+                              v.length < AppConstants.minPasswordLength) {
+                            return 'Password must be at least ${AppConstants.minPasswordLength} characters';
                           }
                           return null;
                         },

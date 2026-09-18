@@ -58,3 +58,25 @@ double computeNetWorth(
     return sum + converted;
   });
 }
+
+bool hasMissingExchangeRate(
+  List<Account> accounts,
+  String baseCurrency,
+  List<ExchangeRate> rates,
+) {
+  for (final account in accounts) {
+    if (account.currency == baseCurrency) continue;
+    final hasDirect = rates.any(
+      (r) =>
+          r.fromCurrency == account.currency &&
+          r.toCurrency == baseCurrency,
+    );
+    final hasInverse = rates.any(
+      (r) =>
+          r.fromCurrency == baseCurrency &&
+          r.toCurrency == account.currency,
+    );
+    if (!hasDirect && !hasInverse) return true;
+  }
+  return false;
+}
