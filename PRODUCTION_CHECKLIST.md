@@ -29,7 +29,7 @@ Use this before the first production cutover and after each release. Details: [P
 ## This application
 
 - [ ] `API_URL` (or `NEXT_PUBLIC_API_URL`) is `https://` and reachable from Vercel
-- [ ] `NEXT_PUBLIC_SITE_URL` is the public web origin
+- [ ] `NEXT_PUBLIC_SITE_URL` is `https://www.smoneymanager.com`
 - [ ] Vercel Web Analytics enabled on the project
 - [ ] `NEXT_PUBLIC_GA_MEASUREMENT_ID` set if using Google Analytics (`G-…`)
 - [ ] Supabase Auth redirect URLs include the production domain

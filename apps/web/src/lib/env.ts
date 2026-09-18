@@ -28,10 +28,13 @@ export function getSupabaseAnonKey(): string {
   return key;
 }
 
+/** Canonical public origin. Apex `smoneymanager.com` 308s to www. */
+export const CANONICAL_SITE_URL = "https://www.smoneymanager.com";
+
 export function getSiteUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-    "http://localhost:3000"
-  );
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (process.env.VERCEL_ENV === "production") return CANONICAL_SITE_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
 }
