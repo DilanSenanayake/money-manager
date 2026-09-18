@@ -18,41 +18,59 @@ export default async function OpenGraphImage() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           background: "#0d9488",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={logoSrc}
-          width={168}
-          height={168}
-          alt=""
-          style={{ borderRadius: 36 }}
-        />
+        {/* Keep text in the center so WhatsApp’s small crop stays readable */}
         <div
           style={{
             display: "flex",
-            marginTop: 28,
-            color: "#ffffff",
-            fontSize: 52,
-            fontWeight: 700,
-            letterSpacing: -1.2,
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 900,
           }}
         >
-          Smart Money Manager
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 14,
-            color: "#ccfbf1",
-            fontSize: 28,
-          }}
-        >
-          Take control of your money
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoSrc}
+            width={220}
+            height={220}
+            alt=""
+            style={{ borderRadius: 48 }}
+          />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              marginTop: 32,
+              color: "#ffffff",
+              fontSize: 80,
+              fontWeight: 800,
+              letterSpacing: -1.5,
+              lineHeight: 1.05,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ display: "flex" }}>Smart Money</div>
+            <div style={{ display: "flex" }}>Manager</div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 20,
+              color: "#ecfdf5",
+              fontSize: 40,
+              fontWeight: 600,
+              lineHeight: 1.2,
+              textAlign: "center",
+            }}
+          >
+            Take control of your money
+          </div>
         </div>
       </div>
     ),

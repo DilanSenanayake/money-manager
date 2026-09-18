@@ -321,13 +321,18 @@ export function AiReviewModal({
                 </div>
               </div>
 
-              <DialogFooter className="shrink-0 gap-2 border-t border-[var(--border)] px-5 py-4 sm:gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <DialogFooter className="shrink-0 gap-2 border-t border-[var(--border)] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:gap-2 sm:px-6">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-11 w-full sm:w-auto"
+                  onClick={() => onOpenChange(false)}
+                >
                   Cancel
                 </Button>
                 <Button
                   size="lg"
-                  className="min-w-32 flex-1 sm:flex-none"
+                  className="h-11 w-full min-w-32 sm:w-auto"
                   disabled={saving || !form.account_id || !form.amount}
                   onClick={async () => {
                     setSaving(true);
