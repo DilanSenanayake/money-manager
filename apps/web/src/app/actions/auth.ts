@@ -13,6 +13,12 @@ export async function signUp(formData: FormData) {
     String(formData.get("base_currency") || "USD")
   );
   const baseCurrency = currencyParsed.success ? currencyParsed.data : "USD";
+  const agreed =
+    formData.get("agree") === "on" || formData.get("agree") === "true";
+
+  if (!agreed) {
+    return { error: "Please agree to the Terms and Privacy Policy." };
+  }
 
   const authParsed = authCredentialsSchema.safeParse({ email, password });
   if (!authParsed.success) {

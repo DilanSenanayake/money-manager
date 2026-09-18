@@ -3,11 +3,10 @@ import { HomeLanding } from "@/components/marketing/home-landing";
 
 export const metadata: Metadata = {
   title: {
-    absolute:
-      "Smart Money Manager — Spend smarter. Save better. Live better.",
+    absolute: "Smart Money Manager - Take control of your money",
   },
   description:
-    "Capture spending from receipts, bank SMS, or one line of text. AI fills the form; you always confirm before save. Wallets, budgets, and analytics in one place.",
+    "See where your money goes. Add a purchase in seconds, confirm every save, and budget in your currency. Free to start. No bank login.",
   robots: { index: true, follow: true },
 };
 

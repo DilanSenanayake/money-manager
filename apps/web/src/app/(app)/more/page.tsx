@@ -77,6 +77,15 @@ export default function MorePage() {
         wide
         className="text-[var(--muted)] hover:text-[var(--foreground)]"
       />
+      <p className="px-1 text-xs text-[var(--muted-fg)]">
+        <Link href="/terms" className="hover:text-[var(--foreground)]">
+          Terms
+        </Link>
+        {" · "}
+        <Link href="/privacy" className="hover:text-[var(--foreground)]">
+          Privacy
+        </Link>
+      </p>
     </div>
   );
 }

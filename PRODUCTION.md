@@ -39,6 +39,7 @@ Never put real secrets in git. Copy from the example files:
 | `NEXT_PUBLIC_API_URL` | Fallback | Still read if `API_URL` is unset (existing Vercel setups) |
 | `NEXT_PUBLIC_SITE_URL` | Recommended | Canonical site origin, e.g. `https://app.example.com` |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Optional | GA4 ID (`G-…`). Vercel Web Analytics needs the dashboard toggle; the app already injects the script. |
+| `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL` | Recommended | Inbox shown on Terms and Privacy (default in code is a placeholder product address) |
 
 ### API (`apps/api`)
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signUp } from "@/app/actions/auth";
 import { CURRENCIES } from "@/lib/schemas";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,8 @@ export default function SignupPage() {
   const [pending, startTransition] = useTransition();
 
   return (
-    <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="auth-shell flex min-h-screen flex-col">
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md shadow-[var(--shadow-md)]">
         <CardHeader className="space-y-3">
           <Link href="/" className="inline-flex">
@@ -88,10 +90,40 @@ export default function SignupPage() {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-[var(--muted)]">
-                You can change this later in Settings.
-              </p>
+            <p className="text-xs text-[var(--muted)]">
+              You can change this later in Settings.
+            </p>
             </div>
+            <label className="flex items-start gap-2.5 text-sm leading-snug text-[var(--muted)]">
+              <input
+                type="checkbox"
+                name="agree"
+                value="on"
+                required
+                className="mt-1 h-4 w-4 shrink-0 rounded border-[var(--border)] accent-[var(--accent)]"
+              />
+              <span>
+                I agree to the{" "}
+                <Link
+                  href="/terms"
+                  className="font-semibold text-[var(--accent-hover)] hover:underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Terms of Use
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/privacy"
+                  className="font-semibold text-[var(--accent-hover)] hover:underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
             {error && (
               <p
                 className="rounded-lg bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"
@@ -126,6 +158,8 @@ export default function SignupPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
+      <SiteFooter />
     </main>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { signIn } from "@/app/actions/auth";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +21,8 @@ export default function LoginPage() {
   const [pending, startTransition] = useTransition();
 
   return (
-    <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="auth-shell flex min-h-screen flex-col">
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md shadow-[var(--shadow-md)]">
         <CardHeader className="space-y-3">
           <Link href="/" className="inline-flex">
@@ -88,6 +90,8 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
+      <SiteFooter />
     </main>
   );
 }

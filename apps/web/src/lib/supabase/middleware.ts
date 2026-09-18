@@ -38,7 +38,9 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/icons/") ||
     path === "/favicon.ico" ||
     path === "/favicon.png" ||
-    path === "/robots.txt";
+    path === "/robots.txt" ||
+    path === "/terms" ||
+    path === "/privacy";
 
   // Validate the JWT with Supabase Auth (do not trust cookie-only getSession()).
   let user = null;

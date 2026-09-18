@@ -6,7 +6,9 @@ import {
   ArrowLeftRight,
   Camera,
   ClipboardPaste,
+  Globe,
   LayoutDashboard,
+  Lock,
   MessageSquareText,
   PiggyBank,
   Plus,
@@ -18,10 +20,13 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CURRENCIES } from "@/lib/schemas";
 import { formatMoney, cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { SiteFooter } from "@/components/layout/site-footer";
 
 type CaptureMode = "text" | "sms" | "receipt";
+type DemoCurrency = (typeof CURRENCIES)[number];
 
 type DemoTx = {
   merchant: string;
@@ -31,70 +36,74 @@ type DemoTx = {
   type: "expense" | "income";
 };
 
+const DEMO_CURRENCIES: DemoCurrency[] = ["USD", "EUR", "GBP", "INR", "LKR"];
+
 const STARTER: DemoTx[] = [
   {
-    merchant: "Keells Super",
-    amount: 4200,
+    merchant: "City Market",
+    amount: 86,
     category: "Groceries",
-    account: "Checking",
+    account: "Main wallet",
     type: "expense",
   },
   {
-    merchant: "Monthly salary",
-    amount: 185000,
+    merchant: "Monthly pay",
+    amount: 3200,
     category: "Salary",
-    account: "Checking",
+    account: "Main wallet",
     type: "income",
   },
   {
-    merchant: "Dialog",
-    amount: 1990,
+    merchant: "Phone bill",
+    amount: 39,
     category: "Utilities",
-    account: "Checking",
+    account: "Main wallet",
     type: "expense",
   },
 ];
 
-const SAMPLES: Record<CaptureMode, { label: string; value: string }[]> = {
-  text: [
-    { label: "Coffee 450", value: "Coffee 450" },
-    { label: "Uber 1,200", value: "Uber 1200" },
-    { label: "Rent 85,000", value: "Rent 85000" },
-  ],
-  sms: [
-    {
-      label: "Keells debit",
-      value:
-        "LKR 2,400.00 debited from A/C **4521 at KEELLS SUPER on 17 Sep. Avl bal 48,210.00",
-    },
-    {
-      label: "Salary credit",
-      value:
-        "LKR 185,000.00 credited to A/C **4521 from ACME PAYROLL on 01 Sep. Avl bal 233,410.00",
-    },
-  ],
-  receipt: [
-    { label: "Cafe receipt", value: "receipt-cafe" },
-    { label: "Grocery bill", value: "receipt-grocery" },
-  ],
-};
+function samples(
+  currency: DemoCurrency
+): Record<CaptureMode, { label: string; value: string }[]> {
+  return {
+    text: [
+      { label: "Coffee 4.50", value: "Coffee 4.50" },
+      { label: "Taxi 12", value: "Taxi 12" },
+      { label: "Rent 950", value: "Rent 950" },
+    ],
+    sms: [
+      {
+        label: "Grocery debit",
+        value: `${currency} 24.00 debited from A/C **4521 at CITY MARKET on 17 Sep. Avl bal 1,210.00`,
+      },
+      {
+        label: "Pay credit",
+        value: `${currency} 3,200.00 credited to A/C **4521 from PAYROLL on 01 Sep. Avl bal 4,410.00`,
+      },
+    ],
+    receipt: [
+      { label: "Cafe receipt", value: "receipt-cafe" },
+      { label: "Grocery bill", value: "receipt-grocery" },
+    ],
+  };
+}
 
 function parseDemo(mode: CaptureMode, raw: string): DemoTx | null {
   if (mode === "receipt") {
     if (raw === "receipt-grocery") {
       return {
-        merchant: "Keells Super",
-        amount: 2400,
+        merchant: "City Market",
+        amount: 24,
         category: "Groceries",
-        account: "Checking",
+        account: "Main wallet",
         type: "expense",
       };
     }
     return {
-      merchant: "The Coffee Bean",
-      amount: 890,
+      merchant: "Neighbourhood Cafe",
+      amount: 8.9,
       category: "Dining",
-      account: "Checking",
+      account: "Main wallet",
       type: "expense",
     };
   }
@@ -105,9 +114,9 @@ function parseDemo(mode: CaptureMode, raw: string): DemoTx | null {
   const amount = amountMatch ? Number(amountMatch[1]) : 0;
   if (!amount) return null;
 
-  const isIncome = /credit|salary|payroll|deposited|received/i.test(text);
+  const isIncome = /credit|salary|payroll|pay|deposited|received/i.test(text);
   const merchantSource = text
-    .replace(/lkr|usd|rs\.?/gi, " ")
+    .replace(/lkr|usd|eur|gbp|inr|jpy|aud|cad|chf|sgd|rs\.?/gi, " ")
     .replace(amountMatch?.[0] ?? "", " ")
     .replace(/debited|credited|from|at|on|a\/c|\*+/gi, " ")
     .replace(/\s+/g, " ")
@@ -115,12 +124,12 @@ function parseDemo(mode: CaptureMode, raw: string): DemoTx | null {
 
   const lower = text.toLowerCase();
   let category = "Other";
-  if (/coffee|cafe|lunch|dinner|restaurant|bean/i.test(lower)) category = "Dining";
-  else if (/keells|grocery|food city|keels/i.test(lower)) category = "Groceries";
-  else if (/uber|pickme|taxi|fuel|petrol/i.test(lower)) category = "Transport";
+  if (/coffee|cafe|lunch|dinner|restaurant/i.test(lower)) category = "Dining";
+  else if (/grocery|market|food/i.test(lower)) category = "Groceries";
+  else if (/taxi|uber|ride|fuel|bus/i.test(lower)) category = "Transport";
   else if (/rent|lease/i.test(lower)) category = "Housing";
-  else if (/salary|payroll/i.test(lower)) category = "Salary";
-  else if (/dialog|utility|bill/i.test(lower)) category = "Utilities";
+  else if (/salary|payroll|pay/i.test(lower)) category = "Salary";
+  else if (/phone|utility|bill/i.test(lower)) category = "Utilities";
 
   return {
     merchant:
@@ -128,17 +137,19 @@ function parseDemo(mode: CaptureMode, raw: string): DemoTx | null {
       (isIncome ? "Incoming" : "Expense"),
     amount,
     category,
-    account: "Checking",
+    account: "Main wallet",
     type: isIncome || /salary|credit/i.test(lower) ? "income" : "expense",
   };
 }
 
 export function HomeLanding() {
   const [mode, setMode] = useState<CaptureMode>("text");
-  const [input, setInput] = useState("Coffee 450");
+  const [currency, setCurrency] = useState<DemoCurrency>("USD");
+  const [input, setInput] = useState("Coffee 4.50");
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<DemoTx | null>(null);
   const [ledger, setLedger] = useState<DemoTx[]>(STARTER);
+  const demoSamples = samples(currency);
 
   const income = useMemo(
     () => ledger.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
@@ -166,7 +177,7 @@ export function HomeLanding() {
     const parsed = parseDemo(mode, next);
     setBusy(false);
     if (!parsed) {
-      toast.error("Try something with an amount, like Coffee 450");
+      toast.error("Try a short note with an amount, like Coffee 4.50");
       return;
     }
     setDraft(parsed);
@@ -176,13 +187,13 @@ export function HomeLanding() {
     if (!draft) return;
     setLedger((rows) => [draft, ...rows].slice(0, 6));
     setDraft(null);
-    toast.success("Saved in the demo — in the real app you confirm the same way.");
+    toast.success("Saved in the demo. In the app, you confirm the same way.");
   }
 
   return (
     <main className="auth-shell">
       <header className="sticky top-0 z-20 border-b border-[var(--border)]/80 bg-[var(--background)]/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
           <Link href="/" aria-label="Smart Money Manager home">
             <BrandMark size="sm" priority />
           </Link>
@@ -191,84 +202,115 @@ export function HomeLanding() {
               Try it
             </a>
             <a href="#why" className="hover:text-[var(--foreground)]">
-              What’s new
+              Why it helps
             </a>
             <a href="#app" className="hover:text-[var(--foreground)]">
               The app
             </a>
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button asChild variant="ghost" size="sm">
               <Link href="/login">Sign in</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/signup">Get started</Link>
+              <Link href="/signup">Start free</Link>
             </Button>
           </div>
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.05fr_0.95fr] md:py-20">
+      <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-10 sm:px-6 sm:py-14 md:grid-cols-[1.08fr_0.92fr] md:gap-10 md:py-20">
         <div className="stagger max-w-xl">
-          <Badge variant="accent" className="w-fit gap-1.5 px-2.5 py-1">
-            <Sparkles className="h-3 w-3" />
-            Confirm-first AI capture
-          </Badge>
-          <h1 className="mt-4 font-display text-4xl leading-[1.08] tracking-tight text-[var(--foreground)] sm:text-5xl md:text-[3.4rem]">
-            Spend smarter. Save better. Live better.
+          <h1 className="font-display text-[2rem] leading-[1.12] tracking-tight text-[var(--foreground)] sm:text-4xl md:text-[3.15rem] md:leading-[1.08]">
+            Take control of your money.
           </h1>
-          <p className="mt-5 text-base leading-relaxed text-[var(--muted)] md:text-lg">
-            Most money apps wait for you to type. This one reads a receipt,
-            a bank SMS, or{" "}
-            <span className="font-medium text-[var(--foreground)]">
-              “Coffee 450”
-            </span>{" "}
-            — fills the form — then{" "}
-            <span className="font-medium text-[var(--foreground)]">
-              waits for you to confirm
-            </span>
-            . AI never auto-saves.
+          <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-[var(--muted)] sm:text-base md:text-lg">
+            See where it goes. Add a purchase in seconds. Nothing is saved until
+            you say yes.
           </p>
-          <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg" className="w-full sm:w-auto">
-              <Link href="/signup">Start tracking free</Link>
+          <div className="mt-7 flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <Button asChild size="lg" className="w-full shadow-[var(--shadow-md)] sm:w-auto">
+              <Link href="/signup">Start free</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-              <a href="#demo">Try a 10-second demo</a>
-            </Button>
+            <a
+              href="#demo"
+              className="inline-flex min-h-11 items-center justify-center px-1 text-center text-sm font-semibold text-[var(--accent-hover)] underline-offset-4 hover:underline"
+            >
+              Try a live demo
+            </a>
           </div>
-          <p className="mt-4 text-xs text-[var(--muted-fg)]">
-            No bank login required. Your data stays in your own Supabase project.
-          </p>
+          <ul className="mt-5 flex flex-col gap-2 text-xs leading-snug text-[var(--muted-fg)] sm:text-[13px]">
+            <li className="flex items-start gap-2">
+              <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent-hover)]" />
+              Free to start. No card. No bank login.
+            </li>
+            <li className="flex items-start gap-2">
+              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent-hover)]" />
+              Your data stays private - only you confirm what is saved.
+            </li>
+            <li className="flex items-start gap-2">
+              <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent-hover)]" />
+              Works in your currency. Choose it when you sign up.
+            </li>
+          </ul>
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-medium text-[var(--muted-fg)]">
+              Preview
+            </span>
+            {DEMO_CURRENCIES.map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => setCurrency(code)}
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums transition-colors",
+                  currency === code
+                    ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-hover)]"
+                    : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+                )}
+                aria-pressed={currency === code}
+              >
+                {code}
+              </button>
+            ))}
+            <span className="text-[11px] text-[var(--muted-fg)]">+ more</span>
+          </div>
         </div>
 
-        <div className="relative">
+        <div className="relative min-w-0">
           <AppPreview
             ledger={ledger}
             income={income}
             expense={expense}
             grocerySpend={grocerySpend}
+            currency={currency}
           />
+          <p className="mt-2 text-center text-[11px] text-[var(--muted-fg)] md:text-left">
+            Sample amounts in {currency}. You set your own when you join.
+          </p>
         </div>
       </section>
 
-      <section id="why" className="mx-auto max-w-6xl px-4 pb-6 sm:px-6">
+      <section id="why" className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 sm:pb-6">
+        <p className="mb-3 max-w-2xl text-sm text-[var(--muted)]">
+          Built to feel calm - help without taking over.
+        </p>
         <div className="grid gap-3 md:grid-cols-3">
           {[
             {
               icon: ShieldCheck,
               title: "You stay in control",
-              body: "The novelty isn’t “AI spends for you.” It’s that capture is instant and saving is always a human yes.",
+              body: "AI can fill the form. You always confirm. Nothing is saved without you.",
             },
             {
               icon: ClipboardPaste,
-              title: "Built for real-life capture",
-              body: "Photo a receipt, paste a bank alert, or type one line. That’s how money actually shows up on your phone.",
+              title: "Capture life as it happens",
+              body: "A photo, a bank message, or one short line - so logging money takes seconds, not a chore.",
             },
             {
               icon: Wallet,
-              title: "Then it looks like a ledger",
-              body: "Wallets, live balances, 80% budget warnings, recurring bills, and charts — once the entry is confirmed.",
+              title: "See the full picture",
+              body: "Wallets, budgets, and trends in one place, so you know where you stand.",
             },
           ].map(({ icon: Icon, title, body }) => (
             <div key={title} className="surface p-5">
@@ -284,17 +326,16 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section id="demo" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+      <section id="demo" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-14">
         <div className="mb-6 max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent-hover)]">
             Interactive demo
           </p>
-          <h2 className="mt-2 font-display text-3xl tracking-tight">
-            Add an expense the new way
+          <h2 className="mt-2 font-display text-2xl tracking-tight sm:text-3xl">
+            Try it before you sign up
           </h2>
-          <p className="mt-2 text-[var(--muted)]">
-            This runs in your browser — no signup. Confirm it and watch the
-            preview ledger on the right update, just like the real app.
+          <p className="mt-2 text-sm text-[var(--muted)] sm:text-base">
+            No account needed. Confirm a sample and watch the home screen update.
           </p>
         </div>
 
@@ -314,10 +355,10 @@ export function HomeLanding() {
                   onClick={() => {
                     setMode(id);
                     setDraft(null);
-                    setInput(SAMPLES[id][0].value);
+                    setInput(demoSamples[id][0].value);
                   }}
                   className={cn(
-                    "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                    "inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                     mode === id
                       ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-hover)]"
                       : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--border-strong)]"
@@ -341,14 +382,17 @@ export function HomeLanding() {
                   </p>
                   <p className="mt-2 font-semibold">
                     {input === "receipt-grocery"
-                      ? "Keells Super"
-                      : "The Coffee Bean"}
+                      ? "City Market"
+                      : "Neighbourhood Cafe"}
                   </p>
-                  <p className="text-sm text-[var(--muted)]">
-                    {input === "receipt-grocery" ? "LKR 2,400.00" : "LKR 890.00"}
+                  <p className="text-sm tabular-nums text-[var(--muted)]">
+                    {formatMoney(
+                      input === "receipt-grocery" ? 24 : 8.9,
+                      currency
+                    )}
                   </p>
                   <p className="mt-3 text-xs text-[var(--accent-hover)]">
-                    Tap to read · in the app this is your camera
+                    Tap to read. In the app, this is your camera.
                   </p>
                 </button>
               ) : (
@@ -363,18 +407,18 @@ export function HomeLanding() {
                   }}
                   placeholder={
                     mode === "sms"
-                      ? "Paste a bank SMS…"
-                      : "Coffee 450"
+                      ? "Paste a bank message…"
+                      : "Coffee 4.50"
                   }
                 />
               )}
 
               <div className="flex flex-wrap gap-2">
-                {SAMPLES[mode].map((sample) => (
+                {demoSamples[mode].map((sample) => (
                   <button
                     key={sample.label}
                     type="button"
-                    className="rounded-full border border-[var(--border)] px-3 py-1 text-xs text-[var(--muted)] hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+                    className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
                     onClick={() => {
                       setInput(sample.value);
                       void runParse(sample.value);
@@ -404,13 +448,13 @@ export function HomeLanding() {
             </p>
             {busy ? (
               <p className="mt-6 text-sm text-[var(--muted)]">
-                Picking out the amount and details…
+                Finding the amount and details…
               </p>
             ) : draft ? (
               <div className="mt-4 space-y-4">
                 <div>
                   <p className="font-display text-3xl tabular-nums">
-                    {formatMoney(draft.amount, "LKR")}
+                    {formatMoney(draft.amount, currency)}
                   </p>
                   <p className="mt-1 font-semibold">{draft.merchant}</p>
                 </div>
@@ -422,36 +466,41 @@ export function HomeLanding() {
                   </Badge>
                 </div>
                 <p className="text-xs leading-relaxed text-[var(--muted)]">
-                  This is the confirm step. Nothing hits your real ledger until
-                  you say so.
+                  This is the confirm step. Nothing is saved until you agree.
                 </p>
-                <div className="flex gap-2">
-                  <Button onClick={confirmDraft}>Confirm &amp; add</Button>
-                  <Button variant="outline" onClick={() => setDraft(null)}>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button className="w-full sm:w-auto" onClick={confirmDraft}>
+                    Confirm &amp; add
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => setDraft(null)}
+                  >
                     Discard
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="mt-6 text-sm leading-relaxed text-[var(--muted)]">
-                <p>Try a sample above. You’ll get a draft like the in-app review modal — then confirm it into the live preview.</p>
-              </div>
+              <p className="mt-6 text-sm leading-relaxed text-[var(--muted)]">
+                Try a sample. You will see a draft, then confirm it into the
+                preview.
+              </p>
             )}
           </div>
         </div>
       </section>
 
-      <section id="app" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+      <section id="app" className="mx-auto max-w-6xl px-4 pb-14 sm:px-6 sm:pb-16">
         <div className="mb-6 max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent-hover)]">
             How the app feels
           </p>
-          <h2 className="mt-2 font-display text-3xl tracking-tight">
-            Home, add, activity — built for daily use
+          <h2 className="mt-2 font-display text-2xl tracking-tight sm:text-3xl">
+            Built for everyday use
           </h2>
-          <p className="mt-2 text-[var(--muted)]">
-            After confirm, it behaves like a proper money manager: accounts with
-            live balances, budget bars, analytics, and recurring bills.
+          <p className="mt-2 text-sm text-[var(--muted)] sm:text-base">
+            After you confirm, it is a calm home for balances, budgets, and bills.
           </p>
         </div>
         <AppPreview
@@ -459,45 +508,67 @@ export function HomeLanding() {
           income={income}
           expense={expense}
           grocerySpend={grocerySpend}
+          currency={currency}
           large
         />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ["Multi-account wallets", "Cash, checking, savings, credit — balances stay in sync."],
-            ["Budget alerts", "80% warn, 100% over. See it on Home, not a spreadsheet."],
-            ["Analytics", "Category spend and income vs expense over six months."],
-            ["Recurring & FX", "Mark bills as repeating. Track multiple currencies."],
+            [
+              "Several wallets",
+              "Keep cash, bank, and cards together so balances stay in view.",
+            ],
+            [
+              "Budget alerts",
+              "A gentle warning as a category fills up - before it runs out.",
+            ],
+            [
+              "Clear trends",
+              "See spending by category over time, so patterns are easy to spot.",
+            ],
+            [
+              "Repeating bills",
+              "Mark what comes back each month, in any currency you use.",
+            ],
           ].map(([title, body]) => (
             <div key={title} className="surface p-4">
               <p className="font-semibold">{title}</p>
-              <p className="mt-1 text-sm text-[var(--muted)]">{body}</p>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
+                {body}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
       <section className="border-t border-[var(--border)]">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-14 sm:px-6 md:flex-row md:items-center">
-          <div>
-            <h2 className="font-display text-3xl tracking-tight">
-              Ready to capture money in seconds?
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 sm:py-14 md:flex-row md:items-center">
+          <div className="max-w-lg">
+            <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
+              Ready to feel in control?
             </h2>
-            <p className="mt-2 max-w-lg text-[var(--muted)]">
-              Create an account, add a wallet, then scan, paste, or describe.
-              You confirm every AI draft.
+            <p className="mt-2 text-sm text-[var(--muted)] sm:text-base">
+              Create a free account, choose your currency, and add your first
+              purchase when you are ready.
+            </p>
+            <p className="mt-3 text-xs text-[var(--muted-fg)]">
+              No credit card. No bank login. Your data stays private.
             </p>
           </div>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Button asChild size="lg">
-              <Link href="/signup">Get started</Link>
+          <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto">
+            <Button asChild size="lg" className="w-full shadow-[var(--shadow-md)]">
+              <Link href="/signup">Start free</Link>
             </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/login">I already have an account</Link>
-            </Button>
+            <Link
+              href="/login"
+              className="text-center text-sm font-semibold text-[var(--muted)] underline-offset-4 hover:text-[var(--foreground)] hover:underline"
+            >
+              I already have an account
+            </Link>
           </div>
         </div>
       </section>
+      <SiteFooter />
     </main>
   );
 }
@@ -507,33 +578,38 @@ function AppPreview({
   income,
   expense,
   grocerySpend,
+  currency,
   large = false,
 }: {
   ledger: DemoTx[];
   income: number;
   expense: number;
   grocerySpend: number;
+  currency: DemoCurrency;
   large?: boolean;
 }) {
-  const groceryLimit = 15000;
+  const groceryLimit = 120;
   const groceryRatio = Math.min(1, grocerySpend / groceryLimit);
 
   return (
     <div
       className={cn(
         "overflow-hidden rounded-[20px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)]",
-        !large && "rotate-[0.4deg]"
+        !large && "md:rotate-[0.4deg]"
       )}
     >
       <div className="flex items-center gap-1.5 border-b border-[var(--border)] bg-[var(--background)] px-3 py-2">
         <span className="h-2 w-2 rounded-full bg-[#f43f5e]/80" />
         <span className="h-2 w-2 rounded-full bg-[#f59e0b]/80" />
         <span className="h-2 w-2 rounded-full bg-[#10b981]/80" />
-        <span className="ml-2 text-[11px] text-[var(--muted-fg)]">
+        <span className="ml-2 truncate text-[11px] text-[var(--muted-fg)]">
           Home · Smart Money Manager
         </span>
+        <span className="ml-auto shrink-0 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--accent-hover)]">
+          {currency}
+        </span>
       </div>
-      <div className="flex min-h-[280px]">
+      <div className="flex min-h-[240px] sm:min-h-[280px]">
         <aside className="hidden w-40 shrink-0 border-r border-[var(--border)] p-3 md:block">
           <p className="mb-3 px-2 text-[11px] font-semibold text-[var(--muted-fg)]">
             Menu
@@ -561,7 +637,7 @@ function AppPreview({
             </div>
           ))}
         </aside>
-        <div className="flex-1 space-y-3 bg-[var(--background)] p-4">
+        <div className="min-w-0 flex-1 space-y-3 bg-[var(--background)] p-4">
           <div>
             <p className="text-xs text-[var(--muted)]">This month</p>
             <p className="font-display text-lg tracking-tight">Welcome back</p>
@@ -572,7 +648,7 @@ function AppPreview({
                 Income
               </p>
               <p className="mt-1 text-sm font-semibold tabular-nums text-[var(--success)]">
-                {formatMoney(income, "LKR")}
+                {formatMoney(income, currency)}
               </p>
             </div>
             <div className="surface p-3">
@@ -580,15 +656,16 @@ function AppPreview({
                 Spent
               </p>
               <p className="mt-1 text-sm font-semibold tabular-nums">
-                {formatMoney(expense, "LKR")}
+                {formatMoney(expense, currency)}
               </p>
             </div>
           </div>
           <div className="surface p-3">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-medium">Groceries</span>
-              <span className="tabular-nums text-[var(--muted)]">
-                {formatMoney(grocerySpend, "LKR")} / {formatMoney(groceryLimit, "LKR")}
+              <span className="shrink-0 tabular-nums text-[var(--muted)]">
+                {formatMoney(grocerySpend, currency)} /{" "}
+                {formatMoney(groceryLimit, currency)}
               </span>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--border)]">
@@ -615,7 +692,7 @@ function AppPreview({
                   )}
                 >
                   {tx.type === "income" ? "+" : "−"}
-                  {formatMoney(tx.amount, "LKR")}
+                  {formatMoney(tx.amount, currency)}
                 </p>
               </div>
             ))}
