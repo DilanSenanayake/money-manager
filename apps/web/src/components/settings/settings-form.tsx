@@ -26,9 +26,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export function SettingsForm({
   profile,
   rates,
+  email,
 }: {
   profile: Profile;
   rates: ExchangeRate[];
+  email: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
@@ -51,6 +53,21 @@ export function SettingsForm({
           <CardTitle>Profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="profile-email">Email</Label>
+            <Input
+              id="profile-email"
+              type="email"
+              value={email}
+              readOnly
+              disabled
+              autoComplete="email"
+              className="disabled:opacity-100 bg-[var(--background)] text-[var(--muted)]"
+            />
+            <p className="text-xs text-slate-500">
+              Used to sign in. This can&apos;t be changed here.
+            </p>
+          </div>
           <div className="space-y-2">
             <Label>Display name</Label>
             <Input
