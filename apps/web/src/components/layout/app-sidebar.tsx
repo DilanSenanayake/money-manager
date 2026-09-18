@@ -15,6 +15,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const primary = [
@@ -73,17 +74,10 @@ export function AppSidebar() {
     <aside className="flex h-full w-full flex-col border-r border-[var(--border)] bg-[var(--surface)] px-3 py-5">
       <div className="mb-7 px-3">
         <Link href="/dashboard" className="inline-flex items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-sm font-bold tracking-tight text-[var(--accent-fg)]">
-            S
-          </span>
-          <span>
-            <span className="block text-sm font-semibold leading-snug tracking-tight">
-              Smart Money Manager
-            </span>
-            <span className="block text-[11px] text-[var(--muted-fg)]">
-              Spend smarter. Save better.
-            </span>
-          </span>
+          <BrandMark
+            size="sm"
+            subtitle="Spend smarter. Save better."
+          />
         </Link>
       </div>
 

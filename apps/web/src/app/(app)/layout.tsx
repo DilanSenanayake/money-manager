@@ -1,4 +1,5 @@
 import { AppSidebar, MobileNav } from "@/components/layout/app-sidebar";
+import { BrandLogo } from "@/components/brand/brand-mark";
 import { PageEnter } from "@/components/layout/page-enter";
 
 export const dynamic = "force-dynamic";
@@ -23,9 +24,7 @@ export default function AppLayout({
           >
             Skip to content
           </a>
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--accent)] text-[11px] font-bold text-[var(--accent-fg)]">
-            S
-          </span>
+          <BrandLogo size={28} alt="" />
           <p className="min-w-0 truncate text-sm font-semibold tracking-tight">
             Smart Money Manager
           </p>

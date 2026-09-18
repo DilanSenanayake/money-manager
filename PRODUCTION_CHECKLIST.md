@@ -38,7 +38,7 @@ Use this before the first production cutover and after each release. Details: [P
 - [ ] Reverse proxy overwrites `X-Forwarded-For` and `X-Forwarded-Proto`
 - [ ] API published as non-root Docker user; container `HEALTHCHECK` is healthy
 - [ ] API bound to localhost or a private network when TLS terminates on the same VM
-- [ ] PWA: hard-refresh once after deploy so `ledgerly-v2` service worker replaces `ledgerly-v1`
+- [ ] PWA: hard-refresh once after deploy so `ledgerly-v3` service worker replaces the previous cache
 - [ ] Receipt scan works in production (camera permission + Tesseract; CSP `wasm-unsafe-eval`)
 - [ ] Rate limits observed (120/min global, 20/min AI) per authenticated user
 - [ ] Privacy policy / terms published if this handles other people's financial data

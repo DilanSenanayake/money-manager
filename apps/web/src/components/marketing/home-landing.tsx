@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatMoney, cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 type CaptureMode = "text" | "sms" | "receipt";
 
@@ -132,24 +133,6 @@ function parseDemo(mode: CaptureMode, raw: string): DemoTx | null {
   };
 }
 
-function BrandMark({ size = "md" }: { size?: "sm" | "md" }) {
-  return (
-    <span className="inline-flex items-center gap-2.5">
-      <span
-        className={cn(
-          "flex items-center justify-center rounded-lg bg-[var(--accent)] font-bold text-[var(--accent-fg)]",
-          size === "sm" ? "h-8 w-8 text-xs" : "h-9 w-9 text-sm"
-        )}
-      >
-        S
-      </span>
-      <span className="text-sm font-semibold tracking-tight">
-        Smart Money Manager
-      </span>
-    </span>
-  );
-}
-
 export function HomeLanding() {
   const [mode, setMode] = useState<CaptureMode>("text");
   const [input, setInput] = useState("Coffee 450");
@@ -201,7 +184,7 @@ export function HomeLanding() {
       <header className="sticky top-0 z-20 border-b border-[var(--border)]/80 bg-[var(--background)]/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link href="/" aria-label="Smart Money Manager home">
-            <BrandMark size="sm" />
+            <BrandMark size="sm" priority />
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-[var(--muted)] md:flex">
             <a href="#demo" className="hover:text-[var(--foreground)]">

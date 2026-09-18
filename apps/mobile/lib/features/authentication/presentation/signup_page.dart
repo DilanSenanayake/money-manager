@@ -95,6 +95,15 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Image.asset(
+                          'assets/icons/logo.png',
+                          width: 56,
+                          height: 56,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         'Create account',
                         style: theme.textTheme.headlineMedium?.copyWith(

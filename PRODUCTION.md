@@ -261,7 +261,7 @@ Use Vercel → Deployments → Promote an earlier production deployment.
 | Dashboard numbers look low | PostgREST max rows truncating | Raise max rows; heavy users can exceed 1,000 txs/month |
 | AI parse always errors | Missing/invalid `Groq__ApiKey` or model names | Check API logs; confirm models in `Groq__Models` |
 | Users bounced to `/login` | Middleware `getUser()` timeout or cookie domain | Confirm Supabase URL/key; check Auth redirect URLs |
-| Stale PWA after deploy | Old service worker | `sw.js` is `ledgerly-v2` and skips caching navigations; users may need one refresh |
+| Stale PWA after deploy | Old service worker | `sw.js` is `ledgerly-v3` and skips caching navigations; users may need one refresh |
 | Rate limit hits everyone | Proxy not sending `X-Forwarded-For` | Fix forwarded headers on Caddy/Nginx |
 
 ## Query limits (API)

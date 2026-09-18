@@ -1,6 +1,7 @@
-const CACHE = "ledgerly-v2";
+const CACHE = "ledgerly-v3";
 const PRECACHE = [
   "/manifest.webmanifest",
+  "/brand/logo.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];

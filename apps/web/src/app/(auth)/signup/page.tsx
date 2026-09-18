@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { signUp } from "@/app/actions/auth";
 import { CURRENCIES } from "@/lib/schemas";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,11 +25,8 @@ export default function SignupPage() {
     <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md shadow-[var(--shadow-md)]">
         <CardHeader className="space-y-3">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-bold text-[var(--accent-fg)]">
-              S
-            </span>
-            <span className="text-sm font-semibold">Smart Money Manager</span>
+          <Link href="/" className="inline-flex">
+            <BrandMark size="sm" />
           </Link>
           <div>
             <CardTitle className="font-display text-2xl">Create account</CardTitle>

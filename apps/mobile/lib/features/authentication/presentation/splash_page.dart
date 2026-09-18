@@ -73,6 +73,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Image.asset(
+                'assets/icons/logo.png',
+                width: 88,
+                height: 88,
+              ),
+              const SizedBox(height: 20),
               Text(
                 AppConstants.appName,
                 textAlign: TextAlign.center,

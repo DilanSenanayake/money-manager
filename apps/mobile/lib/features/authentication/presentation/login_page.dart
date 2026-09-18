@@ -75,6 +75,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Image.asset(
+                          'assets/icons/logo.png',
+                          width: 56,
+                          height: 56,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         AppConstants.appName,
                         style: theme.textTheme.displaySmall?.copyWith(

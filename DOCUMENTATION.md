@@ -169,7 +169,7 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 ### 3.10 PWA
 
 - Web app manifest: `public/manifest.webmanifest`
-- Icons: `public/icons/icon-192.png`, `icon-512.png`
+- Icons: `public/brand/logo.png` (in-app), `public/icons/icon-192.png` / `icon-512.png` (PWA)
 - Service worker: `public/sw.js`
 - Client registration: `src/components/pwa/sw-register.tsx`
 - Standalone display, teal theme (`#0f766e`)
