@@ -1,15 +1,19 @@
-import type { Metadata } from "next";
 import { HomeLanding } from "@/components/marketing/home-landing";
+import { HomeJsonLd } from "@/components/seo/home-json-ld";
+import { publicMetadata, SEO } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: {
-    absolute: "Smart Money Manager - Take control of your money",
-  },
-  description:
-    "See where your money goes. Add a purchase in seconds, confirm every save, and budget in your currency. Free to start. No bank login.",
-  robots: { index: true, follow: true },
-};
+export const metadata = publicMetadata({
+  title: SEO.title,
+  description: SEO.description,
+  path: "/",
+  absoluteTitle: true,
+});
 
 export default function HomePage() {
-  return <HomeLanding />;
+  return (
+    <>
+      <HomeJsonLd />
+      <HomeLanding />
+    </>
+  );
 }

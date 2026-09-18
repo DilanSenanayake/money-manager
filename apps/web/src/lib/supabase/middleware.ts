@@ -39,6 +39,9 @@ export async function updateSession(request: NextRequest) {
     path === "/favicon.ico" ||
     path === "/favicon.png" ||
     path === "/robots.txt" ||
+    path === "/sitemap.xml" ||
+    path.startsWith("/opengraph-image") ||
+    path.startsWith("/twitter-image") ||
     path === "/terms" ||
     path === "/privacy";
 

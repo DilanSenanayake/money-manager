@@ -5,8 +5,7 @@ import { LEGAL } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Terms of Use",
-  description: `Terms that govern your use of ${LEGAL.productName}.`,
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 };
 
 const toc = [

@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Page not found",
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (
@@ -8,10 +14,10 @@ export default function NotFound() {
         Page not found
       </h1>
       <p className="text-sm text-[var(--muted)]">
-        That link doesn&apos;t exist. Head back to your dashboard.
+        That link doesn&apos;t exist. Head back home.
       </p>
       <Button asChild>
-        <Link href="/dashboard">Go to Home</Link>
+        <Link href="/">Go to Home</Link>
       </Button>
     </main>
   );

@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
 import { SiteAnalytics } from "@/components/telemetry/site-analytics";
 import { getSiteUrl } from "@/lib/env";
+import { SEO } from "@/lib/seo";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -15,11 +16,12 @@ const sans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "Smart Money Manager",
-    template: "%s · Smart Money Manager",
+    default: SEO.name,
+    template: `%s · ${SEO.name}`,
   },
-  description:
-    "Spend smarter. Save better. Live better. An intelligent money manager with AI-assisted tracking and insights.",
+  description: SEO.description,
+  applicationName: SEO.name,
+  category: "finance",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -32,11 +34,30 @@ export const metadata: Metadata = {
     apple: [{ url: "/icons/icon-180.png", sizes: "180x180", type: "image/png" }],
     shortcut: "/favicon.ico",
   },
-  robots: { index: false, follow: false },
+  openGraph: {
+    type: "website",
+    locale: SEO.locale,
+    siteName: SEO.name,
+    title: SEO.title,
+    description: SEO.description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SEO.title,
+    description: SEO.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Smart Money Manager",
+    title: SEO.name,
   },
 };
 

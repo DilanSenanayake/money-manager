@@ -5,8 +5,7 @@ import { LEGAL, PROCESSORS } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: `How ${LEGAL.productName} collects, uses, and stores information.`,
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 };
 
 const toc = [

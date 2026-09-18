@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { AppSidebar, MobileNav } from "@/components/layout/app-sidebar";
 import { BrandLogo } from "@/components/brand/brand-mark";
 import { PageEnter } from "@/components/layout/page-enter";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function AppLayout({
   children,
