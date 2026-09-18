@@ -11,6 +11,7 @@ import type { ExchangeRate, Profile } from "@/lib/types";
 import { CURRENCIES } from "@/lib/schemas";
 import { PageHeader } from "@/components/layout/page-header";
 import { SignOutButton } from "@/components/layout/sign-out-button";
+import { AccountSecurity } from "@/components/settings/account-security";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +46,7 @@ export function SettingsForm({
     <div className="page-stack">
       <PageHeader
         title="Settings"
-        description="Profile, base currency, and exchange rates"
+        description="Profile, password, and exchange rates"
       />
 
       <Card>
@@ -53,6 +54,13 @@ export function SettingsForm({
           <CardTitle>Profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <Label>Display name</Label>
+            <Input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="profile-email">Email</Label>
             <Input
@@ -63,16 +71,6 @@ export function SettingsForm({
               disabled
               autoComplete="email"
               className="disabled:opacity-100 bg-[var(--background)] text-[var(--muted)]"
-            />
-            <p className="text-xs text-slate-500">
-              Used to sign in. This can&apos;t be changed here.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label>Display name</Label>
-            <Input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -111,6 +109,8 @@ export function SettingsForm({
           </Button>
         </CardContent>
       </Card>
+
+      <AccountSecurity />
 
       <Card>
         <CardHeader>
