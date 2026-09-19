@@ -1,8 +1,10 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-export const BRAND_LOGO_SRC = "/brand/logo.png";
+export const BRAND_LOGO_SRC =
+  "/icons/smart_money_manager_logo_gold1.png";
 export const BRAND_NAME = "Smart Money Manager";
+const BRAND_LOGO_ASPECT = 414 / 323;
 
 export function BrandLogo({
   size = 32,
@@ -15,12 +17,14 @@ export function BrandLogo({
   alt?: string;
   priority?: boolean;
 }) {
+  const height = size;
+  const width = Math.round(size * BRAND_LOGO_ASPECT);
   return (
     <Image
       src={BRAND_LOGO_SRC}
       alt={alt}
-      width={size}
-      height={size}
+      width={width}
+      height={height}
       priority={priority}
       className={cn("shrink-0 object-contain", className)}
     />

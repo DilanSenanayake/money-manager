@@ -106,8 +106,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         alignment: Alignment.centerLeft,
                         child: Image.asset(
                           'assets/icons/logo.png',
-                          width: 56,
-                          height: 56,
+                          width: 72,
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: 16),

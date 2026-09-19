@@ -98,8 +98,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
               children: [
                 Image.asset(
                   'assets/icons/logo.png',
-                  width: 88,
-                  height: 88,
+                  width: 120,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 20),
                 const Text(

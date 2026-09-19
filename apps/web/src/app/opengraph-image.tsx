@@ -8,7 +8,9 @@ export const contentType = "image/png";
 export const runtime = "nodejs";
 
 export default async function OpenGraphImage() {
-  const logoData = await readFile(join(process.cwd(), "public/brand/logo.png"));
+  const logoData = await readFile(
+    join(process.cwd(), "public/icons/smart_money_manager_logo_gold1.png"),
+  );
   const logoSrc = `data:image/png;base64,${logoData.toString("base64")}`;
 
   return new ImageResponse(
@@ -27,10 +29,9 @@ export default async function OpenGraphImage() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={logoSrc}
-          width={220}
+          width={282}
           height={220}
           alt=""
-          style={{ borderRadius: 36 }}
         />
         <div
           style={{
