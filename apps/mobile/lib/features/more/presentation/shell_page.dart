@@ -58,12 +58,14 @@ class _WebMobileNav extends StatelessWidget {
                 ),
               ),
             ),
-            padding: EdgeInsets.fromLTRB(8, 6, 8, bottom > 0 ? bottom : 8),
+            padding: EdgeInsets.fromLTRB(8, 12, 8, bottom > 0 ? bottom : 8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 _NavTab(
-                  icon: Icons.space_dashboard_outlined,
+                  icon: index == 0
+                      ? Icons.space_dashboard_rounded
+                      : Icons.space_dashboard_outlined,
                   label: 'Home',
                   selected: index == 0,
                   selectedColor: selectedColor,
@@ -85,7 +87,7 @@ class _WebMobileNav extends StatelessWidget {
                   },
                 ),
                 _NavTab(
-                  icon: Icons.menu_rounded,
+                  icon: index == 3 ? Icons.menu_open_rounded : Icons.menu_rounded,
                   label: 'More',
                   selected: index == 3,
                   selectedColor: selectedColor,
@@ -119,25 +121,31 @@ class _NavTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = selected ? selectedColor : context.muted;
     return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 22, color: color),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: AppSize.touch),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: AppSize.navIcon, color: color),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: context
+                        .navLabel(selected: selected)
+                        .copyWith(color: color),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -159,55 +167,48 @@ class _AddTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Transform.translate(
-              offset: const Offset(0, -16),
-              child: AnimatedScale(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: 'Add',
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedScale(
                 scale: selected ? 1 : 0.96,
                 duration: AppDuration.fast,
                 child: AnimatedContainer(
                   duration: AppDuration.fast,
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
                     color: selected ? selectedColor : AppColors.teal500,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.teal500.withValues(
-                          alpha: context.isDark ? 0.28 : 0.28,
-                        ),
-                        blurRadius: selected ? 18 : 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
+                    boxShadow: AppElevation.soft(
+                      selected ? selectedColor : AppColors.teal500,
+                    ),
                   ),
                   child: Icon(
                     Icons.add_rounded,
+                    size: 28,
                     color: context.isDark && selected
                         ? context.colors.onPrimary
                         : Colors.white,
                   ),
                 ),
               ),
-            ),
-            Transform.translate(
-              offset: const Offset(0, -12),
-              child: Text(
+              const SizedBox(height: 4),
+              Text(
                 'Add',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? selectedColor : context.muted,
-                ),
+                style: context.navLabel(selected: selected).copyWith(
+                      color: selected ? selectedColor : context.muted,
+                    ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

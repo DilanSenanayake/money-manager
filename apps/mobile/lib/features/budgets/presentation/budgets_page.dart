@@ -14,6 +14,30 @@ import '../data/categories_repository.dart';
 class BudgetsPage extends ConsumerWidget {
   const BudgetsPage({super.key});
 
+  Future<void> _createCategory(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _CategoryEditorSheet(
+        title: 'New expense category',
+        submitLabel: 'Create',
+        initialName: '',
+        initialIcon: 'circle',
+        type: 'expense',
+        onSubmit: (name, icon, budget) async {
+          await ref.read(categoriesRepositoryProvider).createCategory(
+                name: name,
+                icon: icon,
+                type: 'expense',
+                monthlyBudget: budget,
+              );
+          ref.invalidate(categoriesProvider);
+          ref.invalidate(dashboardProvider);
+        },
+      ),
+    );
+  }
+
   Future<void> _editCategory(
     BuildContext context,
     WidgetRef ref, {
@@ -58,29 +82,7 @@ class BudgetsPage extends ConsumerWidget {
         title: const Text('Budgets'),
         actions: [
           IconButton(
-            onPressed: () async {
-              await showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => _CategoryEditorSheet(
-                  title: 'New expense category',
-                  submitLabel: 'Create',
-                  initialName: '',
-                  initialIcon: 'circle',
-                  type: 'expense',
-                  onSubmit: (name, icon, budget) async {
-                    await ref.read(categoriesRepositoryProvider).createCategory(
-                          name: name,
-                          icon: icon,
-                          type: 'expense',
-                          monthlyBudget: budget,
-                        );
-                    ref.invalidate(categoriesProvider);
-                    ref.invalidate(dashboardProvider);
-                  },
-                ),
-              );
-            },
+            onPressed: () => _createCategory(context, ref),
             icon: const Icon(Icons.add_rounded),
           ),
         ],
@@ -114,6 +116,8 @@ class BudgetsPage extends ConsumerWidget {
                     title: 'No budgets yet',
                     message:
                         'Set a monthly limit on an expense category to see if spending is on track.',
+                    actionLabel: 'Add category',
+                    onAction: () => _createCategory(context, ref),
                   )
                 else
                   ...data.budgets.map(
@@ -300,7 +304,12 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
             loading: _saving,
             onPressed: () async {
               final name = _nameCtrl.text.trim();
-              if (name.isEmpty) return;
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Enter a category name')),
+                );
+                return;
+              }
               setState(() => _saving = true);
               try {
                 await widget.onSubmit(

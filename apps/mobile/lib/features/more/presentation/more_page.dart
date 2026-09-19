@@ -22,7 +22,7 @@ class MorePage extends ConsumerWidget {
           children: [
             const PageHeader(
               title: 'More',
-              description: 'Accounts, budgets, analytics, and settings',
+              description: 'Manage wallets, budgets, and settings',
             ),
             const SizedBox(height: AppSpacing.xl),
             AppCard(
@@ -56,14 +56,17 @@ class MorePage extends ConsumerWidget {
                     subtitle: 'Bills and repeating payments',
                     onTap: () => context.push(RoutePaths.recurring),
                   ),
-                  Divider(height: 1, color: context.colors.outlineVariant),
-                  _MoreTile(
-                    icon: Icons.settings_outlined,
-                    title: 'Settings',
-                    subtitle: 'Profile, currency, exchange rates',
-                    onTap: () => context.push(RoutePaths.settings),
-                  ),
                 ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: _MoreTile(
+                icon: Icons.settings_outlined,
+                title: 'Settings',
+                subtitle: 'Profile, currency, exchange rates',
+                onTap: () => context.push(RoutePaths.settings),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -85,7 +88,7 @@ class MorePage extends ConsumerWidget {
                   onPressed: () => openExternalUrl(AppConfig.termsUrl),
                   child: Text(
                     'Terms',
-                    style: TextStyle(color: context.muted, fontSize: 12),
+                    style: TextStyle(color: context.muted, fontSize: AppSize.navLabel),
                   ),
                 ),
                 Text('·', style: TextStyle(color: context.muted)),
@@ -93,7 +96,7 @@ class MorePage extends ConsumerWidget {
                   onPressed: () => openExternalUrl(AppConfig.privacyUrl),
                   child: Text(
                     'Privacy',
-                    style: TextStyle(color: context.muted, fontSize: 12),
+                    style: TextStyle(color: context.muted, fontSize: AppSize.navLabel),
                   ),
                 ),
               ],
@@ -141,9 +144,12 @@ class _MoreTile extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        style: context.texts.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       ),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      subtitle: Text(
+        subtitle,
+        style: context.texts.bodySmall?.copyWith(color: context.muted),
+      ),
       trailing: Icon(
         Icons.chevron_right_rounded,
         size: 18,

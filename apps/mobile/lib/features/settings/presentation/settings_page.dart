@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/open_url.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../authentication/data/auth_repository.dart';
@@ -178,7 +179,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
         data: (_) {
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.sm,
+              AppSpacing.xl,
+              AppSpacing.xxl,
+            ),
             children: [
               Text(
                 'Profile',
@@ -361,6 +367,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   ),
                                   IconButton(
                                     onPressed: () async {
+                                      final ok = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Remove this rate?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            FilledButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              child: const Text('Remove'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (ok != true) return;
                                       await ref
                                           .read(settingsRepositoryProvider)
                                           .deleteExchangeRate(r.id);

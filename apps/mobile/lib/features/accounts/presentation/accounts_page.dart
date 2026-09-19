@@ -173,7 +173,12 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
   }
 
   Future<void> _save() async {
-    if (_name.text.trim().isEmpty) return;
+    if (_name.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter an account name')),
+      );
+      return;
+    }
     setState(() => _loading = true);
     try {
       final repo = ref.read(accountsRepositoryProvider);

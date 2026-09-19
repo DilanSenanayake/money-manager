@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../core/utils/dates.dart';
+import '../../core/utils/insights.dart';
 import '../../core/utils/labels.dart';
 import '../../core/utils/money.dart';
 import '../models/models.dart';
@@ -222,7 +223,7 @@ class TxTile extends StatelessWidget {
             '$title · ${formatMoney(transaction.amount, currency)} · ${transaction.date}',
           );
         },
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         leading: isTransfer
             ? CircleAvatar(
                 radius: 18,
@@ -372,3 +373,256 @@ class StatCard extends StatelessWidget {
 }
 
 enum StatTone { neutral, positive, negative }
+
+class MoneyDisplay extends StatelessWidget {
+  const MoneyDisplay(
+    this.amount, {
+    super.key,
+    this.currency = 'USD',
+    this.hero = false,
+    this.color,
+    this.signed = false,
+  });
+
+  final num amount;
+  final String currency;
+  final bool hero;
+  final Color? color;
+  final bool signed;
+
+  @override
+  Widget build(BuildContext context) {
+    final prefix = signed
+        ? (amount > 0
+            ? '+'
+            : amount < 0
+                ? ''
+                : '')
+        : '';
+    return Text(
+      '$prefix${formatMoney(amount, currency)}',
+      style: (hero ? context.moneyHero : context.moneyTitle).copyWith(
+        color: color,
+      ),
+    );
+  }
+}
+
+class CashflowPair extends StatelessWidget {
+  const CashflowPair({
+    super.key,
+    required this.income,
+    required this.expense,
+    required this.currency,
+  });
+
+  final num income;
+  final num expense;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _CashflowColumn(
+              label: 'Income',
+              amount: income,
+              currency: currency,
+              color: AppColors.success,
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 44,
+            color: context.colors.outlineVariant,
+          ),
+          Expanded(
+            child: _CashflowColumn(
+              label: 'Spent',
+              amount: expense,
+              currency: currency,
+              color: AppColors.danger,
+              alignEnd: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CashflowColumn extends StatelessWidget {
+  const _CashflowColumn({
+    required this.label,
+    required this.amount,
+    required this.currency,
+    required this.color,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final num amount;
+  final String currency;
+  final Color color;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final align = alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: align,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: context.texts.labelSmall?.copyWith(
+              color: context.muted,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            formatMoney(amount, currency),
+            style: context.texts.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color,
+              fontFeatures: const [FontFeature.tabularFigures()],
+              letterSpacing: -0.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class InsightChip extends StatelessWidget {
+  const InsightChip({
+    super.key,
+    required this.insight,
+    this.onTap,
+  });
+
+  final MoneyInsight insight;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (insight.tone) {
+      InsightTone.danger => AppColors.danger,
+      InsightTone.warn => AppColors.warn,
+      InsightTone.positive => AppColors.success,
+      InsightTone.neutral => context.colors.primary,
+    };
+    final icon = switch (insight.tone) {
+      InsightTone.danger => Icons.warning_amber_rounded,
+      InsightTone.warn => Icons.trending_up_rounded,
+      InsightTone.positive => Icons.trending_down_rounded,
+      InsightTone.neutral => Icons.insights_outlined,
+    };
+    return Material(
+      color: color.withValues(alpha: context.isDark ? 0.16 : 0.08),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  insight.message,
+                  style: context.texts.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AmountField extends StatelessWidget {
+  const AmountField({
+    super.key,
+    required this.controller,
+    this.onChanged,
+    this.autofocus = false,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String>? onChanged;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTextField(
+      controller: controller,
+      label: 'Amount',
+      hint: '0.00',
+      autofocus: autofocus,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      textInputAction: TextInputAction.next,
+      textAlign: TextAlign.start,
+      style: context.moneyTitle,
+      onChanged: onChanged,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+      ],
+    );
+  }
+}
+
+class CategoryChipRow extends StatelessWidget {
+  const CategoryChipRow({
+    super.key,
+    required this.categories,
+    required this.selectedId,
+    required this.onSelected,
+  });
+
+  final List<Category> categories;
+  final String? selectedId;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (categories.isEmpty) {
+      return Text(
+        'No categories for this type yet.',
+        style: context.texts.bodySmall?.copyWith(color: context.muted),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final c in categories)
+          CategoryChoiceChip(
+            name: c.name,
+            icon: c.icon,
+            selected: selectedId == c.id,
+            onSelected: () => onSelected(c.id),
+          ),
+      ],
+    );
+  }
+}

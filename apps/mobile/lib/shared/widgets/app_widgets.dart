@@ -78,6 +78,7 @@ class AppTextField extends StatelessWidget {
     this.autofillHints,
     this.style,
     this.textAlign,
+    this.autofocus = false,
   });
 
   final TextEditingController controller;
@@ -97,6 +98,7 @@ class AppTextField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final TextStyle? style;
   final TextAlign? textAlign;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +116,7 @@ class AppTextField extends StatelessWidget {
       autofillHints: autofillHints,
       style: style,
       textAlign: textAlign ?? TextAlign.start,
+      autofocus: autofocus,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -326,21 +329,19 @@ class DashboardSkeleton extends StatelessWidget {
       padding: AppSpacing.page,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        _SkeletonBlock(height: 28, width: 160),
-        const SizedBox(height: AppSpacing.xs),
-        _SkeletonBlock(height: 16, width: 120),
+        _SkeletonBlock(height: 22, width: 140),
         const SizedBox(height: AppSpacing.lg),
-        _SkeletonBlock(height: 88),
+        const _SkeletonBlock(height: 88),
+        const SizedBox(height: AppSpacing.sm),
+        const _SkeletonBlock(height: 72),
         const SizedBox(height: AppSpacing.md),
-        Row(
-          children: const [
-            Expanded(child: _SkeletonBlock(height: 96)),
-            SizedBox(width: 8),
-            Expanded(child: _SkeletonBlock(height: 96)),
-          ],
-        ),
+        const _SkeletonBlock(height: 48),
         const SizedBox(height: AppSpacing.lg),
-        _SkeletonBlock(height: 180),
+        const _SkeletonBlock(height: 140),
+        const SizedBox(height: AppSpacing.md),
+        const _SkeletonBlock(height: 64),
+        const SizedBox(height: AppSpacing.lg),
+        const _SkeletonBlock(height: 180),
       ],
     );
   }
@@ -429,7 +430,7 @@ class DateField extends StatelessWidget {
           labelText: label,
           prefixIcon: const Icon(Icons.event_outlined),
         ),
-        child: Text(value),
+        child: Text(value.isEmpty ? 'Choose date' : value),
       ),
     );
   }
@@ -617,7 +618,7 @@ class _CaptureTile extends StatelessWidget {
       child: AnimatedContainer(
         duration: AppDuration.fast,
         curve: Curves.easeOut,
-        constraints: const BoxConstraints(minHeight: 76),
+        constraints: const BoxConstraints(minHeight: 64),
         decoration: BoxDecoration(
           color: selected ? accentSoft : Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -652,8 +653,8 @@ class _CaptureTile extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
+              style: context.texts.labelSmall?.copyWith(
+                fontSize: AppSize.navLabel,
                 fontWeight: FontWeight.w600,
                 height: 1.15,
               ),

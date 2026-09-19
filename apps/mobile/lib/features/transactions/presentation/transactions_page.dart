@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/dates.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
@@ -39,6 +38,14 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     super.dispose();
   }
 
+  Future<void> _openFilters(TransactionFilter filter) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ActivityFilterSheet(initial: filter),
+    );
+  }
+
   Future<void> _openEditor({Transaction? tx}) async {
     if (tx != null && tx.isTransfer) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,7 +74,20 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         ref.watch(dashboardProvider).valueOrNull?.baseCurrency ?? 'USD';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity')),
+      appBar: AppBar(
+        title: const Text('Activity'),
+        actions: [
+          IconButton(
+            tooltip: 'Filters',
+            onPressed: () => _openFilters(filter),
+            icon: Badge(
+              isLabelVisible: filter.hasExtraFilters,
+              smallSize: 8,
+              child: const Icon(Icons.tune_rounded),
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -131,16 +151,28 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               data: (txs) {
                 if (txs.isEmpty) {
+                  final narrowed = filter.isNarrowed;
                   return Center(
                     child: Padding(
                       padding: AppSpacing.page,
                       child: EmptyState(
-                        icon: Icons.receipt_long_outlined,
-                        title: 'No activity yet',
-                        message:
-                            'Add a purchase in seconds. Scan, paste an SMS, or enter it yourself.',
-                        actionLabel: 'Add',
-                        onAction: () => context.go(RoutePaths.add),
+                        icon: narrowed
+                            ? Icons.filter_alt_off_outlined
+                            : Icons.receipt_long_outlined,
+                        title: narrowed
+                            ? 'No matching activity'
+                            : 'No activity yet',
+                        message: narrowed
+                            ? 'Try a different search or clear filters to see more.'
+                            : 'Add a purchase in seconds. Scan, paste an SMS, or enter it yourself.',
+                        actionLabel: narrowed ? 'Clear filters' : 'Add',
+                        onAction: narrowed
+                            ? () {
+                                _search.clear();
+                                ref.read(_txFilterProvider.notifier).state =
+                                    const TransactionFilter();
+                              }
+                            : () => context.go(RoutePaths.add),
                       ),
                     ),
                   );
@@ -202,6 +234,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                             currency:
                                 t.account?.currency ?? profileCurrency,
                             showDate: false,
+                            showTypeBadge: false,
                             onTap: () => _openEditor(tx: t),
                             onDelete: () async {
                               await ref
@@ -221,6 +254,129 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActivityFilterSheet extends ConsumerStatefulWidget {
+  const _ActivityFilterSheet({required this.initial});
+
+  final TransactionFilter initial;
+
+  @override
+  ConsumerState<_ActivityFilterSheet> createState() =>
+      _ActivityFilterSheetState();
+}
+
+class _ActivityFilterSheetState extends ConsumerState<_ActivityFilterSheet> {
+  late String? _accountId = widget.initial.accountId;
+  late String? _categoryId = widget.initial.categoryId;
+  late String? _from = widget.initial.from;
+  late String? _to = widget.initial.to;
+
+  @override
+  Widget build(BuildContext context) {
+    final accounts = ref.watch(accountsProvider).valueOrNull ?? [];
+    final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        top: AppSpacing.sm,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + AppSpacing.xl,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Filters',
+              style: context.texts.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            DropdownButtonFormField<String?>(
+              initialValue: _accountId,
+              decoration: const InputDecoration(labelText: 'Account'),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All accounts'),
+                ),
+                ...accounts.map(
+                  (a) => DropdownMenuItem<String?>(
+                    value: a.id,
+                    child: Text(a.name),
+                  ),
+                ),
+              ],
+              onChanged: (v) => setState(() => _accountId = v),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<String?>(
+              initialValue: _categoryId,
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('All categories'),
+                ),
+                ...categories.map(
+                  (c) => DropdownMenuItem<String?>(
+                    value: c.id,
+                    child: Text(c.name),
+                  ),
+                ),
+              ],
+              onChanged: (v) => setState(() => _categoryId = v),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DateField(
+              label: 'From',
+              value: _from ?? '',
+              onChanged: (v) => setState(() => _from = v),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DateField(
+              label: 'To',
+              value: _to ?? '',
+              onChanged: (v) => setState(() => _to = v),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Apply filters',
+              onPressed: () {
+                final current = ref.read(_txFilterProvider);
+                ref.read(_txFilterProvider.notifier).state = current.copyWith(
+                  accountId: _accountId,
+                  categoryId: _categoryId,
+                  from: _from,
+                  to: _to,
+                  clearAccount: _accountId == null,
+                  clearCategory: _categoryId == null,
+                  clearFrom: _from == null || _from!.isEmpty,
+                  clearTo: _to == null || _to!.isEmpty,
+                );
+                Navigator.pop(context);
+              },
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _accountId = null;
+                  _categoryId = null;
+                  _from = null;
+                  _to = null;
+                });
+              },
+              child: const Text('Reset'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -378,12 +534,7 @@ class _TransactionEditorSheetState
                 }),
               ),
             const SizedBox(height: 12),
-            AppTextField(
-              controller: _amount,
-              label: 'Amount',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
+            AmountField(controller: _amount),
             const SizedBox(height: 12),
             DateField(
               value: _date,
@@ -427,19 +578,10 @@ class _TransactionEditorSheetState
               ),
             ] else ...[
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: filtered
-                    .map(
-                      (c) => CategoryChoiceChip(
-                        name: c.name,
-                        icon: c.icon,
-                        selected: _categoryId == c.id,
-                        onSelected: () => setState(() => _categoryId = c.id),
-                      ),
-                    )
-                    .toList(),
+              CategoryChipRow(
+                categories: filtered,
+                selectedId: _categoryId,
+                onSelected: (id) => setState(() => _categoryId = id),
               ),
               const SizedBox(height: 12),
               AppTextField(

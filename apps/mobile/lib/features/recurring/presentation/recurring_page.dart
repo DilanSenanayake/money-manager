@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/category_visuals.dart';
@@ -60,11 +62,13 @@ class RecurringPage extends ConsumerWidget {
         ),
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.event_repeat_outlined,
               title: 'No upcoming bills yet',
               message:
                   'When you add a purchase, mark it as recurring to see the next due date here.',
+              actionLabel: 'Go to activity',
+              onAction: () => context.go(RoutePaths.activity),
             );
           }
           return RefreshIndicator(

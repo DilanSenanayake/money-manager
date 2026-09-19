@@ -27,6 +27,22 @@ class AppDuration {
   static const slow = Duration(milliseconds: 360);
 }
 
+class AppSize {
+  static const touch = 44.0;
+  static const navIcon = 22.0;
+  static const navLabel = 12.0;
+}
+
+class AppElevation {
+  static List<BoxShadow> soft(Color color) => [
+        BoxShadow(
+          color: color.withValues(alpha: 0.22),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
+        ),
+      ];
+}
+
 extension AppThemeContext on BuildContext {
   ColorScheme get colors => Theme.of(this).colorScheme;
 
@@ -35,4 +51,24 @@ extension AppThemeContext on BuildContext {
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
 
   Color get muted => colors.onSurfaceVariant;
+
+  TextStyle get moneyHero => texts.headlineLarge!.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -1.2,
+        height: 1.05,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  TextStyle get moneyTitle => texts.headlineSmall!.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.8,
+        height: 1.1,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  TextStyle navLabel({required bool selected}) => texts.labelSmall!.copyWith(
+        fontSize: AppSize.navLabel,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        letterSpacing: 0,
+      );
 }

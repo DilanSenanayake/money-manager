@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
-import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/category_match.dart';
 import '../../../core/utils/dates.dart';
+import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../accounts/data/accounts_repository.dart';
@@ -206,12 +206,13 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
                 _categoryId = null;
               }),
             ),
+            const SizedBox(height: 16),
+            AmountField(controller: _amount),
             const SizedBox(height: 12),
-            AppTextField(
-              controller: _amount,
-              label: 'Amount',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+            CategoryChipRow(
+              categories: filtered,
+              selectedId: selectedCategoryId,
+              onSelected: (id) => setState(() => _categoryId = id),
             ),
             const SizedBox(height: 12),
             DateField(
@@ -231,21 +232,6 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
                   )
                   .toList(),
               onChanged: (v) => setState(() => _accountId = v),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: filtered
-                  .map(
-                    (c) => CategoryChoiceChip(
-                      name: c.name,
-                      icon: c.icon,
-                      selected: selectedCategoryId == c.id,
-                      onSelected: () => setState(() => _categoryId = c.id),
-                    ),
-                  )
-                  .toList(),
             ),
             const SizedBox(height: 12),
             AppTextField(

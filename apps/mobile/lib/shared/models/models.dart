@@ -457,6 +457,13 @@ class TransactionFilter {
         'to': to,
       };
 
+  bool get hasSearch => q != null && q!.trim().isNotEmpty;
+
+  bool get hasExtraFilters =>
+      accountId != null || categoryId != null || from != null || to != null;
+
+  bool get isNarrowed => hasSearch || hasExtraFilters || type != null;
+
   TransactionFilter copyWith({
     String? q,
     String? accountId,

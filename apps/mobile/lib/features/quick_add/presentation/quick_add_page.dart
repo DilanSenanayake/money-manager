@@ -8,8 +8,8 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/ocr/receipt_ocr.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/dates.dart';
+import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../accounts/data/accounts_repository.dart';
@@ -401,19 +401,21 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                       },
                     ),
                     const SizedBox(height: 20),
-                    AppTextField(
-                      controller: _amount,
-                      label: 'Amount',
-                      hint: '0.00',
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      textAlign: TextAlign.start,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                    AmountField(controller: _amount, autofocus: true),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Category',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
+                    CategoryChipRow(
+                      categories: filtered,
+                      selectedId: _categoryId,
+                      onSelected: (id) => setState(() => _categoryId = id),
+                    ),
+                    const SizedBox(height: 16),
                     DateField(
                       value: _date,
                       onChanged: (v) => setState(() => _date = v),
@@ -431,26 +433,6 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                           )
                           .toList(),
                       onChanged: (v) => setState(() => _accountId = v),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Category',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: filtered.map((c) {
-                        return CategoryChoiceChip(
-                          name: c.name,
-                          icon: c.icon,
-                          selected: _categoryId == c.id,
-                          onSelected: () => setState(() => _categoryId = c.id),
-                        );
-                      }).toList(),
                     ),
                     const SizedBox(height: 16),
                     AppTextField(

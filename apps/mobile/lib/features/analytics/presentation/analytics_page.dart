@@ -1,11 +1,15 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/category_visuals.dart';
+import '../../../core/utils/insights.dart';
 import '../../../core/utils/money.dart';
+import '../../../shared/components/components.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../dashboard/data/dashboard_repository.dart';
 
@@ -28,14 +32,17 @@ class AnalyticsPage extends ConsumerWidget {
         ),
         data: (data) {
           if (data.trend.isEmpty && data.categorySpend.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.insights_outlined,
               title: 'Not enough activity yet',
               message:
                   'Add a few purchases this month to see where money is going.',
+              actionLabel: 'Add',
+              onAction: () => context.go(RoutePaths.add),
             );
           }
 
+          final insights = buildMoneyInsights(analytics: data);
           final maxY = [
             ...data.trend.map((t) => t.income),
             ...data.trend.map((t) => t.expense),
@@ -51,8 +58,94 @@ class AnalyticsPage extends ConsumerWidget {
             child: ListView(
               padding: AppSpacing.page,
               children: [
+                if (insights.isNotEmpty) ...[
+                  for (final insight in insights) ...[
+                    InsightChip(insight: insight),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 Text(
-                  'Income vs spending',
+                  'Where did it go?',
+                  style: context.texts.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This month’s spending by category.',
+                  style: context.texts.bodySmall?.copyWith(color: context.muted),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (data.categorySpend.isEmpty)
+                  const EmptyState(
+                    icon: Icons.pie_chart_outline_rounded,
+                    title: 'No spending this month',
+                    message: 'Expense activity will show up here.',
+                  )
+                else
+                  AppCard(
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 180,
+                          child: PieChart(
+                            PieChartData(
+                              sectionsSpace: 2,
+                              centerSpaceRadius: 52,
+                              sections: [
+                                for (final c in data.categorySpend)
+                                  PieChartSectionData(
+                                    value: c.value,
+                                    title: '',
+                                    radius: 28,
+                                    color: categoryHex(name: c.name),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        for (final c in data.categorySpend)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              children: [
+                                CategoryMark(name: c.name, framed: true),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Text(c.name),
+                                ),
+                                Text(
+                                  totalSpend <= 0
+                                      ? formatMoney(
+                                          c.value,
+                                          data.baseCurrency,
+                                        )
+                                      : '${((c.value / totalSpend) * 100).round()}%',
+                                  style: context.texts.bodySmall?.copyWith(
+                                    color: context.muted,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  formatMoney(
+                                    c.value,
+                                    data.baseCurrency,
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'More or less than before?',
                   style: context.texts.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -138,85 +231,6 @@ class AnalyticsPage extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  'Where it went',
-                  style: context.texts.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'This month’s spending by category.',
-                  style: context.texts.bodySmall?.copyWith(color: context.muted),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                if (data.categorySpend.isEmpty)
-                  const EmptyState(
-                    icon: Icons.pie_chart_outline_rounded,
-                    title: 'No spending this month',
-                    message: 'Expense activity will show up here.',
-                  )
-                else
-                  AppCard(
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 180,
-                          child: PieChart(
-                            PieChartData(
-                              sectionsSpace: 2,
-                              centerSpaceRadius: 52,
-                              sections: [
-                                for (final c in data.categorySpend)
-                                  PieChartSectionData(
-                                    value: c.value,
-                                    title: '',
-                                    radius: 28,
-                                    color: categoryHex(name: c.name),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        for (final c in data.categorySpend)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Row(
-                              children: [
-                                CategoryMark(name: c.name, framed: true),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: Text(c.name),
-                                ),
-                                Text(
-                                  totalSpend <= 0
-                                      ? formatMoney(
-                                          c.value,
-                                          data.baseCurrency,
-                                        )
-                                      : '${((c.value / totalSpend) * 100).round()}%',
-                                  style: context.texts.bodySmall?.copyWith(
-                                    color: context.muted,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Text(
-                                  formatMoney(
-                                    c.value,
-                                    data.baseCurrency,
-                                  ),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           );
