@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/auth_repository.dart';
 
@@ -88,14 +87,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         AppConstants.appName,
                         style: theme.textTheme.displaySmall?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: AppColors.teal700,
+                          color: theme.colorScheme.primary,
+                          letterSpacing: -0.8,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Sign in to spend smarter and save better.',
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: AppColors.slate,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 32),

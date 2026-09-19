@@ -181,15 +181,17 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Confirm before saving',
+              'Check & save',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
             ),
             const SizedBox(height: 8),
             Text(
-              'AI filled this in. Check the details, then save.',
-              style: Theme.of(context).textTheme.bodyMedium,
+              'We filled this in for you — change anything you need, then save.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 16),
             SegmentedButton<String>(
@@ -255,7 +257,7 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
             ),
             const SizedBox(height: 16),
             AppButton(
-              label: 'Save transaction',
+              label: 'Save',
               loading: _loading,
               onPressed: () => _save(accounts, categories),
             ),

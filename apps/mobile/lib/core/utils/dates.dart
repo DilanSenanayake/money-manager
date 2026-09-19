@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 String localDateYYYYMMDD([DateTime? date]) {
   final d = date ?? DateTime.now();
   final y = d.year.toString().padLeft(4, '0');
@@ -14,6 +16,26 @@ String localMonthStartYYYYMMDD([DateTime? date]) {
 String localMonthEndYYYYMMDD([DateTime? date]) {
   final d = date ?? DateTime.now();
   return localDateYYYYMMDD(DateTime(d.year, d.month + 1, 0));
+}
+
+String formatFriendlyDate(String ymd) {
+  final d = parseLocalDate(ymd);
+  if (d == null) return ymd;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final date = DateTime(d.year, d.month, d.day);
+  final diff = today.difference(date).inDays;
+  if (diff == 0) return 'Today';
+  if (diff == 1) return 'Yesterday';
+  if (diff == -1) return 'Tomorrow';
+  if (date.year == now.year) {
+    return DateFormat('EEE d MMM').format(d);
+  }
+  return DateFormat('d MMM yyyy').format(d);
+}
+
+String formatMonthLabel([DateTime? date]) {
+  return DateFormat('MMMM yyyy').format(date ?? DateTime.now());
 }
 
 DateTime? parseLocalDate(String value) {

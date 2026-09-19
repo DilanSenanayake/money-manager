@@ -15,113 +15,140 @@ class MorePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = <_MoreItem>[
-      _MoreItem(
-        Icons.account_balance_wallet_outlined,
-        'Accounts',
-        'Wallets and balances',
-        RoutePaths.accounts,
-      ),
-      _MoreItem(
-        Icons.pie_chart_outline_rounded,
-        'Budgets',
-        'Categories and limits',
-        RoutePaths.budgets,
-      ),
-      _MoreItem(
-        Icons.insights_outlined,
-        'Analytics',
-        'Trends and category spend',
-        RoutePaths.analytics,
-      ),
-      _MoreItem(
-        Icons.event_repeat_outlined,
-        'Recurring',
-        'Upcoming bills',
-        RoutePaths.recurring,
-      ),
-      _MoreItem(
-        Icons.settings_outlined,
-        'Settings',
-        'Profile and exchange rates',
-        RoutePaths.settings,
-      ),
-    ];
-
     return Scaffold(
-      appBar: AppBar(title: const Text('More')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-        children: [
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppCard(
-                onTap: () => context.push(item.route),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.teal500.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(item.icon, color: AppColors.teal700),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            item.subtitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: AppColors.slate),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right_rounded),
-                  ],
-                ),
+      body: SafeArea(
+        child: ListView(
+          padding: AppSpacing.page,
+          children: [
+            const PageHeader(
+              title: 'More',
+              description: 'Accounts, budgets, analytics, and settings',
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _MoreTile(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'Accounts',
+                    subtitle: 'Cash, bank, and credit wallets',
+                    onTap: () => context.push(RoutePaths.accounts),
+                  ),
+                  Divider(height: 1, color: context.colors.outlineVariant),
+                  _MoreTile(
+                    icon: Icons.savings_outlined,
+                    title: 'Budgets',
+                    subtitle: 'Category limits and progress',
+                    onTap: () => context.push(RoutePaths.budgets),
+                  ),
+                  Divider(height: 1, color: context.colors.outlineVariant),
+                  _MoreTile(
+                    icon: Icons.pie_chart_outline_rounded,
+                    title: 'Analytics',
+                    subtitle: 'Trends and category charts',
+                    onTap: () => context.push(RoutePaths.analytics),
+                  ),
+                  Divider(height: 1, color: context.colors.outlineVariant),
+                  _MoreTile(
+                    icon: Icons.event_repeat_outlined,
+                    title: 'Recurring',
+                    subtitle: 'Bills and repeating payments',
+                    onTap: () => context.push(RoutePaths.recurring),
+                  ),
+                  Divider(height: 1, color: context.colors.outlineVariant),
+                  _MoreTile(
+                    icon: Icons.settings_outlined,
+                    title: 'Settings',
+                    subtitle: 'Profile, currency, exchange rates',
+                    onTap: () => context.push(RoutePaths.settings),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          AppButton(
-            label: 'Sign out',
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).signOut();
-              ref.invalidate(dashboardProvider);
-              if (context.mounted) context.go(RoutePaths.login);
-            },
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => openExternalUrl(AppConfig.termsUrl),
-            child: const Text('Terms'),
-          ),
-          TextButton(
-            onPressed: () => openExternalUrl(AppConfig.privacyUrl),
-            child: const Text('Privacy'),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.md),
+            TextButton(
+              onPressed: () async {
+                await ref.read(authRepositoryProvider).signOut();
+                ref.invalidate(dashboardProvider);
+                if (context.mounted) context.go(RoutePaths.login);
+              },
+              child: Text(
+                'Sign out',
+                style: TextStyle(color: context.muted),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => openExternalUrl(AppConfig.termsUrl),
+                  child: Text(
+                    'Terms',
+                    style: TextStyle(color: context.muted, fontSize: 12),
+                  ),
+                ),
+                Text('·', style: TextStyle(color: context.muted)),
+                TextButton(
+                  onPressed: () => openExternalUrl(AppConfig.privacyUrl),
+                  child: Text(
+                    'Privacy',
+                    style: TextStyle(color: context.muted, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _MoreItem {
-  const _MoreItem(this.icon, this.title, this.subtitle, this.route);
+class _MoreTile extends StatelessWidget {
+  const _MoreTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
   final IconData icon;
   final String title;
   final String subtitle;
-  final String route;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      minTileHeight: 56,
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: context.isDark
+              ? context.colors.primary.withValues(alpha: 0.16)
+              : AppColors.teal50,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          color: context.isDark ? context.colors.primary : AppColors.teal700,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      ),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      trailing: Icon(
+        Icons.chevron_right_rounded,
+        size: 18,
+        color: context.muted,
+      ),
+    );
+  }
 }

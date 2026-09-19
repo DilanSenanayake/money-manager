@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/labels.dart';
+import '../../../core/utils/money.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -155,9 +157,9 @@ class BudgetsPage extends ConsumerWidget {
         ],
       ),
       body: dash.when(
-        loading: () => const LoadingView(),
+        loading: () => const SkeletonList(),
         error: (e, _) => ErrorView(
-          message: e is Failure ? e.message : e.toString(),
+          message: e is Failure ? e.message : "Couldn't load your budgets.",
           onRetry: () => ref.invalidate(dashboardProvider),
         ),
         data: (data) {
@@ -168,7 +170,7 @@ class BudgetsPage extends ConsumerWidget {
               ref.invalidate(categoriesProvider);
             },
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.page,
               children: [
                 Text(
                   'This month',
@@ -178,10 +180,11 @@ class BudgetsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 if (data.budgets.isEmpty)
-                  const AppCard(
-                    child: Text(
-                      'Set a monthly budget on expense categories to see progress.',
-                    ),
+                  EmptyState(
+                    icon: Icons.pie_chart_outline_rounded,
+                    title: 'No budgets yet',
+                    message:
+                        'Set a monthly limit on an expense category to see if spending is on track.',
                   )
                 else
                   ...data.budgets.map(
@@ -227,11 +230,15 @@ class BudgetsPage extends ConsumerWidget {
                                   ),
                                 ),
                                 Text(
-                                  c.type,
+                                  labelForTxType(c.type),
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
-                                      ?.copyWith(color: AppColors.slate),
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
                                 ),
                               ],
                             ),
@@ -239,7 +246,11 @@ class BudgetsPage extends ConsumerWidget {
                           Text(
                             c.monthlyBudget == null
                                 ? 'No limit'
-                                : c.monthlyBudget!.toStringAsFixed(0),
+                                : formatMoney(
+                                    c.monthlyBudget!,
+                                    data.baseCurrency,
+                                  ),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),

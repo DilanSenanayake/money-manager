@@ -121,7 +121,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                       Text(
                         'Use a real email address. We’ll seed starter categories and wallets for you.',
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: AppColors.slate,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 28),

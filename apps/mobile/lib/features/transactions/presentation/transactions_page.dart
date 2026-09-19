@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
@@ -65,22 +66,14 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         ref.watch(dashboardProvider).valueOrNull?.baseCurrency ?? 'USD';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Activity'),
-        actions: [
-          IconButton(
-            onPressed: () => _openEditor(),
-            icon: const Icon(Icons.add_rounded),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Activity')),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: AppTextField(
               controller: _search,
-              label: 'Search merchant or notes',
+              hint: 'Search merchant or notes',
               prefixIcon: Icons.search_rounded,
               onChanged: (v) {
                 _debounce?.cancel();
@@ -93,7 +86,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
           ),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
                 FilterChip(
@@ -105,15 +98,19 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   },
                 ),
                 const SizedBox(width: 8),
-                ...['expense', 'income', 'transfer'].map(
+                ...[
+                  ('expense', 'Expense'),
+                  ('income', 'Income'),
+                  ('transfer', 'Transfer'),
+                ].map(
                   (t) => Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      label: Text(t),
-                      selected: filter.type == t,
+                      label: Text(t.$2),
+                      selected: filter.type == t.$1,
                       onSelected: (_) {
                         ref.read(_txFilterProvider.notifier).state =
-                            filter.copyWith(type: t);
+                            filter.copyWith(type: t.$1);
                       },
                     ),
                   ),
@@ -126,54 +123,95 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
             child: async.when(
               loading: () => const SkeletonList(),
               error: (e, _) => ErrorView(
-                message: e is Failure ? e.message : e.toString(),
+                message: e is Failure
+                    ? e.message
+                    : "Couldn't load your transactions.",
                 onRetry: () => ref.invalidate(transactionsProvider),
               ),
               data: (txs) {
                 if (txs.isEmpty) {
-                  return EmptyState(
-                    icon: Icons.receipt_long_outlined,
-                    title: 'No activity',
-                    message: 'Try a different filter or add a transaction.',
-                    actionLabel: 'Add',
-                    onAction: () => context.go(RoutePaths.add),
+                  return Center(
+                    child: Padding(
+                      padding: AppSpacing.page,
+                      child: EmptyState(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'No activity yet',
+                        message:
+                            'Add a purchase in seconds. Scan, paste an SMS, or enter it yourself.',
+                        actionLabel: 'Add',
+                        onAction: () => context.go(RoutePaths.add),
+                      ),
+                    ),
                   );
                 }
                 return RefreshIndicator(
                   onRefresh: () async {
                     ref.invalidate(transactionsProvider);
                   },
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  child: ListView.builder(
+                    padding: AppSpacing.page,
                     itemCount: txs.length +
                         (txs.length >= AppConstants.transactionLimit ? 1 : 0),
-                    separatorBuilder: (_, __) => const SizedBox(height: 4),
                     itemBuilder: (context, i) {
                       if (i == txs.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Text(
-                            'Showing the latest 200 transactions. Narrow with search or filters.',
+                            'Showing the latest 200. Narrow with search or filters.',
                             textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
                           ),
                         );
                       }
                       final t = txs[i];
-                      return AppCard(
-                        padding: EdgeInsets.zero,
-                        child: TxTile(
-                          transaction: t,
-                          currency: t.account?.currency ?? profileCurrency,
-                          onTap: () => _openEditor(tx: t),
-                          onDelete: () async {
-                            await ref
-                                .read(transactionsRepositoryProvider)
-                                .deleteTransaction(t);
-                            ref.invalidate(transactionsProvider);
-                            ref.invalidate(dashboardProvider);
-                            ref.invalidate(accountsProvider);
-                          },
-                        ),
+                      final showHeader =
+                          i == 0 || txs[i - 1].date != t.date;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (showHeader)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                top: i == 0 ? 4 : 20,
+                                bottom: 8,
+                              ),
+                              child: Text(
+                                formatFriendlyDate(t.date).toUpperCase(),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.8,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ),
+                          TxTile(
+                            transaction: t,
+                            currency:
+                                t.account?.currency ?? profileCurrency,
+                            showDate: false,
+                            onTap: () => _openEditor(tx: t),
+                            onDelete: () async {
+                              await ref
+                                  .read(transactionsRepositoryProvider)
+                                  .deleteTransaction(t);
+                              ref.invalidate(transactionsProvider);
+                              ref.invalidate(dashboardProvider);
+                              ref.invalidate(accountsProvider);
+                            },
+                          ),
+                        ],
                       );
                     },
                   ),

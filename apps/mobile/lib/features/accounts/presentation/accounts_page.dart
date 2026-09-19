@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/labels.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -51,9 +52,9 @@ class AccountsPage extends ConsumerWidget {
         ],
       ),
       body: async.when(
-        loading: () => const LoadingView(),
+        loading: () => const SkeletonList(),
         error: (e, _) => ErrorView(
-          message: e is Failure ? e.message : e.toString(),
+          message: e is Failure ? e.message : "Couldn't load your wallets.",
           onRetry: () => ref.invalidate(accountsProvider),
         ),
         data: (accounts) {
@@ -61,7 +62,8 @@ class AccountsPage extends ConsumerWidget {
             return EmptyState(
               icon: Icons.account_balance_wallet_outlined,
               title: 'No wallets yet',
-              message: 'Create cash, checking, savings, or credit accounts.',
+              message:
+                  'Add cash, checking, savings, or a card so balances stay in view.',
               actionLabel: 'Add account',
               onAction: () => _openEditor(context, ref),
             );
@@ -69,7 +71,7 @@ class AccountsPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(accountsProvider),
             child: ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.page,
               itemCount: accounts.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, i) {
@@ -86,6 +88,16 @@ class AccountsPage extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
+                      CircleAvatar(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        child: Icon(
+                          iconForAccountType(a.type),
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,11 +108,10 @@ class AccountsPage extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${a.type} · ${a.currency}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: AppColors.slate),
+                              '${labelForAccountType(a.type)} · ${a.currency}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                           ],
                         ),
@@ -247,7 +258,12 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
             initialValue: _type,
             decoration: const InputDecoration(labelText: 'Type'),
             items: AppConstants.accountTypes
-                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                .map(
+                  (t) => DropdownMenuItem(
+                    value: t,
+                    child: Text(labelForAccountType(t)),
+                  ),
+                )
                 .toList(),
             onChanged: (v) => setState(() => _type = v ?? 'cash'),
           ),
@@ -269,11 +285,13 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
                   const TextInputType.numberWithOptions(decimal: true),
             ),
           ] else
-            const Padding(
-              padding: EdgeInsets.only(top: 12),
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
               child: Text(
-                'Balance updates automatically from transactions.',
-                style: TextStyle(color: AppColors.slate),
+                'Balance updates automatically from activity.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           const SizedBox(height: 16),

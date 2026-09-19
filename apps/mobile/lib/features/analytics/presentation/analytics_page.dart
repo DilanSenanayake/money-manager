@@ -18,145 +18,213 @@ class AnalyticsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Analytics')),
       body: async.when(
-        loading: () => const LoadingView(),
+        loading: () => const SkeletonList(count: 5),
         error: (e, _) => ErrorView(
-          message: e is Failure ? e.message : e.toString(),
+          message: e is Failure
+              ? e.message
+              : "Couldn't load your trends.",
           onRetry: () => ref.invalidate(analyticsProvider),
         ),
         data: (data) {
+          if (data.trend.isEmpty && data.categorySpend.isEmpty) {
+            return const EmptyState(
+              icon: Icons.insights_outlined,
+              title: 'Not enough activity yet',
+              message:
+                  'Add a few purchases this month to see where money is going.',
+            );
+          }
+
           final maxY = [
             ...data.trend.map((t) => t.income),
             ...data.trend.map((t) => t.expense),
             1.0,
           ].reduce((a, b) => a > b ? a : b);
+          final totalSpend = data.categorySpend.fold<double>(
+            0,
+            (sum, c) => sum + c.value,
+          );
 
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(analyticsProvider),
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.page,
               children: [
                 Text(
-                  'Income vs expense',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                AppCard(
-                  child: SizedBox(
-                    height: 220,
-                    child: BarChart(
-                      BarChartData(
-                        maxY: maxY * 1.2,
-                        gridData: const FlGridData(show: false),
-                        borderData: FlBorderData(show: false),
-                        titlesData: FlTitlesData(
-                          topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                final i = value.toInt();
-                                if (i < 0 || i >= data.trend.length) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Text(
-                                  data.trend[i].month,
-                                  style: const TextStyle(fontSize: 11),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        barGroups: [
-                          for (var i = 0; i < data.trend.length; i++)
-                            BarChartGroupData(
-                              x: i,
-                              barRods: [
-                                BarChartRodData(
-                                  toY: data.trend[i].income,
-                                  color: AppColors.success,
-                                  width: 8,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                BarChartRodData(
-                                  toY: data.trend[i].expense,
-                                  color: AppColors.teal500,
-                                  width: 8,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
+                  'Income vs spending',
+                  style: context.texts.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 4),
                 Text(
-                  'Category spend (this month)',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  'Last six months, in your base currency.',
+                  style: context.texts.bodySmall?.copyWith(color: context.muted),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
+                AppCard(
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 220,
+                        child: BarChart(
+                          BarChartData(
+                            maxY: maxY * 1.2,
+                            gridData: const FlGridData(show: false),
+                            borderData: FlBorderData(show: false),
+                            groupsSpace: 14,
+                            titlesData: FlTitlesData(
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              leftTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  getTitlesWidget: (value, meta) {
+                                    final i = value.toInt();
+                                    if (i < 0 || i >= data.trend.length) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        data.trend[i].month,
+                                        style: context.texts.labelSmall,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            barGroups: [
+                              for (var i = 0; i < data.trend.length; i++)
+                                BarChartGroupData(
+                                  x: i,
+                                  barsSpace: 4,
+                                  barRods: [
+                                    BarChartRodData(
+                                      toY: data.trend[i].income,
+                                      color: AppColors.success,
+                                      width: 8,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    BarChartRodData(
+                                      toY: data.trend[i].expense,
+                                      color: AppColors.danger,
+                                      width: 8,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          _LegendDot(color: AppColors.success, label: 'Income'),
+                          const SizedBox(width: AppSpacing.md),
+                          _LegendDot(color: AppColors.danger, label: 'Spent'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Where it went',
+                  style: context.texts.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This month’s spending by category.',
+                  style: context.texts.bodySmall?.copyWith(color: context.muted),
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 if (data.categorySpend.isEmpty)
-                  const AppCard(
-                    child: Text('No expense data for this month yet.'),
+                  const EmptyState(
+                    icon: Icons.pie_chart_outline_rounded,
+                    title: 'No spending this month',
+                    message: 'Expense activity will show up here.',
                   )
                 else
                   AppCard(
-                    child: SizedBox(
-                      height: 220,
-                      child: PieChart(
-                        PieChartData(
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 48,
-                          sections: [
-                            for (var i = 0;
-                                i < data.categorySpend.length;
-                                i++)
-                              PieChartSectionData(
-                                value: data.categorySpend[i].value,
-                                title: data.categorySpend[i].name,
-                                radius: 52,
-                                titleStyle: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                                color: _palette[i % _palette.length],
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                ...data.categorySpend.map(
-                  (c) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: AppCard(
-                      child: Row(
-                        children: [
-                          Expanded(child: Text(c.name)),
-                          Text(
-                            formatMoney(c.value, data.baseCurrency),
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 180,
+                          child: PieChart(
+                            PieChartData(
+                              sectionsSpace: 2,
+                              centerSpaceRadius: 52,
+                              sections: [
+                                for (var i = 0;
+                                    i < data.categorySpend.length;
+                                    i++)
+                                  PieChartSectionData(
+                                    value: data.categorySpend[i].value,
+                                    title: '',
+                                    radius: 28,
+                                    color: _palette[i % _palette.length],
+                                  ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        for (var i = 0; i < data.categorySpend.length; i++)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: _palette[i % _palette.length],
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Text(data.categorySpend[i].name),
+                                ),
+                                Text(
+                                  totalSpend <= 0
+                                      ? formatMoney(
+                                          data.categorySpend[i].value,
+                                          data.baseCurrency,
+                                        )
+                                      : '${((data.categorySpend[i].value / totalSpend) * 100).round()}%',
+                                  style: context.texts.bodySmall?.copyWith(
+                                    color: context.muted,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  formatMoney(
+                                    data.categorySpend[i].value,
+                                    data.baseCurrency,
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                ),
               ],
             ),
           );
@@ -166,13 +234,35 @@ class AnalyticsPage extends ConsumerWidget {
   }
 }
 
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: context.texts.labelMedium),
+      ],
+    );
+  }
+}
+
 const _palette = [
   AppColors.teal500,
-  AppColors.teal700,
   Color(0xFF0891B2),
-  Color(0xFF059669),
-  Color(0xFFD97706),
-  Color(0xFFDC2626),
+  AppColors.warn,
+  AppColors.danger,
   Color(0xFF7C3AED),
   Color(0xFF2563EB),
+  AppColors.teal700,
+  Color(0xFF059669),
 ];

@@ -6,8 +6,10 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency.dart';
+import '../../../core/utils/labels.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/components/components.dart';
+import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/dashboard_repository.dart';
 
@@ -19,276 +21,314 @@ class DashboardPage extends ConsumerWidget {
     final async = ref.watch(dashboardProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppConstants.appName),
-        actions: [
-          IconButton(
-            tooltip: 'Add',
-            onPressed: () => context.go(RoutePaths.add),
-            icon: const Icon(Icons.add_circle_outline_rounded),
+      body: SafeArea(
+        child: async.when(
+          loading: () => const DashboardSkeleton(),
+          error: (e, _) => ErrorView(
+            message: e is Failure
+                ? e.message
+                : "Couldn't load your money overview.",
+            onRetry: () => ref.invalidate(dashboardProvider),
           ),
-        ],
-      ),
-      body: async.when(
-        loading: () => const SkeletonList(count: 6),
-        error: (e, _) => ErrorView(
-          message: e is Failure ? e.message : e.toString(),
-          onRetry: () => ref.invalidate(dashboardProvider),
-        ),
-        data: (data) {
-          final name = data.profile?.displayName?.trim().isNotEmpty == true
-              ? data.profile!.displayName!.split(' ').first
-              : 'there';
-          final missingFx = hasMissingExchangeRate(
-            data.accounts,
-            data.baseCurrency,
-            data.rates,
-          );
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(dashboardProvider),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-              children: [
-                Text(
-                  'Hi, $name',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Spend smarter. Save better. Live better.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.slate,
-                      ),
-                ),
-                const SizedBox(height: 20),
-                if (missingFx) ...[
-                  AppCard(
-                    onTap: () => context.push(RoutePaths.settings),
-                    child: const Text(
-                      'Some wallets use a different currency. Add an exchange rate in Settings, or amounts will convert 1:1.',
+          data: (data) {
+            final firstName = data.profile?.displayName?.trim().isNotEmpty == true
+                ? data.profile!.displayName!.split(' ').first
+                : null;
+            final empty = data.recent.isEmpty;
+            final alerts = data.budgets
+                .where((b) => b.status == 'warn' || b.status == 'over')
+                .toList();
+            final missingFx = hasMissingExchangeRate(
+              data.accounts,
+              data.baseCurrency,
+              data.rates,
+            );
+
+            return RefreshIndicator(
+              onRefresh: () async => ref.invalidate(dashboardProvider),
+              child: ListView(
+                padding: AppSpacing.page,
+                children: [
+                  FadeUp(
+                    child: PageHeader(
+                      title: firstName == null
+                          ? 'Welcome back'
+                          : 'Welcome back, $firstName',
+                      description: AppConstants.tagline,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                ],
-                AppCard(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Net worth',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.slate,
-                            ),
-                      ),
-                      const SizedBox(height: 6),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: data.netWorth),
-                        duration: const Duration(milliseconds: 700),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, value, _) {
-                          return Text(
-                            formatMoney(value, data.baseCurrency),
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        label: 'Income',
-                        value: formatMoney(data.income, data.baseCurrency),
-                        icon: Icons.south_west_rounded,
-                        color: AppColors.success,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: StatCard(
-                        label: 'Spent',
-                        value: formatMoney(data.expense, data.baseCurrency),
-                        icon: Icons.north_east_rounded,
-                        color: AppColors.danger,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                SectionHeader(
-                  title: 'Quick add',
-                  actionLabel: 'Open',
-                  onAction: () => context.go(RoutePaths.add),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _QuickAction(
+                  const SizedBox(height: AppSpacing.xl),
+                  FadeUp(
+                    delay: const Duration(milliseconds: 40),
+                    child: CaptureModeGrid(
+                    compact: true,
+                    modes: [
+                      CaptureMode(
                         icon: Icons.edit_note_rounded,
                         label: 'Manual',
-                        onTap: () => context.go(RoutePaths.add),
+                        onTap: () =>
+                            context.go('${RoutePaths.add}?mode=manual'),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _QuickAction(
-                        icon: Icons.document_scanner_outlined,
-                        label: 'Receipt',
-                        onTap: () => context.go('${RoutePaths.add}?mode=receipt'),
+                      CaptureMode(
+                        icon: Icons.photo_camera_outlined,
+                        label: 'Scan',
+                        onTap: () =>
+                            context.go('${RoutePaths.add}?mode=receipt'),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _QuickAction(
-                        icon: Icons.sms_outlined,
+                      CaptureMode(
+                        icon: Icons.content_paste_rounded,
                         label: 'SMS',
                         onTap: () => context.go('${RoutePaths.add}?mode=sms'),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _QuickAction(
-                        icon: Icons.short_text_rounded,
+                      CaptureMode(
+                        icon: Icons.chat_bubble_outline_rounded,
                         label: 'Type',
                         onTap: () => context.go('${RoutePaths.add}?mode=text'),
                       ),
+                    ],
+                  ),
+                  ),
+                  if (empty) ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    EmptyState(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Start with your first expense',
+                      message:
+                          'Scan a receipt, paste a bank SMS, type “Coffee 450”, or enter an amount and category.',
+                      actionLabel: 'Add manually',
+                      onAction: () =>
+                          context.go('${RoutePaths.add}?mode=manual'),
+                      secondaryLabel: 'Log income',
+                      onSecondary: () =>
+                          context.go('${RoutePaths.add}?type=income'),
                     ),
                   ],
-                ),
-                const SizedBox(height: 24),
-                SectionHeader(
-                  title: 'Accounts',
-                  actionLabel: 'All',
-                  onAction: () => context.push(RoutePaths.accounts),
-                ),
-                const SizedBox(height: 8),
-                if (data.accounts.isEmpty)
-                  const AppCard(
-                    child: Text('No accounts yet. Create one from More.'),
-                  )
-                else
-                  ...data.accounts.take(4).map(
-                        (a) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: AppCard(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        a.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      Text(
-                                        a.type,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(color: AppColors.slate),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                MoneyText(a.balance, currency: a.currency),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                const SizedBox(height: 16),
-                SectionHeader(
-                  title: 'Budgets',
-                  actionLabel: 'Manage',
-                  onAction: () => context.push(RoutePaths.budgets),
-                ),
-                const SizedBox(height: 8),
-                if (data.budgets.isEmpty)
-                  const AppCard(
-                    child: Text('Set monthly budgets to track spending.'),
-                  )
-                else
-                  ...data.budgets.take(3).map(
-                        (b) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: BudgetBar(
-                            progress: b,
-                            currency: data.baseCurrency,
-                          ),
-                        ),
-                      ),
-                const SizedBox(height: 16),
-                SectionHeader(
-                  title: 'Recent',
-                  actionLabel: 'Activity',
-                  onAction: () => context.go(RoutePaths.activity),
-                ),
-                const SizedBox(height: 8),
-                if (data.recent.isEmpty)
-                  EmptyState(
-                    icon: Icons.receipt_long_outlined,
-                    title: 'No transactions yet',
-                    message: 'Add your first expense — AI can help fill it in.',
-                    actionLabel: 'Add now',
-                    onAction: () => context.go(RoutePaths.add),
-                  )
-                else
-                  AppCard(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(
-                      children: data.recent
-                          .map(
-                            (t) => TxTile(
-                              transaction: t,
-                              currency: t.account?.currency ?? data.baseCurrency,
-                            ),
-                          )
-                          .toList(),
+                  if (missingFx) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    StatusBanner(
+                      message:
+                          'Some wallets use another currency. Add an exchange rate so totals stay accurate.',
+                      icon: Icons.currency_exchange_rounded,
+                      tone: StatusTone.warn,
+                      onTap: () => context.push(RoutePaths.settings),
                     ),
+                  ],
+                  if (alerts.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _BudgetAlerts(alerts: alerts),
+                  ],
+                  const SizedBox(height: AppSpacing.xl),
+                  StatCard(
+                    label: 'Net worth',
+                    value: formatMoney(data.netWorth, data.baseCurrency),
+                    hint: 'In ${data.baseCurrency}',
+                    featured: true,
                   ),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: StatCard(
+                          label: 'Income this month',
+                          value: formatMoney(data.income, data.baseCurrency),
+                          tone: StatTone.positive,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: StatCard(
+                          label: 'Spent this month',
+                          value: formatMoney(data.expense, data.baseCurrency),
+                          tone: StatTone.negative,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  _AccountsCard(data: data),
+                  const SizedBox(height: AppSpacing.md),
+                  _BudgetsCard(data: data),
+                  if (!empty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _RecentCard(data: data),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 }
 
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+class _BudgetAlerts extends StatelessWidget {
+  const _BudgetAlerts({required this.alerts});
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  final List<BudgetProgress> alerts;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded,
+                  size: 18, color: AppColors.warn),
+              const SizedBox(width: 8),
+              Text(
+                'Budget alerts',
+                style: context.texts.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.warn,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (final b in alerts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${b.category.name}: ',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    TextSpan(
+                      text: b.status == 'over'
+                          ? 'over budget (${(b.ratio * 100).round()}%)'
+                          : 'at 80%+ of limit (${(b.ratio * 100).round()}%)',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountsCard extends StatelessWidget {
+  const _AccountsCard({required this.data});
+
+  final DashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
       child: Column(
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 0, 4),
+            child: SectionHeader(
+              title: 'Accounts',
+              actionLabel: 'Manage',
+              onAction: () => context.push(RoutePaths.accounts),
+            ),
+          ),
+          if (data.accounts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                'No accounts yet.',
+                style: context.texts.bodySmall?.copyWith(color: context.muted),
+              ),
+            )
+          else
+            for (final account in data.accounts.take(4))
+              ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                title: Text(
+                  account.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: Text(labelForAccountType(account.type)),
+                trailing: MoneyText(
+                  account.balance,
+                  currency: account.currency,
+                  style: context.texts.bodyMedium,
+                ),
+                onTap: () => context.push(RoutePaths.accounts),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BudgetsCard extends StatelessWidget {
+  const _BudgetsCard({required this.data});
+
+  final DashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        children: [
+          SectionHeader(
+            title: 'Budgets',
+            actionLabel: 'View all',
+            onAction: () => context.push(RoutePaths.budgets),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (data.budgets.isEmpty)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Set monthly budgets on expense categories to track progress.',
+                style: context.texts.bodySmall?.copyWith(color: context.muted),
+              ),
+            )
+          else
+            for (final budget in data.budgets.take(3)) ...[
+              BudgetBar(
+                progress: budget,
+                currency: data.baseCurrency,
+                compact: true,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentCard extends StatelessWidget {
+  const _RecentCard({required this.data});
+
+  final DashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 0, 4),
+            child: SectionHeader(
+              title: 'Recent activity',
+              actionLabel: 'See all',
+              onAction: () => context.go(RoutePaths.activity),
+            ),
+          ),
+          for (final t in data.recent.take(6))
+            TxTile(
+              transaction: t,
+              currency: t.account?.currency ?? data.baseCurrency,
+              onTap: () => context.go(RoutePaths.activity),
+            ),
         ],
       ),
     );

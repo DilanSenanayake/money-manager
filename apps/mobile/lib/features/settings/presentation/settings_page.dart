@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/open_url.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../authentication/data/auth_repository.dart';
@@ -217,7 +216,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Text(
                 'Changing base currency does not relabel wallet balances. Add an exchange rate instead.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.slate,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
               const SizedBox(height: 16),
@@ -268,7 +267,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Text(
                 'Manual rates used for net worth and analytics. Missing rates fall back to 1:1.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.slate,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
               const SizedBox(height: 12),
@@ -390,7 +389,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               Text(
                 'This removes your login, wallets, and transactions. It cannot be undone.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.slate,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
               const SizedBox(height: 12),

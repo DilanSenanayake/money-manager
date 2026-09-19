@@ -11,6 +11,7 @@ class AppButton extends StatelessWidget {
     this.loading = false,
     this.expanded = true,
     this.icon,
+    this.tonal = false,
   });
 
   final String label;
@@ -18,14 +19,18 @@ class AppButton extends StatelessWidget {
   final bool loading;
   final bool expanded;
   final IconData? icon;
+  final bool tonal;
 
   @override
   Widget build(BuildContext context) {
     final child = loading
-        ? const SizedBox(
+        ? SizedBox(
             height: 22,
             width: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.4),
+            child: CircularProgressIndicator(
+              strokeWidth: 2.4,
+              color: context.colors.onPrimary,
+            ),
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
@@ -33,16 +38,21 @@ class AppButton extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 Icon(icon, size: 20),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.xs),
               ],
               Text(label),
             ],
           );
 
-    final button = FilledButton(
-      onPressed: loading ? null : onPressed,
-      child: child,
-    );
+    final button = tonal
+        ? FilledButton.tonal(
+            onPressed: loading ? null : onPressed,
+            child: child,
+          )
+        : FilledButton(
+            onPressed: loading ? null : onPressed,
+            child: child,
+          );
 
     return expanded ? SizedBox(width: double.infinity, child: button) : button;
   }
@@ -66,6 +76,8 @@ class AppTextField extends StatelessWidget {
     this.inputFormatters,
     this.enabled = true,
     this.autofillHints,
+    this.style,
+    this.textAlign,
   });
 
   final TextEditingController controller;
@@ -83,6 +95,8 @@ class AppTextField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final bool enabled;
   final Iterable<String>? autofillHints;
+  final TextStyle? style;
+  final TextAlign? textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -92,13 +106,14 @@ class AppTextField extends StatelessWidget {
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       validator: validator,
-      // obscureText requires a single-line field
       maxLines: obscureText ? 1 : maxLines,
       onChanged: onChanged,
       onFieldSubmitted: onFieldSubmitted,
       inputFormatters: inputFormatters,
       enabled: enabled,
       autofillHints: autofillHints,
+      style: style,
+      textAlign: textAlign ?? TextAlign.start,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -113,7 +128,7 @@ class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(AppSpacing.md),
     this.onTap,
   });
 
@@ -127,10 +142,13 @@ class AppCard extends StatelessWidget {
       child: Padding(padding: padding, child: child),
     );
     if (onTap == null) return card;
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: card,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: onTap,
+        child: card,
+      ),
     );
   }
 }
@@ -143,6 +161,8 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
+    this.secondaryLabel,
+    this.onSecondary,
   });
 
   final IconData icon;
@@ -150,51 +170,78 @@ class EmptyState extends StatelessWidget {
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(icon, size: 36, color: theme.colorScheme.primary),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.slate,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 20),
-              AppButton(
-                label: actionLabel!,
-                onPressed: onAction,
-                expanded: false,
-              ),
-            ],
-          ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xl,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: context.colors.outline,
+          style: BorderStyle.solid,
         ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.teal50.withValues(
+                alpha: context.isDark ? 0.2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 22, color: context.colors.primary),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            title,
+            style: context.texts.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            style: context.texts.bodySmall?.copyWith(
+              color: context.muted,
+              height: 1.45,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                AppButton(
+                  label: actionLabel!,
+                  onPressed: onAction,
+                  expanded: false,
+                ),
+                if (secondaryLabel != null && onSecondary != null)
+                  OutlinedButton(
+                    onPressed: onSecondary,
+                    child: Text(secondaryLabel!),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -208,15 +255,22 @@ class LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(message!),
+      child: Padding(
+        padding: AppSpacing.page,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _SkeletonBlock(height: 88),
+            const SizedBox(height: AppSpacing.sm),
+            const _SkeletonBlock(height: 72),
+            const SizedBox(height: AppSpacing.sm),
+            const _SkeletonBlock(height: 72),
+            if (message != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(message!, style: TextStyle(color: context.muted)),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -234,12 +288,14 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.error_outline_rounded,
-      title: 'Something went wrong',
-      message: message,
-      actionLabel: onRetry == null ? null : 'Try again',
-      onAction: onRetry,
+    return Center(
+      child: EmptyState(
+        icon: Icons.wifi_off_rounded,
+        title: "Couldn't load this",
+        message: message,
+        actionLabel: onRetry == null ? null : 'Try again',
+        onAction: onRetry,
+      ),
     );
   }
 }
@@ -251,16 +307,87 @@ class SkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.outlineVariant;
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.page,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: count,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (_, __) => Container(
-        height: 76,
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (_, __) => const _SkeletonBlock(height: 76),
+    );
+  }
+}
+
+class DashboardSkeleton extends StatelessWidget {
+  const DashboardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: AppSpacing.page,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        _SkeletonBlock(height: 28, width: 160),
+        const SizedBox(height: AppSpacing.xs),
+        _SkeletonBlock(height: 16, width: 120),
+        const SizedBox(height: AppSpacing.lg),
+        _SkeletonBlock(height: 88),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: const [
+            Expanded(child: _SkeletonBlock(height: 96)),
+            SizedBox(width: 8),
+            Expanded(child: _SkeletonBlock(height: 96)),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _SkeletonBlock(height: 180),
+      ],
+    );
+  }
+}
+
+class _SkeletonBlock extends StatefulWidget {
+  const _SkeletonBlock({required this.height, this.width});
+
+  final double height;
+  final double? width;
+
+  @override
+  State<_SkeletonBlock> createState() => _SkeletonBlockState();
+}
+
+class _SkeletonBlockState extends State<_SkeletonBlock>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = context.colors.outlineVariant;
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.45, end: 0.9).animate(
+        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+      ),
+      child: Container(
+        height: widget.height,
+        width: widget.width,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(20),
+          color: base,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
       ),
     );
@@ -282,7 +409,7 @@ class DateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       onTap: () async {
         final parsed = DateTime.tryParse(value) ?? DateTime.now();
         final picked = await showDatePicker(
@@ -308,6 +435,44 @@ class DateField extends StatelessWidget {
   }
 }
 
+class PageHeader extends StatelessWidget {
+  const PageHeader({
+    super.key,
+    required this.title,
+    this.description,
+  });
+
+  final String title;
+  final String? description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: context.texts.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.6,
+            height: 1.15,
+          ),
+        ),
+        if (description != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            description!,
+            style: context.texts.bodyMedium?.copyWith(
+              color: context.muted,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
     super.key,
@@ -327,14 +492,239 @@ class SectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: context.texts.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
           ),
         ),
         if (actionLabel != null)
           TextButton(onPressed: onAction, child: Text(actionLabel!)),
       ],
+    );
+  }
+}
+
+class StatusBanner extends StatelessWidget {
+  const StatusBanner({
+    super.key,
+    required this.message,
+    this.icon = Icons.info_outline_rounded,
+    this.tone = StatusTone.neutral,
+    this.onTap,
+  });
+
+  final String message;
+  final IconData icon;
+  final StatusTone tone;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (tone) {
+      StatusTone.danger => AppColors.danger,
+      StatusTone.warn => AppColors.warn,
+      StatusTone.success => AppColors.success,
+      StatusTone.neutral => context.colors.primary,
+    };
+    return AppCard(
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: context.texts.bodyMedium?.copyWith(height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum StatusTone { neutral, success, warn, danger }
+
+class CaptureModeGrid extends StatelessWidget {
+  const CaptureModeGrid({
+    super.key,
+    required this.modes,
+    this.compact = false,
+  });
+
+  final List<CaptureMode> modes;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return Row(
+        children: [
+          for (var i = 0; i < modes.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(child: _CaptureTile(mode: modes[i])),
+          ],
+        ],
+      );
+    }
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: AppSpacing.sm,
+      crossAxisSpacing: AppSpacing.sm,
+      childAspectRatio: 1.45,
+      children: [for (final mode in modes) _CaptureTile(mode: mode)],
+    );
+  }
+}
+
+class CaptureMode {
+  const CaptureMode({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.subtitle,
+    this.selected = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool selected;
+}
+
+class _CaptureTile extends StatelessWidget {
+  const _CaptureTile({required this.mode});
+
+  final CaptureMode mode;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = mode.selected;
+    final accentSoft = context.isDark
+        ? context.colors.primary.withValues(alpha: 0.16)
+        : AppColors.teal50;
+    return Pressable(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        mode.onTap();
+      },
+      child: AnimatedContainer(
+        duration: AppDuration.fast,
+        curve: Curves.easeOut,
+        constraints: const BoxConstraints(minHeight: 76),
+        decoration: BoxDecoration(
+          color: selected ? accentSoft : Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: selected ? context.colors.primary : context.colors.outlineVariant,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: AppDuration.fast,
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: selected ? context.colors.primary : accentSoft,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                mode.icon,
+                size: 16,
+                color: selected
+                    ? context.colors.onPrimary
+                    : (context.isDark ? context.colors.primary : AppColors.teal700),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              mode.label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                height: 1.15,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class Pressable extends StatefulWidget {
+  const Pressable({
+    super.key,
+    required this.child,
+    required this.onTap,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  State<Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<Pressable> {
+  var _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _down = true),
+      onTapUp: (_) => setState(() => _down = false),
+      onTapCancel: () => setState(() => _down = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _down ? 0.96 : 1,
+        duration: AppDuration.fast,
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class FadeUp extends StatelessWidget {
+  const FadeUp({super.key, required this.child, this.delay = Duration.zero});
+
+  final Widget child;
+  final Duration delay;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = AppDuration.slow + delay;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: total,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        final start = delay.inMilliseconds / total.inMilliseconds;
+        final t = start >= 1 ? 1.0 : ((value - start) / (1 - start)).clamp(0.0, 1.0);
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, 10 * (1 - t)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
     );
   }
 }

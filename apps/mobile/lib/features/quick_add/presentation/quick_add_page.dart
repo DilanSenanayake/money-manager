@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/ocr/receipt_ocr.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -42,13 +43,28 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_handledInitialMode) return;
-    _handledInitialMode = true;
-    final mode = GoRouterState.of(context).uri.queryParameters['mode'];
-    if (mode == 'receipt' || mode == 'sms' || mode == 'text' || mode == 'manual') {
-      _mode = mode!;
+    final params = GoRouterState.of(context).uri.queryParameters;
+    final mode = params['mode'];
+    final type = params['type'];
+    var nextMode = _mode;
+    if (mode == 'receipt' ||
+        mode == 'sms' ||
+        mode == 'text' ||
+        mode == 'manual') {
+      nextMode = mode!;
     }
-    if (_mode == 'receipt') {
+    if (type == 'income' || type == 'expense') {
+      _type = type!;
+      nextMode = 'manual';
+    }
+    if (nextMode != _mode) {
+      _mode = nextMode;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    }
+    if (!_handledInitialMode && _mode == 'receipt') {
+      _handledInitialMode = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _pickReceipt();
       });
@@ -231,8 +247,8 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add')),
-      body: Stack(
+      body: SafeArea(
+        child: Stack(
         children: [
           accountsAsync.when(
             loading: () => const SkeletonList(),
@@ -244,9 +260,10 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
               if (accounts.isEmpty) {
                 return EmptyState(
                   icon: Icons.account_balance_wallet_outlined,
-                  title: 'Add an account first',
-                  message: 'You need a wallet before logging transactions.',
-                  actionLabel: 'Accounts',
+                  title: 'Add a wallet first',
+                  message:
+                      'You need an account before logging activity. Add cash, bank, or a card.',
+                  actionLabel: 'Add account',
                   onAction: () => context.push(RoutePaths.accounts),
                 );
               }
@@ -256,47 +273,64 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                   categories.where((c) => c.type == _type).toList();
 
               return ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                padding: AppSpacing.page,
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ChoiceChip(
-                        label: const Text('Manual'),
-                        selected: _mode == 'manual',
-                        onSelected: (_) => setState(() => _mode = 'manual'),
-                      ),
-                      ChoiceChip(
-                        label: const Text('Scan'),
+                  const PageHeader(
+                    title: 'Add',
+                    description:
+                        'Let AI fill the details — scan, paste, describe, or enter manually',
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  CaptureModeGrid(
+                    compact: true,
+                    modes: [
+                      CaptureMode(
+                        icon: Icons.photo_camera_outlined,
+                        label: 'Scan',
                         selected: _mode == 'receipt',
-                        onSelected: (_) {
+                        onTap: () {
                           setState(() => _mode = 'receipt');
                           _pickReceipt();
                         },
                       ),
-                      ChoiceChip(
-                        label: const Text('SMS'),
+                      CaptureMode(
+                        icon: Icons.content_paste_rounded,
+                        label: 'SMS',
                         selected: _mode == 'sms',
-                        onSelected: (_) => setState(() => _mode = 'sms'),
+                        onTap: () => setState(() => _mode = 'sms'),
                       ),
-                      ChoiceChip(
-                        label: const Text('Type'),
+                      CaptureMode(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        label: 'Type',
                         selected: _mode == 'text',
-                        onSelected: (_) => setState(() => _mode = 'text'),
+                        onTap: () => setState(() => _mode = 'text'),
+                      ),
+                      CaptureMode(
+                        icon: Icons.edit_note_rounded,
+                        label: 'Manual',
+                        selected: _mode == 'manual',
+                        onTap: () => setState(() => _mode = 'manual'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  AnimatedSwitcher(
+                    duration: AppDuration.normal,
+                    switchInCurve: Curves.easeOutCubic,
+                    child: Column(
+                      key: ValueKey(_mode),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                   if (_mode == 'receipt') ...[
                     AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const Text(
-                            'Take a photo of a receipt. We’ll read it on this device, then you confirm before anything is saved.',
+                          Text(
+                            'Take a photo of a receipt. We’ll read it on this device, then you check & save.',
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                           AppButton(
                             label: 'Take photo',
                             onPressed: () =>
@@ -317,20 +351,24 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                     AppTextField(
                       controller: _sms,
                       label: 'Paste a bank SMS',
+                      hint: 'Rs 4,500 debited from A/C ...',
                       maxLines: 5,
                     ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () async {
-                        final data = await Clipboard.getData('text/plain');
-                        if (data?.text != null) {
-                          setState(() => _sms.text = data!.text!);
-                        }
-                      },
-                      child: const Text('Paste from clipboard'),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () async {
+                          final data = await Clipboard.getData('text/plain');
+                          if (data?.text != null) {
+                            setState(() => _sms.text = data!.text!);
+                          }
+                        },
+                        child: const Text('Paste from clipboard'),
+                      ),
                     ),
                     AppButton(
-                      label: 'Parse message',
+                      label: 'Continue',
                       onPressed: _parseSms,
                       icon: Icons.auto_awesome,
                     ),
@@ -338,12 +376,12 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                     AppTextField(
                       controller: _quickText,
                       label: 'Describe it',
-                      hint: 'Coffee 450 at Starbucks',
+                      hint: 'Coffee 4.50',
                       maxLines: 3,
                     ),
                     const SizedBox(height: 12),
                     AppButton(
-                      label: 'Parse note',
+                      label: 'Continue',
                       onPressed: _parseText,
                       icon: Icons.auto_awesome,
                     ),
@@ -361,13 +399,18 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                         });
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     AppTextField(
                       controller: _amount,
                       label: 'Amount',
+                      hint: '0.00',
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
-                      prefixIcon: Icons.payments_outlined,
+                      textAlign: TextAlign.start,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                     ),
                     const SizedBox(height: 12),
                     DateField(
@@ -391,7 +434,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                     const SizedBox(height: 16),
                     Text(
                       'Category',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                     ),
@@ -412,7 +455,8 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                     const SizedBox(height: 16),
                     AppTextField(
                       controller: _merchant,
-                      label: 'Merchant (optional)',
+                      label: 'Description (optional)',
+                      hint: 'Where or what',
                       prefixIcon: Icons.storefront_outlined,
                     ),
                     const SizedBox(height: 12),
@@ -424,12 +468,15 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                     ),
                     const SizedBox(height: 24),
                     AppButton(
-                      label: 'Save transaction',
+                      label: 'Save',
                       loading: _loading,
                       onPressed: _saveManual,
                       icon: Icons.check_rounded,
                     ),
                   ],
+                      ],
+                    ),
+                  ),
                 ],
               );
             },
@@ -451,6 +498,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
               ),
             ),
         ],
+        ),
       ),
     );
   }

@@ -50,24 +50,26 @@ class RecurringPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Recurring')),
       body: async.when(
-        loading: () => const LoadingView(),
+        loading: () => const SkeletonList(),
         error: (e, _) => ErrorView(
-          message: e is Failure ? e.message : e.toString(),
+          message: e is Failure
+              ? e.message
+              : "Couldn't load recurring bills.",
           onRetry: () => ref.invalidate(recurringProvider),
         ),
         data: (items) {
           if (items.isEmpty) {
             return const EmptyState(
               icon: Icons.event_repeat_outlined,
-              title: 'No recurring bills',
+              title: 'No upcoming bills yet',
               message:
-                  'Mark a transaction as recurring when you create it to track upcoming dues.',
+                  'When you add a purchase, mark it as recurring to see the next due date here.',
             );
           }
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(recurringProvider),
             child: ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.page,
               itemCount: items.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, i) {
@@ -88,11 +90,15 @@ class RecurringPage extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Next due ${item.nextDue} · ${tx.recurringFrequency ?? 'monthly'}',
+                              'Next ${formatFriendlyDate(item.nextDue)} · ${tx.recurringFrequency ?? 'monthly'}',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
-                                  ?.copyWith(color: AppColors.slate),
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                             ),
                           ],
                         ),

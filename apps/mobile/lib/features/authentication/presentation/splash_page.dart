@@ -80,14 +80,25 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.teal50, Color(0xFFE2E8F0), Colors.white],
+            colors: context.isDark
+                ? [
+                    const Color(0xFF0F2A28),
+                    scheme.surface,
+                    scheme.surface,
+                  ]
+                : const [
+                    AppColors.teal50,
+                    Color(0xFFE2E8F0),
+                    Colors.white,
+                  ],
           ),
         ),
         child: SafeArea(
@@ -102,20 +113,23 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   AppConstants.appName,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.teal700,
+                    color: Theme.of(context).colorScheme.primary,
+                    letterSpacing: -0.6,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   AppConstants.tagline,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.slate),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 if (_needsUnlock) ...[
