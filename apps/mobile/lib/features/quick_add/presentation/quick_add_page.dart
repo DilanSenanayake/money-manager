@@ -8,6 +8,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/ocr/receipt_ocr.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/dates.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -443,12 +444,11 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                       spacing: 8,
                       runSpacing: 8,
                       children: filtered.map((c) {
-                        final selected = _categoryId == c.id;
-                        return ChoiceChip(
-                          label: Text(c.name),
-                          selected: selected,
-                          onSelected: (_) =>
-                              setState(() => _categoryId = c.id),
+                        return CategoryChoiceChip(
+                          name: c.name,
+                          icon: c.icon,
+                          selected: _categoryId == c.id,
+                          onSelected: () => setState(() => _categoryId = c.id),
                         );
                       }).toList(),
                     ),

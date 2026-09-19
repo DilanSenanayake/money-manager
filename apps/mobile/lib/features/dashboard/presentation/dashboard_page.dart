@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/currency.dart';
 import '../../../core/utils/labels.dart';
 import '../../../core/utils/money.dart';
@@ -190,21 +191,33 @@ class _BudgetAlerts extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           for (final b in alerts)
             Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '${b.category.name}: ',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CategoryMark(
+                    icon: b.category.icon,
+                    name: b.category.name,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '${b.category.name}: ',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          TextSpan(
+                            text: b.status == 'over'
+                                ? 'over budget (${(b.ratio * 100).round()}%)'
+                                : 'at 80%+ of limit (${(b.ratio * 100).round()}%)',
+                          ),
+                        ],
+                      ),
                     ),
-                    TextSpan(
-                      text: b.status == 'over'
-                          ? 'over budget (${(b.ratio * 100).round()}%)'
-                          : 'at 80%+ of limit (${(b.ratio * 100).round()}%)',
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
         ],

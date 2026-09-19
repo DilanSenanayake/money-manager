@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/category_visuals.dart';
 import '../../core/utils/dates.dart';
 import '../../core/utils/labels.dart';
 import '../../core/utils/money.dart';
@@ -87,6 +88,12 @@ class BudgetBar extends StatelessWidget {
       children: [
         Row(
           children: [
+            CategoryMark(
+              icon: progress.category.icon,
+              name: progress.category.name,
+              framed: true,
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 progress.category.name,
@@ -216,19 +223,22 @@ class TxTile extends StatelessWidget {
           );
         },
         contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        leading: CircleAvatar(
-          radius: 18,
-          backgroundColor: amountColor.withValues(alpha: 0.12),
-          child: Icon(
-            isTransfer
-                ? Icons.swap_horiz_rounded
-                : isIncome
-                    ? Icons.south_west_rounded
-                    : Icons.north_east_rounded,
-            color: amountColor,
-            size: 18,
-          ),
-        ),
+        leading: isTransfer
+            ? CircleAvatar(
+                radius: 18,
+                backgroundColor: amountColor.withValues(alpha: 0.12),
+                child: Icon(
+                  Icons.swap_horiz_rounded,
+                  color: amountColor,
+                  size: 18,
+                ),
+              )
+            : CategoryMark(
+                icon: transaction.category?.icon,
+                name: transaction.category?.name,
+                framed: true,
+                size: 18,
+              ),
         title: Text(
           title,
           maxLines: 1,

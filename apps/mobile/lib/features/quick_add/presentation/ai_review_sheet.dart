@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
+import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/category_match.dart';
 import '../../../core/utils/dates.dart';
 import '../../../shared/models/models.dart';
@@ -234,12 +235,14 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: filtered
                   .map(
-                    (c) => ChoiceChip(
-                      label: Text(c.name),
+                    (c) => CategoryChoiceChip(
+                      name: c.name,
+                      icon: c.icon,
                       selected: selectedCategoryId == c.id,
-                      onSelected: (_) => setState(() => _categoryId = c.id),
+                      onSelected: () => setState(() => _categoryId = c.id),
                     ),
                   )
                   .toList(),

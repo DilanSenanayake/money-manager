@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/labels.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/components/components.dart';
@@ -22,65 +23,28 @@ class BudgetsPage extends ConsumerWidget {
     required String type,
     double? monthlyBudget,
   }) async {
-    final budgetCtrl = TextEditingController(
-      text: monthlyBudget?.toStringAsFixed(0) ?? '',
-    );
-    final nameCtrl = TextEditingController(text: name);
-
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 8,
-            bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Edit ${type == 'expense' ? 'budget' : 'category'}',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              AppTextField(controller: nameCtrl, label: 'Name'),
-              if (type == 'expense') ...[
-                const SizedBox(height: 12),
-                AppTextField(
-                  controller: budgetCtrl,
-                  label: 'Monthly budget',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ],
-              const SizedBox(height: 16),
-              AppButton(
-                label: 'Save',
-                onPressed: () async {
-                  await ref.read(categoriesRepositoryProvider).updateCategory(
-                        id: id,
-                        name: nameCtrl.text.trim(),
-                        icon: icon,
-                        type: type,
-                        monthlyBudget: budgetCtrl.text.trim().isEmpty
-                            ? null
-                            : double.tryParse(budgetCtrl.text),
-                      );
-                  ref.invalidate(categoriesProvider);
-                  ref.invalidate(dashboardProvider);
-                  if (context.mounted) Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => _CategoryEditorSheet(
+        title: 'Edit ${type == 'expense' ? 'budget' : 'category'}',
+        submitLabel: 'Save',
+        initialName: name,
+        initialIcon: icon,
+        type: type,
+        initialBudget: monthlyBudget,
+        onSubmit: (nextName, nextIcon, nextBudget) async {
+          await ref.read(categoriesRepositoryProvider).updateCategory(
+                id: id,
+                name: nextName,
+                icon: nextIcon,
+                type: type,
+                monthlyBudget: nextBudget,
+              );
+          ref.invalidate(categoriesProvider);
+          ref.invalidate(dashboardProvider);
+        },
+      ),
     );
   }
 
@@ -95,60 +59,25 @@ class BudgetsPage extends ConsumerWidget {
         actions: [
           IconButton(
             onPressed: () async {
-              final nameCtrl = TextEditingController();
-              final budgetCtrl = TextEditingController();
               await showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
-                builder: (context) => Padding(
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 8,
-                    bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'New expense category',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(controller: nameCtrl, label: 'Name'),
-                      const SizedBox(height: 12),
-                      AppTextField(
-                        controller: budgetCtrl,
-                        label: 'Monthly budget (optional)',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      AppButton(
-                        label: 'Create',
-                        onPressed: () async {
-                          if (nameCtrl.text.trim().isEmpty) return;
-                          await ref
-                              .read(categoriesRepositoryProvider)
-                              .createCategory(
-                                name: nameCtrl.text.trim(),
-                                icon: 'circle',
-                                type: 'expense',
-                                monthlyBudget: budgetCtrl.text.trim().isEmpty
-                                    ? null
-                                    : double.tryParse(budgetCtrl.text),
-                              );
-                          ref.invalidate(categoriesProvider);
-                          ref.invalidate(dashboardProvider);
-                          if (context.mounted) Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  ),
+                builder: (context) => _CategoryEditorSheet(
+                  title: 'New expense category',
+                  submitLabel: 'Create',
+                  initialName: '',
+                  initialIcon: 'circle',
+                  type: 'expense',
+                  onSubmit: (name, icon, budget) async {
+                    await ref.read(categoriesRepositoryProvider).createCategory(
+                          name: name,
+                          icon: icon,
+                          type: 'expense',
+                          monthlyBudget: budget,
+                        );
+                    ref.invalidate(categoriesProvider);
+                    ref.invalidate(dashboardProvider);
+                  },
                 ),
               );
             },
@@ -219,6 +148,12 @@ class BudgetsPage extends ConsumerWidget {
                       ),
                       child: Row(
                         children: [
+                          CategoryMark(
+                            icon: c.icon,
+                            name: c.name,
+                            framed: true,
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,6 +196,128 @@ class BudgetsPage extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _CategoryEditorSheet extends StatefulWidget {
+  const _CategoryEditorSheet({
+    required this.title,
+    required this.submitLabel,
+    required this.initialName,
+    required this.initialIcon,
+    required this.type,
+    this.initialBudget,
+    required this.onSubmit,
+  });
+
+  final String title;
+  final String submitLabel;
+  final String initialName;
+  final String initialIcon;
+  final String type;
+  final double? initialBudget;
+  final Future<void> Function(String name, String icon, double? budget)
+      onSubmit;
+
+  @override
+  State<_CategoryEditorSheet> createState() => _CategoryEditorSheetState();
+}
+
+class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _budgetCtrl;
+  late String _icon;
+  var _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.initialName);
+    _budgetCtrl = TextEditingController(
+      text: widget.initialBudget?.toStringAsFixed(0) ?? '',
+    );
+    _icon = widget.initialIcon;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _budgetCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 8,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+          Text(
+            widget.title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 16),
+          AppTextField(controller: _nameCtrl, label: 'Name'),
+          const SizedBox(height: 12),
+          Text(
+            'Icon',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          CategoryIconPicker(
+            value: _icon,
+            onChanged: (id) => setState(() => _icon = id),
+          ),
+          if (widget.type == 'expense') ...[
+            const SizedBox(height: 12),
+            AppTextField(
+              controller: _budgetCtrl,
+              label: widget.initialName.isEmpty
+                  ? 'Monthly budget (optional)'
+                  : 'Monthly budget',
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          AppButton(
+            label: widget.submitLabel,
+            loading: _saving,
+            onPressed: () async {
+              final name = _nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              setState(() => _saving = true);
+              try {
+                await widget.onSubmit(
+                  name,
+                  _icon,
+                  _budgetCtrl.text.trim().isEmpty
+                      ? null
+                      : double.tryParse(_budgetCtrl.text),
+                );
+                if (context.mounted) Navigator.pop(context);
+              } finally {
+                if (mounted) setState(() => _saving = false);
+              }
+            },
+          ),
+        ],
+        ),
       ),
     );
   }

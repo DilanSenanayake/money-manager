@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/models/models.dart';
@@ -78,6 +79,12 @@ class RecurringPage extends ConsumerWidget {
                 return AppCard(
                   child: Row(
                     children: [
+                      CategoryMark(
+                        icon: tx.category?.icon,
+                        name: tx.category?.name,
+                        framed: true,
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -167,44 +168,35 @@ class AnalyticsPage extends ConsumerWidget {
                               sectionsSpace: 2,
                               centerSpaceRadius: 52,
                               sections: [
-                                for (var i = 0;
-                                    i < data.categorySpend.length;
-                                    i++)
+                                for (final c in data.categorySpend)
                                   PieChartSectionData(
-                                    value: data.categorySpend[i].value,
+                                    value: c.value,
                                     title: '',
                                     radius: 28,
-                                    color: _palette[i % _palette.length],
+                                    color: categoryHex(name: c.name),
                                   ),
                               ],
                             ),
                           ),
                         ),
                         const SizedBox(height: AppSpacing.md),
-                        for (var i = 0; i < data.categorySpend.length; i++)
+                        for (final c in data.categorySpend)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 10),
                             child: Row(
                               children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: _palette[i % _palette.length],
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
+                                CategoryMark(name: c.name, framed: true),
                                 const SizedBox(width: AppSpacing.sm),
                                 Expanded(
-                                  child: Text(data.categorySpend[i].name),
+                                  child: Text(c.name),
                                 ),
                                 Text(
                                   totalSpend <= 0
                                       ? formatMoney(
-                                          data.categorySpend[i].value,
+                                          c.value,
                                           data.baseCurrency,
                                         )
-                                      : '${((data.categorySpend[i].value / totalSpend) * 100).round()}%',
+                                      : '${((c.value / totalSpend) * 100).round()}%',
                                   style: context.texts.bodySmall?.copyWith(
                                     color: context.muted,
                                   ),
@@ -212,7 +204,7 @@ class AnalyticsPage extends ConsumerWidget {
                                 const SizedBox(width: AppSpacing.sm),
                                 Text(
                                   formatMoney(
-                                    data.categorySpend[i].value,
+                                    c.value,
                                     data.baseCurrency,
                                   ),
                                   style: const TextStyle(
@@ -256,13 +248,3 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
-const _palette = [
-  AppColors.teal500,
-  Color(0xFF0891B2),
-  AppColors.warn,
-  AppColors.danger,
-  Color(0xFF7C3AED),
-  Color(0xFF2563EB),
-  AppColors.teal700,
-  Color(0xFF059669),
-];
