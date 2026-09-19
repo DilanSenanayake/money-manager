@@ -29,7 +29,7 @@ export default function AppLayout({
           >
             Skip to content
           </a>
-          <BrandLogo size={28} alt="" />
+          <BrandLogo size={40} alt="" />
           <p className="min-w-0 truncate text-sm font-semibold tracking-tight">
             Smart Money Manager
           </p>

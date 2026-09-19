@@ -22,7 +22,7 @@ export function BrandLogo({
       width={size}
       height={size}
       priority={priority}
-      className={cn("shrink-0", className)}
+      className={cn("shrink-0 object-contain", className)}
     />
   );
 }
