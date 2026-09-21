@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,7 +42,15 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
   bool _loading = false;
   String _busyMessage = 'Please wait…';
   String _mode = 'manual';
-  bool _handledInitialMode = false;
+  final _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _recoverLostReceipt();
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -62,12 +73,6 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
       _mode = nextMode;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() {});
-      });
-    }
-    if (!_handledInitialMode && _mode == 'receipt') {
-      _handledInitialMode = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _pickReceipt();
       });
     }
   }
@@ -139,16 +144,74 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
     }
   }
 
-  Future<void> _pickReceipt({ImageSource source = ImageSource.camera}) async {
+  Future<void> _recoverLostReceipt() async {
+    if (kIsWeb) return;
     try {
-      final picked = await ImagePicker().pickImage(
+      final lost = await _picker.retrieveLostData();
+      if (lost.isEmpty || lost.file == null) return;
+      await _processPickedReceipt(lost.file!);
+    } catch (_) {}
+  }
+
+  Future<void> _pickReceipt({required ImageSource source}) async {
+    try {
+      final picked = await _picker.pickImage(
         source: source,
         maxWidth: 1600,
         maxHeight: 1600,
         imageQuality: 80,
+        requestFullMetadata: false,
+        preferredCameraDevice: CameraDevice.rear,
       );
       if (picked == null) return;
-      final bytes = await picked.length();
+      await _processPickedReceipt(picked);
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      if (_isPickerCancel(e)) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_pickerErrorMessage(e))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is Failure ? e.message : e.toString())),
+      );
+    }
+  }
+
+  Future<void> _processPickedReceipt(XFile picked) async {
+    try {
+      if (kIsWeb) {
+        final bytes = await picked.readAsBytes();
+        if (bytes.length > AppConstants.maxReceiptBytes) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('That photo is too large. Use one under 8 MB.'),
+            ),
+          );
+          return;
+        }
+        if (!mounted) return;
+        final saved = await showAiReviewSheet(
+          context: context,
+          ref: ref,
+          source: 'receipt',
+          extraction: ReceiptExtraction(
+            merchant: '',
+            amount: 0,
+            currency: 'USD',
+            date: localDateYYYYMMDD(),
+            category: 'Other',
+            notes: 'From photo — enter the amount and details you see.',
+          ),
+        );
+        if (saved) await _afterSave();
+        return;
+      }
+
+      final local = await _copyPickedFile(picked);
+      final bytes = await local.length();
       if (bytes > AppConstants.maxReceiptBytes) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,7 +224,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
         _loading = true;
         _busyMessage = 'Reading your receipt…';
       });
-      final text = await ReceiptOcr().extractText(picked.path);
+      final text = await ReceiptOcr().extractText(local.path);
       if (text.trim().length < 8) {
         throw const ValidationFailure(
           'We couldn’t read that photo clearly. Try again with better lighting, or add it manually.',
@@ -186,6 +249,39 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<XFile> _copyPickedFile(XFile picked) async {
+    final ext = picked.name.contains('.')
+        ? picked.name.split('.').last.toLowerCase()
+        : 'jpg';
+    final dest = File(
+      '${Directory.systemTemp.path}/receipt_${DateTime.now().millisecondsSinceEpoch}.$ext',
+    );
+    await dest.writeAsBytes(await picked.readAsBytes(), flush: true);
+    return XFile(dest.path);
+  }
+
+  bool _isPickerCancel(PlatformException e) {
+    final code = e.code.toLowerCase();
+    final message = (e.message ?? '').toLowerCase();
+    return code.contains('cancel') ||
+        message.contains('cancel') ||
+        message.contains('canceled');
+  }
+
+  String _pickerErrorMessage(PlatformException e) {
+    final blob = '${e.code} ${e.message ?? ''}'.toLowerCase();
+    if (blob.contains('camera') && blob.contains('permission')) {
+      return 'Allow camera access in system settings, or choose a photo from the gallery.';
+    }
+    if (blob.contains('photo') && blob.contains('permission')) {
+      return 'Allow photo access in system settings, then try again.';
+    }
+    if (blob.contains('camera')) {
+      return 'Could not open the camera. Choose a photo from the gallery instead.';
+    }
+    return 'Could not open that photo. Try the gallery, or add it manually.';
   }
 
   Future<void> _parseSms() async {
@@ -289,10 +385,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                         icon: Icons.photo_camera_outlined,
                         label: 'Scan',
                         selected: _mode == 'receipt',
-                        onTap: () {
-                          setState(() => _mode = 'receipt');
-                          _pickReceipt();
-                        },
+                        onTap: () => setState(() => _mode = 'receipt'),
                       ),
                       CaptureMode(
                         icon: Icons.content_paste_rounded,
@@ -328,7 +421,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Take a photo of a receipt. We’ll read it on this device, then you check & save.',
+                            'Take a photo or choose one from your gallery. We’ll read it on this device, then you check & save.',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 16),

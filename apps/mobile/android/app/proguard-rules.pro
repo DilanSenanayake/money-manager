@@ -8,3 +8,11 @@
 -dontwarn com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 -dontwarn com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions$Builder
 -dontwarn com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+
+# Keep on-device receipt OCR. R8 was stripping ML Kit and causing a crash
+# right after the camera returned a photo.
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_text** { *; }
+-keepclassmembers class * {
+    native <methods>;
+}

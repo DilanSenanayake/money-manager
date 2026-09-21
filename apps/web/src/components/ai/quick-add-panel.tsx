@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Camera,
   ClipboardPaste,
+  Images,
   MessageSquareText,
   PenLine,
   Sparkles,
@@ -70,7 +71,6 @@ export function QuickAddPanel({
   initialMode,
 }: Props) {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [busyTitle, setBusyTitle] = useState("Just a moment");
   const [busyMessage, setBusyMessage] = useState("Please wait…");
@@ -99,12 +99,6 @@ export function QuickAddPanel({
   const [initialForm, setInitialForm] = useState<AiReviewSave | null>(null);
   const [ocrText, setOcrText] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
-
-  useEffect(() => {
-    if (initialMode === "receipt") {
-      fileRef.current?.click();
-    }
-  }, [initialMode]);
 
   const manualCategories = categories.filter((c) => c.type === manualType);
   const selectedAccountCurrency =
@@ -153,13 +147,31 @@ export function QuickAddPanel({
     }
   }
 
+  function openReceiptPicker(source: "camera" | "gallery") {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    if (source === "camera") {
+      input.setAttribute("capture", "environment");
+    }
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (file) void handleReceiptFile(file);
+    });
+    input.click();
+  }
+
   async function handleReceiptFile(file: File) {
+    if (file.size < 32) {
+      toast.error("That photo was empty. Try again, or pick one from your gallery.");
+      return;
+    }
     const maxBytes = 8 * 1024 * 1024;
     if (file.size > maxBytes) {
       toast.error("That photo is too large. Use one under 8 MB.");
       return;
     }
-    if (file.type && !file.type.startsWith("image/")) {
+    if (file.type && !file.type.startsWith("image/") && file.type !== "application/octet-stream") {
       toast.error("Please choose a photo of the receipt.");
       return;
     }
@@ -284,10 +296,7 @@ export function QuickAddPanel({
             icon: Camera,
             active: active === "receipt",
             disabled: busy,
-            onClick: () => {
-              setActive("receipt");
-              fileRef.current?.click();
-            },
+            onClick: () => setActive("receipt"),
           },
           {
             key: "sms",
@@ -316,20 +325,6 @@ export function QuickAddPanel({
         ]}
       />
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (!file) return;
-          void handleReceiptFile(file);
-        }}
-      />
-
       {active === "receipt" && (
         <Card className="animate-slide-down">
           <CardHeader className="pb-3">
@@ -338,17 +333,27 @@ export function QuickAddPanel({
               Scan receipt
             </CardTitle>
             <CardDescription>
-              Take or upload a photo — we’ll fill the form for you to confirm
+              Take a photo or choose one from your gallery — we’ll fill the form
+              for you to confirm
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid gap-2 sm:grid-cols-2">
             <Button
-              className="w-full sm:w-auto"
+              className="min-h-11 w-full"
               disabled={busy}
-              onClick={() => fileRef.current?.click()}
+              onClick={() => openReceiptPicker("camera")}
             >
               <Camera className="h-4 w-4" />
-              Choose photo
+              Take photo
+            </Button>
+            <Button
+              variant="outline"
+              className="min-h-11 w-full"
+              disabled={busy}
+              onClick={() => openReceiptPicker("gallery")}
+            >
+              <Images className="h-4 w-4" />
+              Choose from gallery
             </Button>
           </CardContent>
         </Card>
