@@ -260,6 +260,7 @@ class TxTile extends StatelessWidget {
       confirmDismiss: (_) async {
         final ok = await showDialog<bool>(
           context: context,
+          useRootNavigator: true,
           builder: (context) => AlertDialog(
             title: const Text('Delete this?'),
             content: const Text(

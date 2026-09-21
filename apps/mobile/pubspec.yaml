@@ -1,7 +1,7 @@
 name: ledgerly
 description: Smart Money Manager — native money manager for Android and iOS.
 publish_to: "none"
-version: 1.0.0+4
+version: 1.0.0+5
 
 environment:
   sdk: ^3.8.0

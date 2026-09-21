@@ -41,29 +41,76 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   Future<void> _openFilters(TransactionFilter filter) async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (_) => _ActivityFilterSheet(initial: filter),
     );
   }
 
   Future<void> _openEditor({Transaction? tx}) async {
     if (tx != null && tx.isTransfer) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Edit transfers by deleting and recreating them'),
-        ),
-      );
+      await _confirmDelete(tx);
       return;
     }
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (_) => _TransactionEditorSheet(existing: tx),
     );
     ref.invalidate(transactionsProvider);
     ref.invalidate(dashboardProvider);
     ref.invalidate(accountsProvider);
     ref.invalidate(analyticsProvider);
+  }
+
+  Future<void> _deleteTransaction(Transaction tx) async {
+    try {
+      await ref.read(transactionsRepositoryProvider).deleteTransaction(tx);
+      ref.invalidate(transactionsProvider);
+      ref.invalidate(dashboardProvider);
+      ref.invalidate(accountsProvider);
+      ref.invalidate(analyticsProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Deleted')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is Failure ? e.message : e.toString())),
+      );
+      // List may be out of sync if swipe already removed the row.
+      ref.invalidate(transactionsProvider);
+    }
+  }
+
+  Future<void> _confirmDelete(Transaction tx) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tx.isTransfer ? 'Delete this transfer?' : 'Delete this?'),
+        content: Text(
+          tx.isTransfer
+              ? 'Both sides of the transfer will be removed. You can’t undo this.'
+              : 'This activity will be removed. You can’t undo this.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _deleteTransaction(tx);
   }
 
   @override
@@ -236,14 +283,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                             showDate: false,
                             showTypeBadge: false,
                             onTap: () => _openEditor(tx: t),
-                            onDelete: () async {
-                              await ref
-                                  .read(transactionsRepositoryProvider)
-                                  .deleteTransaction(t);
-                              ref.invalidate(transactionsProvider);
-                              ref.invalidate(dashboardProvider);
-                              ref.invalidate(accountsProvider);
-                            },
+                            onDelete: () => _deleteTransaction(t),
                           ),
                         ],
                       );
@@ -492,6 +532,44 @@ class _TransactionEditorSheetState
     }
   }
 
+  Future<void> _delete() async {
+    final tx = widget.existing;
+    if (tx == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this?'),
+        content: const Text(
+          'This activity will be removed. You can’t undo this.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _loading = true);
+    try {
+      await ref.read(transactionsRepositoryProvider).deleteTransaction(tx);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is Failure ? e.message : e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountsProvider).valueOrNull ?? [];
@@ -619,6 +697,19 @@ class _TransactionEditorSheetState
               loading: _loading,
               onPressed: _save,
             ),
+            if (widget.existing != null) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _loading ? null : _delete,
+                child: Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

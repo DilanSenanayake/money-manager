@@ -17,7 +17,9 @@ class BudgetsPage extends ConsumerWidget {
   Future<void> _createCategory(BuildContext context, WidgetRef ref) async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => _CategoryEditorSheet(
         title: 'New expense category',
         submitLabel: 'Create',
@@ -49,7 +51,9 @@ class BudgetsPage extends ConsumerWidget {
   }) async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => _CategoryEditorSheet(
         title: 'Edit ${type == 'expense' ? 'budget' : 'category'}',
         submitLabel: 'Save',

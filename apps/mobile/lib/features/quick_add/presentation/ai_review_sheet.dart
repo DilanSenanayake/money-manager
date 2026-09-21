@@ -19,9 +19,13 @@ Future<bool> showAiReviewSheet({
   required String source,
   required Object extraction,
 }) async {
+  // Root navigator so the sheet sits above the shell bottom nav
+  // (`extendBody: true` otherwise paints the bar over nested routes).
   final result = await showModalBottomSheet<bool>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
+    useSafeArea: true,
     builder: (_) => AiReviewSheet(source: source, extraction: extraction),
   );
   return result == true;
@@ -169,82 +173,107 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
           _notes.text,
         ]);
 
+    final media = MediaQuery.of(context);
+    final bottomPad = media.viewInsets.bottom + media.padding.bottom + 16;
+
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
         top: 8,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
+        bottom: bottomPad,
       ),
-      child: SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: media.size.height * 0.92 - media.viewInsets.bottom,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Check & save',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'We filled this in for you — change anything you need, then save.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'expense', label: Text('Expense')),
-                ButtonSegment(value: 'income', label: Text('Income')),
-              ],
-              selected: {_type},
-              onSelectionChanged: (s) => setState(() {
-                _type = s.first;
-                _categoryId = null;
-              }),
-            ),
-            const SizedBox(height: 16),
-            AmountField(controller: _amount),
-            const SizedBox(height: 12),
-            CategoryChipRow(
-              categories: filtered,
-              selectedId: selectedCategoryId,
-              onSelected: (id) => setState(() => _categoryId = id),
-            ),
-            const SizedBox(height: 12),
-            DateField(
-              value: _date,
-              onChanged: (v) => setState(() => _date = v),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _accountId,
-              decoration: const InputDecoration(labelText: 'Account'),
-              items: accounts
-                  .map(
-                    (a) => DropdownMenuItem(
-                      value: a.id,
-                      child: Text('${a.name} (${a.currency})'),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Check & save',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _accountId = v),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We filled this in for you — change anything you need, then save.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: 'expense',
+                          label: Text('Expense'),
+                        ),
+                        ButtonSegment(
+                          value: 'income',
+                          label: Text('Income'),
+                        ),
+                      ],
+                      selected: {_type},
+                      onSelectionChanged: (s) => setState(() {
+                        _type = s.first;
+                        _categoryId = null;
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                    AmountField(controller: _amount),
+                    const SizedBox(height: 12),
+                    CategoryChipRow(
+                      categories: filtered,
+                      selectedId: selectedCategoryId,
+                      onSelected: (id) => setState(() => _categoryId = id),
+                    ),
+                    const SizedBox(height: 12),
+                    DateField(
+                      value: _date,
+                      onChanged: (v) => setState(() => _date = v),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _accountId,
+                      decoration:
+                          const InputDecoration(labelText: 'Account'),
+                      items: accounts
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text('${a.name} (${a.currency})'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _accountId = v),
+                    ),
+                    const SizedBox(height: 12),
+                    AppTextField(
+                      controller: _merchant,
+                      label: 'Merchant',
+                    ),
+                    const SizedBox(height: 12),
+                    AppTextField(
+                      controller: _notes,
+                      label: 'Notes (optional)',
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 12),
-            AppTextField(
-              controller: _merchant,
-              label: 'Merchant',
-            ),
-            const SizedBox(height: 12),
-            AppTextField(
-              controller: _notes,
-              label: 'Notes (optional)',
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
             AppButton(
               label: 'Save',
               loading: _loading,
