@@ -18,6 +18,7 @@ import {
   transactionTitle,
 } from "@/lib/transaction-description";
 import type { TransactionInput } from "@/lib/schemas";
+import { trackEvent } from "@/lib/analytics";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,12 @@ export function TransactionsManager({
       if (result.error) {
         toast.error(result.error);
         return;
+      }
+      if (!isEditing) {
+        trackEvent("add_transaction", {
+          type: payload.type,
+          method: "manual",
+        });
       }
       toast.success(isEditing ? "Transaction updated" : "Transaction saved");
       onDialogChange(false);

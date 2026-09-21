@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CURRENCIES } from "@/lib/schemas";
 import { formatMoney, cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { SiteFooter } from "@/components/layout/site-footer";
 
@@ -213,7 +214,17 @@ export function HomeLanding() {
               <Link href="/login">Sign in</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/signup">Start free</Link>
+              <Link
+                href="/signup"
+                onClick={() =>
+                  trackEvent("select_content", {
+                    content_type: "cta",
+                    item_id: "start_free_header",
+                  })
+                }
+              >
+                Start free
+              </Link>
             </Button>
           </div>
         </div>
@@ -230,7 +241,17 @@ export function HomeLanding() {
           </p>
           <div className="mt-7 flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <Button asChild size="lg" className="w-full shadow-[var(--shadow-md)] sm:w-auto">
-              <Link href="/signup">Start free</Link>
+              <Link
+                href="/signup"
+                onClick={() =>
+                  trackEvent("select_content", {
+                    content_type: "cta",
+                    item_id: "start_free_hero",
+                  })
+                }
+              >
+                Start free
+              </Link>
             </Button>
             <a
               href="#demo"
@@ -557,7 +578,17 @@ export function HomeLanding() {
           </div>
           <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto">
             <Button asChild size="lg" className="w-full shadow-[var(--shadow-md)]">
-              <Link href="/signup">Start free</Link>
+              <Link
+                href="/signup"
+                onClick={() =>
+                  trackEvent("select_content", {
+                    content_type: "cta",
+                    item_id: "start_free_footer",
+                  })
+                }
+              >
+                Start free
+              </Link>
             </Button>
             <Link
               href="/login"

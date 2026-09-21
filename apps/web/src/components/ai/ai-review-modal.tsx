@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { saveReviewedTransaction } from "@/app/actions/ai";
+import { trackEvent } from "@/lib/analytics";
 import type { Account, Category } from "@/lib/types";
 import type {
   AiReviewSave,
@@ -367,6 +368,10 @@ export function AiReviewModal({
                         setSaving(false);
                         return;
                       }
+                      trackEvent("add_transaction", {
+                        type: form.type,
+                        method: source ?? "text",
+                      });
                       toast.success("Saved");
                       onOpenChange(false);
                       setSaving(false);

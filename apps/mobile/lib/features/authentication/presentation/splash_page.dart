@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,26 +47,39 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     context.go(RoutePaths.home);
   }
 
+  /// Huawei EMUI / Android 9 FingerprintManager can block the UI thread
+  /// inside [LocalAuthentication.authenticate], so Dart timeouts never fire.
+  /// Skip the lock on Android; keep a guarded prompt on iOS only.
   Future<bool> _authenticate() async {
-    if (kIsWeb ||
-        (defaultTargetPlatform != TargetPlatform.android &&
-            defaultTargetPlatform != TargetPlatform.iOS)) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
       return true;
     }
     try {
       final auth = LocalAuthentication();
-      final canCheck =
-          await auth.canCheckBiometrics || await auth.isDeviceSupported();
-      if (!canCheck) return true;
-      return auth.authenticate(
-        localizedReason: 'Unlock ${AppConstants.appName}',
-        options: const AuthenticationOptions(
-          biometricOnly: false,
-          stickyAuth: true,
-        ),
-      );
+      final supported = await auth
+          .isDeviceSupported()
+          .timeout(const Duration(seconds: 2), onTimeout: () => false);
+      if (!supported) return true;
+
+      final enrolled = await auth
+          .getAvailableBiometrics()
+          .timeout(const Duration(seconds: 2), onTimeout: () => <BiometricType>[]);
+      if (enrolled.isEmpty) return true;
+
+      return await auth
+          .authenticate(
+            localizedReason: 'Unlock ${AppConstants.appName}',
+            options: const AuthenticationOptions(
+              biometricOnly: true,
+              stickyAuth: false,
+              useErrorDialogs: false,
+            ),
+          )
+          .timeout(const Duration(seconds: 8), onTimeout: () => true);
+    } on TimeoutException {
+      return true;
     } catch (_) {
-      return false;
+      return true;
     }
   }
 
@@ -107,28 +122,45 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(
-                  'assets/icons/logo.png',
-                  width: 120,
-                  fit: BoxFit.contain,
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.88, end: 1),
+                  duration: AppDuration.slow + const Duration(milliseconds: 80),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: ((value - 0.88) / 0.12).clamp(0.0, 1.0),
+                      child: Transform.scale(scale: value, child: child),
+                    );
+                  },
+                  child: Image.asset(
+                    'assets/icons/logo.png',
+                    width: 120,
+                    fit: BoxFit.contain,
+                  ),
                 ),
                 const SizedBox(height: 20),
-                Text(
-                  AppConstants.appName,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.primary,
-                    letterSpacing: -0.6,
+                FadeUp(
+                  delay: const Duration(milliseconds: 80),
+                  child: Text(
+                    AppConstants.appName,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.primary,
+                      letterSpacing: -0.6,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  AppConstants.tagline,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                FadeUp(
+                  delay: const Duration(milliseconds: 140),
+                  child: Text(
+                    AppConstants.tagline,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -152,7 +184,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                     child: const Text('Sign out'),
                   ),
                 ] else
-                  const CircularProgressIndicator(),
+                  const IndeterminateBar(),
               ],
             ),
           ),

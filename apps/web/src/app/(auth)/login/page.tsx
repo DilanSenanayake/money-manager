@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { signIn } from "@/app/actions/auth";
+import { trackAfterAction } from "@/lib/analytics";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,11 @@ export default function LoginPage() {
             className="space-y-4"
             action={(formData) => {
               startTransition(async () => {
-                const result = await signIn(formData);
+                const result = await trackAfterAction(
+                  "login",
+                  { method: "email" },
+                  () => signIn(formData)
+                );
                 if (result?.error) setError(result.error);
               });
             }}

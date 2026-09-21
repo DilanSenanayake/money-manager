@@ -18,6 +18,7 @@ import {
   parseReceiptText,
 } from "@/app/actions/ai";
 import { createTransaction } from "@/app/actions/transactions";
+import { trackEvent } from "@/lib/analytics";
 import { extractTextFromImage } from "@/lib/ocr";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { toMerchantAndNotes } from "@/lib/transaction-description";
@@ -250,6 +251,10 @@ export function QuickAddPanel({
         toast.error(result.error);
         return;
       }
+      trackEvent("add_transaction", {
+        type: manualType,
+        method: "manual",
+      });
       toast.success("Saved");
       setManualAmount("");
       setManualCategoryId(null);

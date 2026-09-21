@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { signUp } from "@/app/actions/auth";
+import { trackAfterAction } from "@/lib/analytics";
 import { CURRENCIES } from "@/lib/schemas";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -44,7 +45,11 @@ export default function SignupPage() {
               startTransition(async () => {
                 setError(null);
                 setMessage(null);
-                const result = await signUp(formData);
+                const result = await trackAfterAction(
+                  "sign_up",
+                  { method: "email" },
+                  () => signUp(formData)
+                );
                 if (result?.error) setError(result.error);
                 else if (result?.message) setMessage(result.message);
               });

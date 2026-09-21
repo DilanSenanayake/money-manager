@@ -108,14 +108,10 @@ class BudgetBar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          child: LinearProgressIndicator(
-            value: ratio,
-            minHeight: compact ? 6 : 8,
-            color: color,
-            backgroundColor: color.withValues(alpha: 0.14),
-          ),
+        _FillBar(
+          ratio: ratio,
+          color: color,
+          height: compact ? 6 : 8,
         ),
         if (progress.status == 'over' || progress.status == 'warn') ...[
           const SizedBox(height: 6),
@@ -132,6 +128,80 @@ class BudgetBar extends StatelessWidget {
 
     if (compact) return body;
     return AppCard(child: body);
+  }
+}
+
+class _FillBar extends StatefulWidget {
+  const _FillBar({
+    required this.ratio,
+    required this.color,
+    required this.height,
+  });
+
+  final double ratio;
+  final Color color;
+  final double height;
+
+  @override
+  State<_FillBar> createState() => _FillBarState();
+}
+
+class _FillBarState extends State<_FillBar> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: AppDuration.countUp);
+    _animation = Tween<double>(begin: 0, end: widget.ratio).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(_FillBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.ratio == widget.ratio) return;
+    _animation = Tween<double>(begin: _animation.value, end: widget.ratio).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _controller.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = MediaQuery.of(context).disableAnimations
+        ? widget.ratio
+        : null;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: value != null
+          ? LinearProgressIndicator(
+              value: value,
+              minHeight: widget.height,
+              color: widget.color,
+              backgroundColor: widget.color.withValues(alpha: 0.14),
+            )
+          : AnimatedBuilder(
+              animation: _animation,
+              builder: (context, _) {
+                return LinearProgressIndicator(
+                  value: _animation.value,
+                  minHeight: widget.height,
+                  color: widget.color,
+                  backgroundColor: widget.color.withValues(alpha: 0.14),
+                );
+              },
+            ),
+    );
   }
 }
 
@@ -382,6 +452,7 @@ class MoneyDisplay extends StatelessWidget {
     this.hero = false,
     this.color,
     this.signed = false,
+    this.animate = false,
   });
 
   final num amount;
@@ -389,20 +460,32 @@ class MoneyDisplay extends StatelessWidget {
   final bool hero;
   final Color? color;
   final bool signed;
+  final bool animate;
 
   @override
   Widget build(BuildContext context) {
-    final prefix = signed
-        ? (amount > 0
-            ? '+'
-            : amount < 0
-                ? ''
-                : '')
-        : '';
-    return Text(
-      '$prefix${formatMoney(amount, currency)}',
-      style: (hero ? context.moneyHero : context.moneyTitle).copyWith(
-        color: color,
+    Widget text(num value) {
+      final prefix = signed
+          ? (value > 0
+              ? '+'
+              : value < 0
+                  ? ''
+                  : '')
+          : '';
+      return Text(
+        '$prefix${formatMoney(value, currency)}',
+        style: (hero ? context.moneyHero : context.moneyTitle).copyWith(
+          color: color,
+        ),
+      );
+    }
+
+    if (!animate) return text(amount);
+    return Semantics(
+      label: formatMoney(amount, currency),
+      child: AnimatedAmount(
+        amount: amount,
+        builder: (context, value) => text(value),
       ),
     );
   }
@@ -414,11 +497,13 @@ class CashflowPair extends StatelessWidget {
     required this.income,
     required this.expense,
     required this.currency,
+    this.animate = false,
   });
 
   final num income;
   final num expense;
   final String currency;
+  final bool animate;
 
   @override
   Widget build(BuildContext context) {
@@ -435,6 +520,7 @@ class CashflowPair extends StatelessWidget {
               amount: income,
               currency: currency,
               color: AppColors.success,
+              animate: animate,
             ),
           ),
           Container(
@@ -449,6 +535,7 @@ class CashflowPair extends StatelessWidget {
               currency: currency,
               color: AppColors.danger,
               alignEnd: true,
+              animate: animate,
             ),
           ),
         ],
@@ -464,6 +551,7 @@ class _CashflowColumn extends StatelessWidget {
     required this.currency,
     required this.color,
     this.alignEnd = false,
+    this.animate = false,
   });
 
   final String label;
@@ -471,6 +559,7 @@ class _CashflowColumn extends StatelessWidget {
   final String currency;
   final Color color;
   final bool alignEnd;
+  final bool animate;
 
   @override
   Widget build(BuildContext context) {
@@ -489,15 +578,30 @@ class _CashflowColumn extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            formatMoney(amount, currency),
-            style: context.texts.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: color,
-              fontFeatures: const [FontFeature.tabularFigures()],
-              letterSpacing: -0.4,
+          if (animate)
+            AnimatedAmount(
+              amount: amount,
+              duration: AppDuration.slow + const Duration(milliseconds: 200),
+              builder: (context, value) => Text(
+                formatMoney(value, currency),
+                style: context.texts.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  letterSpacing: -0.4,
+                ),
+              ),
+            )
+          else
+            Text(
+              formatMoney(amount, currency),
+              style: context.texts.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: color,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                letterSpacing: -0.4,
+              ),
             ),
-          ),
         ],
       ),
     );

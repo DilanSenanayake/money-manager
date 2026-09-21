@@ -1,5 +1,8 @@
+"use client";
+
 import { LogOut } from "lucide-react";
 import { signOut } from "@/app/actions/auth";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +14,10 @@ export function SignOutButton({
   wide?: boolean;
 }) {
   return (
-    <form action={signOut}>
+    <form
+      action={signOut}
+      onSubmit={() => trackEvent("logout")}
+    >
       <Button
         type="submit"
         variant="ghost"

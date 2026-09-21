@@ -471,7 +471,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CircularProgressIndicator(),
+                      const IndeterminateBar(width: 120),
                       const SizedBox(height: 16),
                       Text(_busyMessage),
                     ],

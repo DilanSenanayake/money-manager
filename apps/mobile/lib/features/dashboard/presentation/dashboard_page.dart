@@ -105,19 +105,26 @@ class DashboardPage extends ConsumerWidget {
                               data.netWorth,
                               currency: data.baseCurrency,
                               hero: true,
+                              animate: true,
                             ),
                             if (data.income != 0 || data.expense != 0) ...[
                               const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                leftover >= 0
-                                    ? '${formatMoney(leftover, data.baseCurrency)} left this month'
-                                    : '${formatMoney(-leftover, data.baseCurrency)} more spent than earned this month',
-                                style: context.texts.bodyMedium?.copyWith(
-                                  color: leftover >= 0
-                                      ? AppColors.success
-                                      : AppColors.danger,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              AnimatedAmount(
+                                amount: leftover.abs(),
+                                builder: (context, value) {
+                                  final positive = leftover >= 0;
+                                  return Text(
+                                    positive
+                                        ? '${formatMoney(value, data.baseCurrency)} left this month'
+                                        : '${formatMoney(value, data.baseCurrency)} more spent than earned this month',
+                                    style: context.texts.bodyMedium?.copyWith(
+                                      color: positive
+                                          ? AppColors.success
+                                          : AppColors.danger,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ],
@@ -131,17 +138,21 @@ class DashboardPage extends ConsumerWidget {
                         income: data.income,
                         expense: data.expense,
                         currency: data.baseCurrency,
+                        animate: true,
                       ),
                     ),
                     if (insights.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.md),
                       for (var i = 0; i < insights.length; i++) ...[
                         if (i > 0) const SizedBox(height: AppSpacing.xs),
-                        InsightChip(
-                          insight: insights[i],
-                          onTap: insights[i].kind == InsightKind.budget
-                              ? () => context.push(RoutePaths.budgets)
-                              : () => context.push(RoutePaths.analytics),
+                        FadeUp(
+                          delay: Duration(milliseconds: 120 + (i * 70)),
+                          child: InsightChip(
+                            insight: insights[i],
+                            onTap: insights[i].kind == InsightKind.budget
+                                ? () => context.push(RoutePaths.budgets)
+                                : () => context.push(RoutePaths.analytics),
+                          ),
                         ),
                       ],
                     ],

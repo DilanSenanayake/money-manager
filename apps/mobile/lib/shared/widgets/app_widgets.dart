@@ -257,22 +257,24 @@ class LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: AppSpacing.page,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const _SkeletonBlock(height: 88),
-            const SizedBox(height: AppSpacing.sm),
-            const _SkeletonBlock(height: 72),
-            const SizedBox(height: AppSpacing.sm),
-            const _SkeletonBlock(height: 72),
-            if (message != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              Text(message!, style: TextStyle(color: context.muted)),
+    return Shimmer(
+      child: Center(
+        child: Padding(
+          padding: AppSpacing.page,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const _SkeletonBlock(height: 88),
+              const SizedBox(height: AppSpacing.sm),
+              const _SkeletonBlock(height: 72),
+              const SizedBox(height: AppSpacing.sm),
+              const _SkeletonBlock(height: 72),
+              if (message != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(message!, style: TextStyle(color: context.muted)),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -310,12 +312,14 @@ class SkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: AppSpacing.page,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: count,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, __) => const _SkeletonBlock(height: 76),
+    return Shimmer(
+      child: ListView.separated(
+        padding: AppSpacing.page,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: count,
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+        itemBuilder: (_, __) => const _SkeletonBlock(height: 76),
+      ),
     );
   }
 }
@@ -325,72 +329,81 @@ class DashboardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: AppSpacing.page,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        _SkeletonBlock(height: 22, width: 140),
-        const SizedBox(height: AppSpacing.lg),
-        const _SkeletonBlock(height: 88),
-        const SizedBox(height: AppSpacing.sm),
-        const _SkeletonBlock(height: 72),
-        const SizedBox(height: AppSpacing.md),
-        const _SkeletonBlock(height: 48),
-        const SizedBox(height: AppSpacing.lg),
-        const _SkeletonBlock(height: 140),
-        const SizedBox(height: AppSpacing.md),
-        const _SkeletonBlock(height: 64),
-        const SizedBox(height: AppSpacing.lg),
-        const _SkeletonBlock(height: 180),
-      ],
+    return Shimmer(
+      child: ListView(
+        padding: AppSpacing.page,
+        physics: const NeverScrollableScrollPhysics(),
+        children: const [
+          _SkeletonBlock(height: 22, width: 140),
+          SizedBox(height: AppSpacing.lg),
+          _SkeletonBlock(height: 48, width: 220),
+          SizedBox(height: AppSpacing.xs),
+          _SkeletonBlock(height: 40, width: 180),
+          SizedBox(height: AppSpacing.md),
+          _SkeletonBlock(height: 72),
+          SizedBox(height: AppSpacing.md),
+          _SkeletonBlock(height: 48),
+          SizedBox(height: AppSpacing.lg),
+          _SkeletonBlock(height: 140),
+          SizedBox(height: AppSpacing.md),
+          _SkeletonBlock(height: 64),
+          SizedBox(height: AppSpacing.lg),
+          _SkeletonBlock(height: 180),
+        ],
+      ),
     );
   }
 }
 
-class _SkeletonBlock extends StatefulWidget {
+class _SkeletonBlock extends StatelessWidget {
   const _SkeletonBlock({required this.height, this.width});
 
   final double height;
   final double? width;
 
   @override
-  State<_SkeletonBlock> createState() => _SkeletonBlockState();
-}
-
-class _SkeletonBlockState extends State<_SkeletonBlock>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final base = context.colors.outlineVariant;
-    return FadeTransition(
-      opacity: Tween<double>(begin: 0.45, end: 0.9).animate(
-        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
-      ),
-      child: Container(
-        height: widget.height,
-        width: widget.width,
+    final highlight = Color.lerp(base, Colors.white, context.isDark ? 0.12 : 0.55)!;
+    final shimmer = Shimmer.of(context);
+
+    Widget box({required Alignment begin, required Alignment end}) {
+      return Container(
+        height: height,
+        width: width,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          gradient: LinearGradient(
+            begin: begin,
+            end: end,
+            colors: [base, highlight, base],
+            stops: const [0.15, 0.5, 0.85],
+          ),
+        ),
+      );
+    }
+
+    if (shimmer == null || MediaQuery.of(context).disableAnimations) {
+      return Container(
+        height: height,
+        width: width,
         decoration: BoxDecoration(
           color: base,
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
-      ),
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: shimmer,
+      builder: (context, _) {
+        final t = shimmer.value;
+        final dx = (t * 2) - 1;
+        return box(
+          begin: Alignment(dx - 1, 0),
+          end: Alignment(dx + 1, 0),
+        );
+      },
     );
   }
 }
@@ -709,6 +722,7 @@ class FadeUp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.of(context).disableAnimations) return child;
     final total = AppDuration.slow + delay;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
@@ -726,6 +740,182 @@ class FadeUp extends StatelessWidget {
         );
       },
       child: child,
+    );
+  }
+}
+
+/// Tweens a number from 0 (or the previous value) to [amount].
+class AnimatedAmount extends StatefulWidget {
+  const AnimatedAmount({
+    super.key,
+    required this.amount,
+    required this.builder,
+    this.duration = AppDuration.countUp,
+  });
+
+  final num amount;
+  final Duration duration;
+  final Widget Function(BuildContext context, num value) builder;
+
+  @override
+  State<AnimatedAmount> createState() => _AnimatedAmountState();
+}
+
+class _AnimatedAmountState extends State<AnimatedAmount>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+    _animation = Tween<double>(
+      begin: 0,
+      end: widget.amount.toDouble(),
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(AnimatedAmount oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.amount == widget.amount) return;
+    _animation = Tween<double>(
+      begin: _animation.value,
+      end: widget.amount.toDouble(),
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller
+      ..duration = widget.duration
+      ..forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.of(context).disableAnimations) {
+      return widget.builder(context, widget.amount);
+    }
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, _) => widget.builder(context, _animation.value),
+    );
+  }
+}
+
+class Shimmer extends StatefulWidget {
+  const Shimmer({super.key, required this.child});
+
+  final Widget child;
+
+  static Animation<double>? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<_ShimmerScope>()?.animation;
+  }
+
+  @override
+  State<Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppDuration.shimmer,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ShimmerScope(
+      animation: _controller,
+      child: widget.child,
+    );
+  }
+}
+
+class _ShimmerScope extends InheritedWidget {
+  const _ShimmerScope({required this.animation, required super.child});
+
+  final Animation<double> animation;
+
+  @override
+  bool updateShouldNotify(_ShimmerScope oldWidget) =>
+      animation != oldWidget.animation;
+}
+
+class IndeterminateBar extends StatefulWidget {
+  const IndeterminateBar({super.key, this.width = 96});
+
+  final double width;
+
+  @override
+  State<IndeterminateBar> createState() => _IndeterminateBarState();
+}
+
+class _IndeterminateBarState extends State<IndeterminateBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: widget.width,
+      height: 3,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: ColoredBox(
+          color: context.colors.primary.withValues(alpha: 0.16),
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final t = _controller.value;
+              return Align(
+                alignment: Alignment(-1.2 + (t * 2.4), 0),
+                child: FractionallySizedBox(
+                  widthFactor: 0.38,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.colors.primary,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }

@@ -25,6 +25,8 @@ class AppDuration {
   static const fast = Duration(milliseconds: 140);
   static const normal = Duration(milliseconds: 220);
   static const slow = Duration(milliseconds: 360);
+  static const countUp = Duration(milliseconds: 780);
+  static const shimmer = Duration(milliseconds: 1400);
 }
 
 class AppSize {
