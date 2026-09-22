@@ -99,9 +99,10 @@ export default function TermsPage() {
           <li>View summaries and charts based on data you saved.</li>
           <li>
             Use Smart Add: take or choose a receipt photo (text is read on your
-            device when possible), paste a bank message yourself, or type one
-            line. The Service may suggest fields. You review and confirm before
-            a record is stored.
+            device when possible), paste a bank message yourself, type one
+            line, or optionally speak a short description (turned into text on
+            your device or browser). The Service may suggest fields. You review
+            and confirm before a record is stored.
           </li>
         </ul>
         <p>

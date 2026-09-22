@@ -71,10 +71,12 @@ export default function PrivacyPage() {
         <p>
           If you use a receipt photo, text is typically read on your device
           first. Extracted text may be sent to the application server and an AI
-          processor so fields can be suggested. If you paste a bank message or
-          type a short description, that text is sent the same way. Drafts are
-          not stored as saved transactions until you confirm. We do not ask the
-          web app for permission to read all messages on your phone.
+          processor so fields can be suggested. If you paste a bank message,
+          type a short description, or use optional voice input, that text is
+          sent the same way after speech is turned into words on your device or
+          browser. We do not store raw microphone recordings on our servers.
+          Drafts are not stored as saved transactions until you confirm. We do
+          not ask the web app for permission to read all messages on your phone.
         </p>
         <p className="font-semibold">Technical and usage data</p>
         <p>
@@ -104,7 +106,8 @@ export default function PrivacyPage() {
             charts.
           </li>
           <li>
-            Run Smart Add when you ask for it, then wait for your confirmation.
+            Run Smart Add when you ask for it (including optional voice-to-text
+            on your device), then wait for your confirmation.
           </li>
           <li>Keep the Service reliable, fix errors, and prevent abuse.</li>
           <li>

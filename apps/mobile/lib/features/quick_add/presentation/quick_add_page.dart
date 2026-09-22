@@ -12,6 +12,7 @@ import '../../../core/error/failures.dart';
 import '../../../core/ocr/receipt_ocr.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/voice/voice_input.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -43,13 +44,59 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
   String _busyMessage = 'Please wait…';
   String _mode = 'manual';
   final _picker = ImagePicker();
+  final _voice = VoiceInput();
+  bool _listening = false;
+  bool? _voiceAvailable;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _recoverLostReceipt();
+      _probeVoice();
     });
+  }
+
+  Future<void> _probeVoice() async {
+    final ok = await _voice.ensureReady();
+    if (!mounted) return;
+    setState(() => _voiceAvailable = ok);
+  }
+
+  Future<void> _toggleVoice() async {
+    if (_listening) {
+      await _voice.stop();
+      if (mounted) setState(() => _listening = false);
+      return;
+    }
+    await _voice.start(
+      onWords: (words) {
+        if (!mounted) return;
+        setState(() {
+          _quickText.text = words;
+          _quickText.selection = TextSelection.collapsed(offset: words.length);
+        });
+      },
+      onListeningChanged: (listening) {
+        if (!mounted) return;
+        setState(() => _listening = listening);
+      },
+      onError: (message) {
+        if (!mounted) return;
+        setState(() => _listening = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      },
+    );
+    if (!mounted) return;
+    setState(() => _listening = _voice.isListening);
+  }
+
+  Future<void> _stopVoiceIfNeeded() async {
+    if (!_listening) return;
+    await _voice.stop();
+    if (mounted) setState(() => _listening = false);
   }
 
   @override
@@ -79,6 +126,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
 
   @override
   void dispose() {
+    _voice.dispose();
     _amount.dispose();
     _merchant.dispose();
     _notes.dispose();
@@ -312,6 +360,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
   }
 
   Future<void> _parseText() async {
+    await _stopVoiceIfNeeded();
     setState(() {
       _loading = true;
       _busyMessage = 'Understanding that note…';
@@ -385,13 +434,19 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                         icon: Icons.photo_camera_outlined,
                         label: 'Scan',
                         selected: _mode == 'receipt',
-                        onTap: () => setState(() => _mode = 'receipt'),
+                        onTap: () async {
+                          await _stopVoiceIfNeeded();
+                          setState(() => _mode = 'receipt');
+                        },
                       ),
                       CaptureMode(
                         icon: Icons.content_paste_rounded,
                         label: 'SMS',
                         selected: _mode == 'sms',
-                        onTap: () => setState(() => _mode = 'sms'),
+                        onTap: () async {
+                          await _stopVoiceIfNeeded();
+                          setState(() => _mode = 'sms');
+                        },
                       ),
                       CaptureMode(
                         icon: Icons.chat_bubble_outline_rounded,
@@ -403,7 +458,10 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                         icon: Icons.edit_note_rounded,
                         label: 'Manual',
                         selected: _mode == 'manual',
-                        onTap: () => setState(() => _mode = 'manual'),
+                        onTap: () async {
+                          await _stopVoiceIfNeeded();
+                          setState(() => _mode = 'manual');
+                        },
                       ),
                     ],
                   ),
@@ -470,9 +528,33 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                     AppTextField(
                       controller: _quickText,
                       label: 'Describe it',
-                      hint: 'Coffee 4.50',
+                      hint: 'Coffee 4.50 — or tap the mic',
                       maxLines: 3,
+                      suffix: _voiceAvailable == false
+                          ? null
+                          : IconButton(
+                              tooltip: _listening
+                                  ? 'Stop listening'
+                                  : 'Speak to fill',
+                              onPressed: _loading ? null : _toggleVoice,
+                              icon: Icon(
+                                _listening ? Icons.mic_off_rounded : Icons.mic_none_rounded,
+                                color: _listening
+                                    ? Theme.of(context).colorScheme.error
+                                    : null,
+                              ),
+                            ),
                     ),
+                    if (_listening) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Listening… tap the mic when you’re done',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     AppButton(
                       label: 'Continue',

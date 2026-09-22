@@ -59,6 +59,10 @@
 	<string>Take a photo of a receipt so Smart Add can read the amount and merchant.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose a receipt photo so Smart Add can read the amount and merchant.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record a short description so Smart Add can suggest amount and merchant. Nothing is saved until you confirm.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Turn your spoken expense or income into text on this device for Smart Add.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

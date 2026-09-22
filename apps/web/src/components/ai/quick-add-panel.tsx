@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
@@ -9,6 +9,8 @@ import {
   ClipboardPaste,
   Images,
   MessageSquareText,
+  Mic,
+  MicOff,
   PenLine,
   Sparkles,
 } from "lucide-react";
@@ -20,6 +22,7 @@ import {
 } from "@/app/actions/ai";
 import { createTransaction } from "@/app/actions/transactions";
 import { trackEvent } from "@/lib/analytics";
+import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { extractTextFromImage } from "@/lib/ocr";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { toMerchantAndNotes } from "@/lib/transaction-description";
@@ -99,6 +102,15 @@ export function QuickAddPanel({
   const [initialForm, setInitialForm] = useState<AiReviewSave | null>(null);
   const [ocrText, setOcrText] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+
+  const onVoiceTranscript = useCallback((text: string) => {
+    setQuickText(text);
+  }, []);
+
+  const speech = useSpeechToText({
+    onTranscript: onVoiceTranscript,
+    onError: (message) => toast.error(message),
+  });
 
   const manualCategories = categories.filter((c) => c.type === manualType);
   const selectedAccountCurrency =
@@ -296,7 +308,10 @@ export function QuickAddPanel({
             icon: Camera,
             active: active === "receipt",
             disabled: busy,
-            onClick: () => setActive("receipt"),
+            onClick: () => {
+              if (speech.listening) speech.stop();
+              setActive("receipt");
+            },
           },
           {
             key: "sms",
@@ -304,7 +319,10 @@ export function QuickAddPanel({
             icon: ClipboardPaste,
             active: active === "sms",
             disabled: busy,
-            onClick: () => setActive("sms"),
+            onClick: () => {
+              if (speech.listening) speech.stop();
+              setActive("sms");
+            },
           },
           {
             key: "text",
@@ -320,7 +338,10 @@ export function QuickAddPanel({
             icon: PenLine,
             active: active === "manual",
             disabled: busy,
-            onClick: () => setActive("manual"),
+            onClick: () => {
+              if (speech.listening) speech.stop();
+              setActive("manual");
+            },
           },
         ]}
       />
@@ -421,26 +442,76 @@ export function QuickAddPanel({
               Describe it
             </CardTitle>
             <CardDescription>
-              Examples: “Groceries 3200” · “Salary 150000” · “Uber 850”
+              Type or speak — examples: “Groceries 3200” · “Salary 150000”
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Input
-              placeholder="What did you spend or earn?"
-              value={quickText}
-              onChange={(e) => setQuickText(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && quickText.trim() && !busy) {
-                  e.preventDefault();
-                  void runTextParse();
+            <div className="relative">
+              <Input
+                placeholder="What did you spend or earn?"
+                value={quickText}
+                onChange={(e) => setQuickText(e.target.value)}
+                autoFocus
+                className={speech.supported ? "pr-11" : undefined}
+                aria-describedby={
+                  speech.listening ? "voice-listening-hint" : undefined
                 }
-              }}
-            />
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && quickText.trim() && !busy) {
+                    e.preventDefault();
+                    if (speech.listening) speech.stop();
+                    void runTextParse();
+                  }
+                }}
+              />
+              {speech.supported ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  disabled={busy}
+                  aria-pressed={speech.listening}
+                  aria-label={
+                    speech.listening ? "Stop listening" : "Speak to fill"
+                  }
+                  className={cn(
+                    "absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2",
+                    speech.listening &&
+                      "bg-[var(--danger-soft)] text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+                  )}
+                  onClick={() => {
+                    if (!speech.listening) {
+                      trackEvent("select_content", {
+                        content_type: "voice",
+                        item_id: "type_mic",
+                      });
+                    }
+                    speech.toggle();
+                  }}
+                >
+                  {speech.listening ? (
+                    <MicOff className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </Button>
+              ) : null}
+            </div>
+            {speech.listening ? (
+              <p
+                id="voice-listening-hint"
+                className="text-xs font-medium text-[var(--accent-hover)]"
+              >
+                Listening… tap the mic when you’re done
+              </p>
+            ) : null}
             <Button
               className="w-full sm:w-auto"
               disabled={busy || !quickText.trim()}
-              onClick={() => void runTextParse()}
+              onClick={() => {
+                if (speech.listening) speech.stop();
+                void runTextParse();
+              }}
             >
               <Sparkles className="h-4 w-4" />
               Continue

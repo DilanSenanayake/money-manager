@@ -10,11 +10,11 @@
  * - Account deletion: within 30 days of a verified request, except where law requires longer retention.
  * - Contact inbox: NEXT_PUBLIC_LEGAL_CONTACT_EMAIL, falling back to the address below.
  * - Processors listed in privacy match the current stack: Supabase, Vercel, Groq, optional Google Analytics.
- * - The web app does not auto-read SMS or link bank accounts. Users paste or type text and confirm saves.
+ * - The web app does not auto-read SMS or link bank accounts. Users paste, type, or optionally speak a short description and confirm saves.
  */
 export const LEGAL = {
   productName: "Smart Money Manager",
-  lastUpdated: "18 September 2026",
+  lastUpdated: "22 September 2026",
   minAge: 16,
   deletionDays: 30,
   jurisdiction: "Sri Lanka",
