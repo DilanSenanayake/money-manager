@@ -8,13 +8,11 @@ import {
   Camera,
   ClipboardPaste,
   Images,
-  MessageSquareText,
   Mic,
   MicOff,
   PenLine,
   Sparkles,
 } from "lucide-react";
-import { ActionTiles } from "@/components/layout/action-tiles";
 import {
   parseBankSms,
   parseQuickText,
@@ -24,6 +22,7 @@ import { createTransaction } from "@/app/actions/transactions";
 import { trackEvent } from "@/lib/analytics";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { extractTextFromImage } from "@/lib/ocr";
+import { looksLikeBankSms } from "@/lib/smart-input";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { toMerchantAndNotes } from "@/lib/transaction-description";
 import type { Account, Category } from "@/lib/types";
@@ -60,12 +59,22 @@ import {
 } from "@/components/ui/card";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
+type Path = "smart" | "manual";
+
 type Props = {
   accounts: Account[];
   categories: Category[];
   initialType?: "income" | "expense";
-  initialMode?: "receipt" | "sms" | "text" | "manual";
+  /** Legacy modes map into smart | manual. */
+  initialMode?: "receipt" | "sms" | "text" | "manual" | "smart" | "voice";
 };
+
+function resolvePath(
+  mode: Props["initialMode"]
+): Path {
+  if (mode === "manual") return "manual";
+  return "smart";
+}
 
 export function QuickAddPanel({
   accounts,
@@ -78,12 +87,9 @@ export function QuickAddPanel({
   const [busyTitle, setBusyTitle] = useState("Just a moment");
   const [busyMessage, setBusyMessage] = useState("Please wait…");
   const [busyProgress, setBusyProgress] = useState<number | null>(null);
-  const [active, setActive] = useState<
-    "receipt" | "sms" | "text" | "manual"
-  >(initialMode === "receipt" ? "receipt" : (initialMode ?? "manual"));
+  const [path, setPath] = useState<Path>(() => resolvePath(initialMode));
 
-  const [smsText, setSmsText] = useState("");
-  const [quickText, setQuickText] = useState("");
+  const [composerText, setComposerText] = useState("");
   const [manualType, setManualType] = useState<"income" | "expense">(
     initialType
   );
@@ -104,7 +110,7 @@ export function QuickAddPanel({
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const onVoiceTranscript = useCallback((text: string) => {
-    setQuickText(text);
+    setComposerText(text);
   }, []);
 
   const speech = useSpeechToText({
@@ -159,11 +165,16 @@ export function QuickAddPanel({
     }
   }
 
-  function openReceiptPicker(source: "camera" | "gallery") {
+  function switchPath(next: Path) {
+    if (speech.listening) speech.stop();
+    setPath(next);
+  }
+
+  function openReceiptPicker(kind: "camera" | "gallery") {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
-    if (source === "camera") {
+    if (kind === "camera") {
       input.setAttribute("capture", "environment");
     }
     input.addEventListener("change", () => {
@@ -183,7 +194,11 @@ export function QuickAddPanel({
       toast.error("That photo is too large. Use one under 8 MB.");
       return;
     }
-    if (file.type && !file.type.startsWith("image/") && file.type !== "application/octet-stream") {
+    if (
+      file.type &&
+      !file.type.startsWith("image/") &&
+      file.type !== "application/octet-stream"
+    ) {
       toast.error("Please choose a photo of the receipt.");
       return;
     }
@@ -215,37 +230,45 @@ export function QuickAddPanel({
     }
   }
 
-  async function runSmsParse() {
-    if (!smsText.trim() || busy) return;
-    startBusy("Reading message", "Picking out the amount and details…");
+  async function runComposerContinue() {
+    if (speech.listening) speech.stop();
+    const text = composerText.trim();
+    if (!text || busy) return;
+
+    const asSms = looksLikeBankSms(text);
+    startBusy(
+      asSms ? "Reading message" : "Understanding",
+      asSms
+        ? "Picking out the amount and details…"
+        : "Filling in the details…"
+    );
     try {
-      const result = await parseBankSms(smsText);
+      const result = asSms
+        ? await parseBankSms(text)
+        : await parseQuickText(text);
       if ("error" in result) {
         stopBusy();
         toast.error(result.error);
         return;
       }
-      openReview(result.data, "sms");
+      openReview(result.data, asSms ? "sms" : "text");
     } catch {
       stopBusy();
       toast.error("Something went wrong. Please try again.");
     }
   }
 
-  async function runTextParse() {
-    if (!quickText.trim() || busy) return;
-    startBusy("Understanding", "Filling in the details…");
+  async function pasteClipboard() {
     try {
-      const result = await parseQuickText(quickText);
-      if ("error" in result) {
-        stopBusy();
-        toast.error(result.error);
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) {
+        toast.error("Nothing to paste from the clipboard");
         return;
       }
-      openReview(result.data, "text");
+      setComposerText(text);
+      toast.success("Pasted");
     } catch {
-      stopBusy();
-      toast.error("Something went wrong. Please try again.");
+      toast.error("Couldn’t read the clipboard — paste it yourself");
     }
   }
 
@@ -297,205 +320,163 @@ export function QuickAddPanel({
     <div className="page-stack">
       <PageHeader
         title="Add"
-        description="Let AI fill the details — scan, paste, describe, or enter manually"
+        description="Smart AI suggests the details — or enter them yourself"
       />
 
-      <ActionTiles
-        tiles={[
-          {
-            key: "receipt",
-            label: "Scan",
-            icon: Camera,
-            active: active === "receipt",
-            disabled: busy,
-            onClick: () => {
-              if (speech.listening) speech.stop();
-              setActive("receipt");
-            },
-          },
-          {
-            key: "sms",
-            label: "SMS",
-            icon: ClipboardPaste,
-            active: active === "sms",
-            disabled: busy,
-            onClick: () => {
-              if (speech.listening) speech.stop();
-              setActive("sms");
-            },
-          },
-          {
-            key: "text",
-            label: "Type",
-            icon: MessageSquareText,
-            active: active === "text",
-            disabled: busy,
-            onClick: () => setActive("text"),
-          },
-          {
-            key: "manual",
-            label: "Manual",
-            icon: PenLine,
-            active: active === "manual",
-            disabled: busy,
-            onClick: () => {
-              if (speech.listening) speech.stop();
-              setActive("manual");
-            },
-          },
-        ]}
-      />
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => switchPath("smart")}
+          className={cn(
+            "surface surface-interactive pressable flex min-h-[4.5rem] flex-col items-start justify-center gap-1 px-4 py-3 text-left transition-[box-shadow,border-color,background-color]",
+            path === "smart" &&
+              "border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent-ring)]"
+          )}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <Sparkles className="h-4 w-4 text-[var(--accent-hover)]" />
+            Smart AI
+          </span>
+          <span className="text-xs text-[var(--muted)]">
+            Speak, type, paste, or scan — then confirm
+          </span>
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => switchPath("manual")}
+          className={cn(
+            "surface surface-interactive pressable flex min-h-[4.5rem] flex-col items-start justify-center gap-1 px-4 py-3 text-left transition-[box-shadow,border-color,background-color]",
+            path === "manual" &&
+              "border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent-ring)]"
+          )}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <PenLine className="h-4 w-4 text-[var(--accent-hover)]" />
+            Manual
+          </span>
+          <span className="text-xs text-[var(--muted)]">
+            Fill amount, category, and account yourself
+          </span>
+        </button>
+      </div>
 
-      {active === "receipt" && (
+      {path === "smart" && (
         <Card className="animate-slide-down">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Camera className="h-4 w-4" />
-              Scan receipt
-            </CardTitle>
+            <CardTitle className="text-base">Tell us what happened</CardTitle>
             <CardDescription>
-              Take a photo or choose one from your gallery — we’ll fill the form
-              for you to confirm
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-2">
-            <Button
-              className="min-h-11 w-full"
-              disabled={busy}
-              onClick={() => openReceiptPicker("camera")}
-            >
-              <Camera className="h-4 w-4" />
-              Take photo
-            </Button>
-            <Button
-              variant="outline"
-              className="min-h-11 w-full"
-              disabled={busy}
-              onClick={() => openReceiptPicker("gallery")}
-            >
-              <Images className="h-4 w-4" />
-              Choose from gallery
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {active === "sms" && (
-        <Card className="animate-slide-down">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ClipboardPaste className="h-4 w-4" />
-              Bank message
-            </CardTitle>
-            <CardDescription>
-              Paste a bank alert — we’ll fill in the details for you
+              Type or paste a note or bank SMS, speak it, or attach a receipt
+              photo
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Textarea
-              placeholder="Paste your bank message here…"
-              value={smsText}
-              onChange={(e) => setSmsText(e.target.value)}
-              rows={4}
-              autoFocus
-            />
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                disabled={busy}
-                onClick={async () => {
-                  try {
-                    const text = await navigator.clipboard.readText();
-                    if (!text.trim()) {
-                      toast.error("Nothing to paste from the clipboard");
-                      return;
-                    }
-                    setSmsText(text);
-                    toast.success("Pasted");
-                  } catch {
-                    toast.error("Couldn’t read the clipboard — paste it yourself");
-                  }
-                }}
-              >
-                Paste from clipboard
-              </Button>
-              <Button
-                className="w-full sm:w-auto"
-                disabled={busy || !smsText.trim()}
-                onClick={() => void runSmsParse()}
-              >
-                <Sparkles className="h-4 w-4" />
-                Continue
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {active === "text" && (
-        <Card className="animate-slide-down">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <MessageSquareText className="h-4 w-4" />
-              Describe it
-            </CardTitle>
-            <CardDescription>
-              Type or speak — examples: “Groceries 3200” · “Salary 150000”
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="relative">
-              <Input
-                placeholder="What did you spend or earn?"
-                value={quickText}
-                onChange={(e) => setQuickText(e.target.value)}
+            <div
+              className={cn(
+                "rounded-[14px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)] focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent-ring)]",
+                speech.listening && "border-[var(--danger)]"
+              )}
+            >
+              <Textarea
+                placeholder="Coffee 450 · or paste a bank SMS…"
+                value={composerText}
+                onChange={(e) => setComposerText(e.target.value)}
+                rows={4}
                 autoFocus
-                className={speech.supported ? "pr-11" : undefined}
+                disabled={busy}
+                className="min-h-[7rem] resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
                 aria-describedby={
                   speech.listening ? "voice-listening-hint" : undefined
                 }
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && quickText.trim() && !busy) {
+                  if (
+                    e.key === "Enter" &&
+                    !e.shiftKey &&
+                    composerText.trim() &&
+                    !busy
+                  ) {
                     e.preventDefault();
-                    if (speech.listening) speech.stop();
-                    void runTextParse();
+                    void runComposerContinue();
                   }
                 }}
               />
-              {speech.supported ? (
+              <div className="flex items-center gap-1 border-t border-[var(--border)] px-2 py-1.5">
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
                   disabled={busy}
-                  aria-pressed={speech.listening}
-                  aria-label={
-                    speech.listening ? "Stop listening" : "Speak to fill"
-                  }
-                  className={cn(
-                    "absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2",
-                    speech.listening &&
-                      "bg-[var(--danger-soft)] text-[var(--danger)] hover:bg-[var(--danger-soft)]"
-                  )}
-                  onClick={() => {
-                    if (!speech.listening) {
-                      trackEvent("select_content", {
-                        content_type: "voice",
-                        item_id: "type_mic",
-                      });
-                    }
-                    speech.toggle();
-                  }}
+                  aria-label="Take receipt photo"
+                  className="h-9 w-9"
+                  onClick={() => openReceiptPicker("camera")}
                 >
-                  {speech.listening ? (
-                    <MicOff className="h-4 w-4" />
-                  ) : (
-                    <Mic className="h-4 w-4" />
-                  )}
+                  <Camera className="h-4 w-4" />
                 </Button>
-              ) : null}
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  disabled={busy}
+                  aria-label="Choose receipt from gallery"
+                  className="h-9 w-9"
+                  onClick={() => openReceiptPicker("gallery")}
+                >
+                  <Images className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  disabled={busy}
+                  aria-label="Paste from clipboard"
+                  className="h-9 w-9"
+                  onClick={() => void pasteClipboard()}
+                >
+                  <ClipboardPaste className="h-4 w-4" />
+                </Button>
+                {speech.supported ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    disabled={busy}
+                    aria-pressed={speech.listening}
+                    aria-label={
+                      speech.listening ? "Stop listening" : "Speak to fill"
+                    }
+                    className={cn(
+                      "h-9 w-9",
+                      speech.listening &&
+                        "bg-[var(--danger-soft)] text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+                    )}
+                    onClick={() => {
+                      if (!speech.listening) {
+                        trackEvent("select_content", {
+                          content_type: "voice",
+                          item_id: "smart_composer_mic",
+                        });
+                      }
+                      speech.toggle();
+                    }}
+                  >
+                    {speech.listening ? (
+                      <MicOff className="h-4 w-4" />
+                    ) : (
+                      <Mic className="h-4 w-4" />
+                    )}
+                  </Button>
+                ) : null}
+                <div className="flex-1" />
+                <Button
+                  size="sm"
+                  disabled={busy || !composerText.trim()}
+                  onClick={() => void runComposerContinue()}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Continue
+                </Button>
+              </div>
             </div>
             {speech.listening ? (
               <p
@@ -504,23 +485,17 @@ export function QuickAddPanel({
               >
                 Listening… tap the mic when you’re done
               </p>
-            ) : null}
-            <Button
-              className="w-full sm:w-auto"
-              disabled={busy || !quickText.trim()}
-              onClick={() => {
-                if (speech.listening) speech.stop();
-                void runTextParse();
-              }}
-            >
-              <Sparkles className="h-4 w-4" />
-              Continue
-            </Button>
+            ) : (
+              <p className="text-xs text-[var(--muted)]">
+                Short notes use Smart Add text. Long bank alerts are read as
+                SMS. Receipts use the camera or gallery.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {active === "manual" && (
+      {path === "manual" && (
         <Card className="animate-slide-down">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Add manually</CardTitle>
@@ -528,99 +503,99 @@ export function QuickAddPanel({
               Account, amount, description, category, and save
             </CardDescription>
           </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            {(["expense", "income"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  setManualType(t);
-                  setManualCategoryId(null);
-                }}
-                className={cn(
-                  "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60",
-                  manualType === t
-                    ? t === "expense"
-                      ? "border-rose-600 bg-rose-50 text-rose-700"
-                      : "border-teal-700 bg-teal-50 text-teal-800"
-                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                )}
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              {(["expense", "income"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setManualType(t);
+                    setManualCategoryId(null);
+                  }}
+                  className={cn(
+                    "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium capitalize transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60",
+                    manualType === t
+                      ? t === "expense"
+                        ? "border-rose-600 bg-rose-50 text-rose-700"
+                        : "border-teal-700 bg-teal-50 text-teal-800"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Label>Account</Label>
+              <Select
+                value={manualAccountId}
+                onValueChange={setManualAccountId}
+                disabled={busy || accounts.length === 0}
               >
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="space-y-2">
-            <Label>Account</Label>
-            <Select
-              value={manualAccountId}
-              onValueChange={setManualAccountId}
-              disabled={busy || accounts.length === 0}
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder={`Amount (${selectedAccountCurrency})`}
+              className="h-12 text-2xl font-semibold"
+              value={manualAmount}
+              disabled={busy}
+              onChange={(e) => setManualAmount(e.target.value)}
+            />
+            <Textarea
+              placeholder="What was this for? (optional)"
+              rows={2}
+              maxLength={1000}
+              value={manualDescription}
+              disabled={busy}
+              onChange={(e) => setManualDescription(e.target.value)}
+            />
+            <DateQuickPick
+              value={manualDate}
+              onChange={setManualDate}
+              disabled={busy}
+            />
+            <div className="flex flex-wrap gap-2">
+              {manualCategories.map((c) => (
+                <CategoryChip
+                  key={c.id}
+                  icon={c.icon}
+                  name={c.name}
+                  selected={manualCategoryId === c.id}
+                  disabled={busy}
+                  onClick={() => setManualCategoryId(c.id)}
+                />
+              ))}
+            </div>
+            <Button
+              size="lg"
+              className="w-full"
+              disabled={busy || !manualAmount || !manualAccountId}
+              onClick={() => void runManualSave()}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder={`Amount (${selectedAccountCurrency})`}
-            className="h-12 text-2xl font-semibold"
-            value={manualAmount}
-            disabled={busy}
-            onChange={(e) => setManualAmount(e.target.value)}
-          />
-          <Textarea
-            placeholder="What was this for? (optional)"
-            rows={2}
-            maxLength={1000}
-            value={manualDescription}
-            disabled={busy}
-            onChange={(e) => setManualDescription(e.target.value)}
-          />
-          <DateQuickPick
-            value={manualDate}
-            onChange={setManualDate}
-            disabled={busy}
-          />
-          <div className="flex flex-wrap gap-2">
-            {manualCategories.map((c) => (
-              <CategoryChip
-                key={c.id}
-                icon={c.icon}
-                name={c.name}
-                selected={manualCategoryId === c.id}
-                disabled={busy}
-                onClick={() => setManualCategoryId(c.id)}
-              />
-            ))}
-          </div>
-          <Button
-            size="lg"
-            className="w-full"
-            disabled={busy || !manualAmount || !manualAccountId}
-            onClick={() => void runManualSave()}
-          >
-            Save
-          </Button>
-          {accounts.length === 0 && (
-            <p className="text-xs text-rose-600">
-              Add an account first in More → Accounts.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+              Save
+            </Button>
+            {accounts.length === 0 && (
+              <p className="text-xs text-rose-600">
+                Add an account first in More → Accounts.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <LoadingOverlay

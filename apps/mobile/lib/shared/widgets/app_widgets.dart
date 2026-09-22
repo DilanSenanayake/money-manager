@@ -631,7 +631,9 @@ class _CaptureTile extends StatelessWidget {
       child: AnimatedContainer(
         duration: AppDuration.fast,
         curve: Curves.easeOut,
-        constraints: const BoxConstraints(minHeight: 64),
+        constraints: BoxConstraints(
+          minHeight: mode.subtitle != null ? 84 : 64,
+        ),
         decoration: BoxDecoration(
           color: selected ? accentSoft : Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -672,6 +674,21 @@ class _CaptureTile extends StatelessWidget {
                 height: 1.15,
               ),
             ),
+            if (mode.subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                mode.subtitle!,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.texts.labelSmall?.copyWith(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: context.colors.onSurfaceVariant,
+                  height: 1.2,
+                ),
+              ),
+            ],
           ],
         ),
       ),

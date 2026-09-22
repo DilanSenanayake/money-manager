@@ -22,13 +22,19 @@ export default async function AddPage({
     params.type === "income" || params.type === "expense"
       ? params.type
       : "expense";
+
+  const raw = params.mode;
   const initialMode =
-    params.mode === "receipt" ||
-    params.mode === "sms" ||
-    params.mode === "text" ||
-    params.mode === "manual"
-      ? params.mode
-      : undefined;
+    raw === "receipt" ||
+    raw === "sms" ||
+    raw === "text" ||
+    raw === "manual" ||
+    raw === "smart" ||
+    raw === "voice"
+      ? raw
+      : params.type === "income" || params.type === "expense"
+        ? "manual"
+        : "smart";
 
   return (
     <QuickAddPanel

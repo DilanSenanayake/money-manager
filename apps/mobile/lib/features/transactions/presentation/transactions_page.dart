@@ -211,7 +211,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                             : 'No activity yet',
                         message: narrowed
                             ? 'Try a different search or clear filters to see more.'
-                            : 'Add a purchase in seconds. Scan, paste an SMS, or enter it yourself.',
+                            : 'Add a purchase in seconds. Use Smart AI or enter it yourself.',
                         actionLabel: narrowed ? 'Clear filters' : 'Add',
                         onAction: narrowed
                             ? () {

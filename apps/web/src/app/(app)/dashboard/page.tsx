@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Camera, ClipboardPaste, MessageSquareText, PenLine, Wallet } from "lucide-react";
+import { PenLine, Sparkles, Wallet } from "lucide-react";
 import { ActionTiles } from "@/components/layout/action-tiles";
 import { formatMoney } from "@/lib/utils";
 import { transactionTitle } from "@/lib/transaction-description";
@@ -27,28 +27,16 @@ export default async function DashboardPage() {
       <ActionTiles
         tiles={[
           {
+            key: "smart",
+            label: "Smart AI",
+            icon: Sparkles,
+            href: "/add?mode=smart",
+          },
+          {
             key: "manual",
             label: "Manual",
             icon: PenLine,
             href: "/add?mode=manual",
-          },
-          {
-            key: "receipt",
-            label: "Scan",
-            icon: Camera,
-            href: "/add?mode=receipt",
-          },
-          {
-            key: "sms",
-            label: "SMS",
-            icon: ClipboardPaste,
-            href: "/add?mode=sms",
-          },
-          {
-            key: "text",
-            label: "Type",
-            icon: MessageSquareText,
-            href: "/add?mode=text",
           },
         ]}
       />
@@ -57,14 +45,14 @@ export default async function DashboardPage() {
         <EmptyState
           icon={Wallet}
           title="Start with your first expense"
-          description="Scan a receipt, paste a bank SMS, type “Coffee 450”, or enter an amount and category."
+          description="Use Smart AI to type, paste, speak, or scan — or enter details manually."
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild>
-                <Link href="/add?mode=manual">Add manually</Link>
+                <Link href="/add?mode=smart">Smart AI</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/add?type=income">Log income</Link>
+                <Link href="/add?mode=manual">Add manually</Link>
               </Button>
             </div>
           }

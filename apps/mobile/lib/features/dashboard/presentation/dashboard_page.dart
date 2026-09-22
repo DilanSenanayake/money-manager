@@ -72,13 +72,13 @@ class DashboardPage extends ConsumerWidget {
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'Start with your first expense',
                       message:
-                          'Scan a receipt, paste a bank SMS, type “Coffee 450”, or enter an amount and category.',
-                      actionLabel: 'Add manually',
+                          'Use Smart AI to type, paste, speak, or scan — or enter details manually.',
+                      actionLabel: 'Smart AI',
                       onAction: () =>
-                          context.go('${RoutePaths.add}?mode=manual'),
-                      secondaryLabel: 'Log income',
+                          context.go('${RoutePaths.add}?mode=smart'),
+                      secondaryLabel: 'Add manually',
                       onSecondary: () =>
-                          context.go('${RoutePaths.add}?type=income'),
+                          context.go('${RoutePaths.add}?mode=manual'),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const _CaptureRow(),
@@ -201,24 +201,16 @@ class _CaptureRow extends StatelessWidget {
       compact: true,
       modes: [
         CaptureMode(
+          icon: Icons.auto_awesome_rounded,
+          label: 'Smart AI',
+          subtitle: 'Type, paste, speak, scan',
+          onTap: () => context.go('${RoutePaths.add}?mode=smart'),
+        ),
+        CaptureMode(
           icon: Icons.edit_note_rounded,
           label: 'Manual',
+          subtitle: 'Enter details yourself',
           onTap: () => context.go('${RoutePaths.add}?mode=manual'),
-        ),
-        CaptureMode(
-          icon: Icons.photo_camera_outlined,
-          label: 'Scan',
-          onTap: () => context.go('${RoutePaths.add}?mode=receipt'),
-        ),
-        CaptureMode(
-          icon: Icons.content_paste_rounded,
-          label: 'SMS',
-          onTap: () => context.go('${RoutePaths.add}?mode=sms'),
-        ),
-        CaptureMode(
-          icon: Icons.chat_bubble_outline_rounded,
-          label: 'Type',
-          onTap: () => context.go('${RoutePaths.add}?mode=text'),
         ),
       ],
     );
