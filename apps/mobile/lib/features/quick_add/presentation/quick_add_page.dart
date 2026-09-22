@@ -24,7 +24,7 @@ import '../../transactions/data/transactions_repository.dart';
 import '../data/ai_repository.dart';
 import 'ai_review_sheet.dart';
 
-/// Add path: Smart AI composer vs Manual form. Legacy query modes map in.
+/// Add path: AI composer (sparkles) vs enter-details form (+). Legacy query modes map in.
 class QuickAddPage extends ConsumerStatefulWidget {
   const QuickAddPage({super.key});
 
@@ -431,7 +431,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                     const PageHeader(
                       title: 'Add',
                       description:
-                          'Smart AI suggests the details — or enter them yourself',
+                          'Use AI to describe it, or + to enter the details',
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     CaptureModeGrid(
@@ -439,15 +439,15 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                       modes: [
                         CaptureMode(
                           icon: Icons.auto_awesome_rounded,
-                          label: 'Smart AI',
-                          subtitle: 'Speak, type, paste, or scan',
+                          label: 'Add with AI — type, paste, speak, or scan',
+                          iconOnly: true,
                           selected: _path == 'smart',
                           onTap: () => _switchPath('smart'),
                         ),
                         CaptureMode(
-                          icon: Icons.edit_note_rounded,
-                          label: 'Manual',
-                          subtitle: 'Fill details yourself',
+                          icon: Icons.add_rounded,
+                          label: 'Enter details yourself',
+                          iconOnly: true,
                           selected: _path == 'manual',
                           onTap: () => _switchPath('manual'),
                         ),

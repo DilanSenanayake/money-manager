@@ -10,9 +10,9 @@ import {
   Images,
   Mic,
   MicOff,
-  PenLine,
   Sparkles,
 } from "lucide-react";
+import { PlusTileIcon } from "@/components/layout/action-tiles";
 import {
   parseBankSms,
   parseQuickText,
@@ -320,44 +320,56 @@ export function QuickAddPanel({
     <div className="page-stack">
       <PageHeader
         title="Add"
-        description="Smart AI suggests the details — or enter them yourself"
+        description="Use AI to describe it, or + to enter the details"
       />
 
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           disabled={busy}
+          aria-pressed={path === "smart"}
+          aria-label="Add with AI — type, paste, speak, or scan"
+          title="Add with AI"
           onClick={() => switchPath("smart")}
           className={cn(
-            "surface surface-interactive pressable flex min-h-[4.5rem] flex-col items-start justify-center gap-1 px-4 py-3 text-left transition-[box-shadow,border-color,background-color]",
+            "surface surface-interactive pressable flex min-h-[3.5rem] items-center justify-center px-4 py-3 transition-[box-shadow,border-color,background-color]",
             path === "smart" &&
               "border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent-ring)]"
           )}
         >
-          <span className="flex items-center gap-2 text-sm font-semibold">
-            <Sparkles className="h-4 w-4 text-[var(--accent-hover)]" />
-            Smart AI
-          </span>
-          <span className="text-xs text-[var(--muted)]">
-            Speak, type, paste, or scan — then confirm
+          <span
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-lg",
+              path === "smart"
+                ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                : "bg-[var(--accent-soft)] text-[var(--accent-hover)]"
+            )}
+          >
+            <Sparkles className="h-5 w-5" />
           </span>
         </button>
         <button
           type="button"
           disabled={busy}
+          aria-pressed={path === "manual"}
+          aria-label="Enter details yourself"
+          title="Enter details"
           onClick={() => switchPath("manual")}
           className={cn(
-            "surface surface-interactive pressable flex min-h-[4.5rem] flex-col items-start justify-center gap-1 px-4 py-3 text-left transition-[box-shadow,border-color,background-color]",
+            "surface surface-interactive pressable flex min-h-[3.5rem] items-center justify-center px-4 py-3 transition-[box-shadow,border-color,background-color]",
             path === "manual" &&
               "border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent-ring)]"
           )}
         >
-          <span className="flex items-center gap-2 text-sm font-semibold">
-            <PenLine className="h-4 w-4 text-[var(--accent-hover)]" />
-            Manual
-          </span>
-          <span className="text-xs text-[var(--muted)]">
-            Fill amount, category, and account yourself
+          <span
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-lg",
+              path === "manual"
+                ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                : "bg-[var(--accent-soft)] text-[var(--accent-hover)]"
+            )}
+          >
+            <PlusTileIcon className="h-5 w-5" />
           </span>
         </button>
       </div>
@@ -498,7 +510,7 @@ export function QuickAddPanel({
       {path === "manual" && (
         <Card className="animate-slide-down">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Add manually</CardTitle>
+            <CardTitle className="text-base">Enter details</CardTitle>
             <CardDescription>
               Account, amount, description, category, and save
             </CardDescription>

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { PenLine, Sparkles, Wallet } from "lucide-react";
-import { ActionTiles } from "@/components/layout/action-tiles";
+import { Sparkles, Wallet } from "lucide-react";
+import { ActionTiles, PlusTileIcon } from "@/components/layout/action-tiles";
 import { formatMoney } from "@/lib/utils";
 import { transactionTitle } from "@/lib/transaction-description";
 import { getDashboardData } from "@/app/actions/dashboard";
@@ -28,15 +28,17 @@ export default async function DashboardPage() {
         tiles={[
           {
             key: "smart",
-            label: "Smart AI",
+            ariaLabel: "Add with AI — type, paste, speak, or scan",
             icon: Sparkles,
             href: "/add?mode=smart",
+            hideLabel: true,
           },
           {
             key: "manual",
-            label: "Manual",
-            icon: PenLine,
+            ariaLabel: "Enter details yourself",
+            icon: PlusTileIcon,
             href: "/add?mode=manual",
+            hideLabel: true,
           },
         ]}
       />
@@ -45,14 +47,20 @@ export default async function DashboardPage() {
         <EmptyState
           icon={Wallet}
           title="Start with your first expense"
-          description="Use Smart AI to type, paste, speak, or scan — or enter details manually."
+          description="Use AI to type, paste, speak, or scan — or + to enter the details yourself."
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild>
-                <Link href="/add?mode=smart">Smart AI</Link>
+                <Link href="/add?mode=smart" className="gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Add with AI
+                </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/add?mode=manual">Add manually</Link>
+                <Link href="/add?mode=manual" className="gap-2">
+                  <PlusTileIcon className="h-4 w-4" />
+                  Enter details
+                </Link>
               </Button>
             </div>
           }

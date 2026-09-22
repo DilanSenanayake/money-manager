@@ -72,11 +72,11 @@ class DashboardPage extends ConsumerWidget {
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'Start with your first expense',
                       message:
-                          'Use Smart AI to type, paste, speak, or scan — or enter details manually.',
-                      actionLabel: 'Smart AI',
+                          'Use AI to type, paste, speak, or scan — or + to enter the details yourself.',
+                      actionLabel: 'Add with AI',
                       onAction: () =>
                           context.go('${RoutePaths.add}?mode=smart'),
-                      secondaryLabel: 'Add manually',
+                      secondaryLabel: 'Enter details',
                       onSecondary: () =>
                           context.go('${RoutePaths.add}?mode=manual'),
                     ),
@@ -202,14 +202,14 @@ class _CaptureRow extends StatelessWidget {
       modes: [
         CaptureMode(
           icon: Icons.auto_awesome_rounded,
-          label: 'Smart AI',
-          subtitle: 'Type, paste, speak, scan',
+          label: 'Add with AI — type, paste, speak, or scan',
+          iconOnly: true,
           onTap: () => context.go('${RoutePaths.add}?mode=smart'),
         ),
         CaptureMode(
-          icon: Icons.edit_note_rounded,
-          label: 'Manual',
-          subtitle: 'Enter details yourself',
+          icon: Icons.add_rounded,
+          label: 'Enter details yourself',
+          iconOnly: true,
           onTap: () => context.go('${RoutePaths.add}?mode=manual'),
         ),
       ],

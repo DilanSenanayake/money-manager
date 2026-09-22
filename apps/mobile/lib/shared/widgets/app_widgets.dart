@@ -602,12 +602,15 @@ class CaptureMode {
     required this.label,
     required this.onTap,
     this.subtitle,
+    this.iconOnly = false,
     this.selected = false,
   });
 
   final IconData icon;
+  /// Visible label, or semantics-only when [iconOnly] is true.
   final String label;
   final String? subtitle;
+  final bool iconOnly;
   final VoidCallback onTap;
   final bool selected;
 }
@@ -623,73 +626,88 @@ class _CaptureTile extends StatelessWidget {
     final accentSoft = context.isDark
         ? context.colors.primary.withValues(alpha: 0.16)
         : AppColors.teal50;
-    return Pressable(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        mode.onTap();
-      },
-      child: AnimatedContainer(
-        duration: AppDuration.fast,
-        curve: Curves.easeOut,
-        constraints: BoxConstraints(
-          minHeight: mode.subtitle != null ? 84 : 64,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? accentSoft : Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: selected ? context.colors.primary : context.colors.outlineVariant,
-            width: selected ? 1.5 : 1,
+    final iconColor = selected
+        ? context.colors.onPrimary
+        : (context.isDark ? context.colors.primary : AppColors.teal700);
+
+    return Semantics(
+      button: true,
+      label: mode.label,
+      selected: selected,
+      child: Pressable(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          mode.onTap();
+        },
+        child: AnimatedContainer(
+          duration: AppDuration.fast,
+          curve: Curves.easeOut,
+          constraints: BoxConstraints(
+            minHeight: mode.iconOnly
+                ? 56
+                : (mode.subtitle != null ? 84 : 64),
           ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: AppDuration.fast,
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: selected ? context.colors.primary : accentSoft,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                mode.icon,
-                size: 16,
-                color: selected
-                    ? context.colors.onPrimary
-                    : (context.isDark ? context.colors.primary : AppColors.teal700),
-              ),
+          decoration: BoxDecoration(
+            color: selected ? accentSoft : Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color:
+                  selected ? context.colors.primary : context.colors.outlineVariant,
+              width: selected ? 1.5 : 1,
             ),
-            const SizedBox(height: 6),
-            Text(
-              mode.label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.texts.labelSmall?.copyWith(
-                fontSize: AppSize.navLabel,
-                fontWeight: FontWeight.w600,
-                height: 1.15,
-              ),
-            ),
-            if (mode.subtitle != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                mode.subtitle!,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: context.texts.labelSmall?.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: context.colors.onSurfaceVariant,
-                  height: 1.2,
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: mode.iconOnly ? 12 : 10,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: AppDuration.fast,
+                width: mode.iconOnly ? 40 : 32,
+                height: mode.iconOnly ? 40 : 32,
+                decoration: BoxDecoration(
+                  color: selected ? context.colors.primary : accentSoft,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  mode.icon,
+                  size: mode.iconOnly ? 22 : 16,
+                  color: iconColor,
                 ),
               ),
+              if (!mode.iconOnly) ...[
+                const SizedBox(height: 6),
+                Text(
+                  mode.label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.texts.labelSmall?.copyWith(
+                    fontSize: AppSize.navLabel,
+                    fontWeight: FontWeight.w600,
+                    height: 1.15,
+                  ),
+                ),
+                if (mode.subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    mode.subtitle!,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.texts.labelSmall?.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: context.colors.onSurfaceVariant,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
