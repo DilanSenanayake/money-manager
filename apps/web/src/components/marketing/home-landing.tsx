@@ -24,6 +24,10 @@ import { CURRENCIES } from "@/lib/schemas";
 import { formatMoney, cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 import { BrandMark } from "@/components/brand/brand-mark";
+import {
+  CategoryBadge,
+  CategoryIcon,
+} from "@/components/categories/category-icon";
 import { SiteFooter } from "@/components/layout/site-footer";
 
 type CaptureMode = "text" | "sms" | "receipt";
@@ -712,9 +716,19 @@ function AppPreview({
                 key={`${tx.merchant}-${tx.amount}-${i}`}
                 className="flex items-center justify-between gap-2 text-sm"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{tx.merchant}</p>
-                  <p className="text-[11px] text-[var(--muted)]">{tx.category}</p>
+                <div className="flex min-w-0 items-center gap-2">
+                  <CategoryIcon
+                    icon={null}
+                    name={tx.category}
+                    framed
+                    className="h-7 w-7 rounded-md"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{tx.merchant}</p>
+                    <div className="mt-0.5">
+                      <CategoryBadge name={tx.category} />
+                    </div>
+                  </div>
                 </div>
                 <p
                   className={cn(

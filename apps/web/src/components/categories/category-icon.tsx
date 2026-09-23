@@ -143,9 +143,41 @@ export const CATEGORY_ICON_OPTIONS = [
   { id: "circle", label: "Other" },
 ] as const;
 
-export function getCategoryIcon(icon?: string | null): LucideIcon {
-  if (!icon) return Circle;
-  return CATEGORY_ICONS[icon] ?? Circle;
+const NAME_TO_ICON: Record<string, string> = {
+  salary: "wallet",
+  freelance: "briefcase",
+  investments: "trending-up",
+  groceries: "shopping-cart",
+  dining: "utensils",
+  transport: "car",
+  shopping: "shopping-bag",
+  utilities: "zap",
+  health: "heart",
+  entertainment: "film",
+  rent: "home",
+  other: "circle",
+};
+
+/** Prefer a known icon key; otherwise map common category names. */
+export function resolveCategoryIconKey(
+  icon?: string | null,
+  name?: string | null
+): string {
+  if (icon && CATEGORY_ICONS[icon]) return icon;
+  if (name) {
+    const fromName = NAME_TO_ICON[name.toLowerCase()];
+    if (fromName) return fromName;
+  }
+  if (icon) return icon;
+  return "circle";
+}
+
+export function getCategoryIcon(
+  icon?: string | null,
+  name?: string | null
+): LucideIcon {
+  const key = resolveCategoryIconKey(icon, name);
+  return CATEGORY_ICONS[key] ?? Circle;
 }
 
 function hashKey(key: string): number {
@@ -180,21 +212,6 @@ const CATEGORY_HEX: Record<string, string> = {
   circle: "#57534e",
 };
 
-const NAME_TO_ICON: Record<string, string> = {
-  salary: "wallet",
-  freelance: "briefcase",
-  investments: "trending-up",
-  groceries: "shopping-cart",
-  dining: "utensils",
-  transport: "car",
-  shopping: "shopping-bag",
-  utilities: "zap",
-  health: "heart",
-  entertainment: "film",
-  rent: "home",
-  other: "circle",
-};
-
 export function getCategoryHex(
   icon?: string | null,
   name?: string | null
@@ -210,9 +227,10 @@ export function getCategoryColor(
   icon?: string | null,
   name?: string | null
 ): CategoryColor {
-  if (icon && CATEGORY_COLORS[icon]) return CATEGORY_COLORS[icon];
-  const key = (name || icon || "other").toLowerCase();
-  return FALLBACK_COLORS[hashKey(key) % FALLBACK_COLORS.length];
+  const key = resolveCategoryIconKey(icon, name);
+  if (CATEGORY_COLORS[key]) return CATEGORY_COLORS[key];
+  const hashSource = (name || icon || "other").toLowerCase();
+  return FALLBACK_COLORS[hashKey(hashSource) % FALLBACK_COLORS.length];
 }
 
 type CategoryIconProps = {
@@ -221,6 +239,8 @@ type CategoryIconProps = {
   className?: string;
   /** Soft colored tile behind the glyph */
   framed?: boolean;
+  /** Override icon color (e.g. badge hex) */
+  color?: string;
 };
 
 export function CategoryIcon({
@@ -228,14 +248,16 @@ export function CategoryIcon({
   name,
   className,
   framed = false,
+  color: colorOverride,
 }: CategoryIconProps) {
-  const Icon = getCategoryIcon(icon);
+  const Icon = getCategoryIcon(icon, name);
   const color = getCategoryColor(icon, name);
 
   if (!framed) {
     return (
       <Icon
-        className={cn("h-4 w-4 shrink-0", color.fg, className)}
+        className={cn("h-4 w-4 shrink-0", !colorOverride && color.fg, className)}
+        style={colorOverride ? { color: colorOverride } : undefined}
         aria-hidden
       />
     );
@@ -245,13 +267,54 @@ export function CategoryIcon({
     <span
       className={cn(
         "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-        color.bg,
-        color.fg,
+        !colorOverride && color.bg,
+        !colorOverride && color.fg,
         className
       )}
+      style={
+        colorOverride
+          ? {
+              backgroundColor: `color-mix(in srgb, ${colorOverride} 18%, transparent)`,
+              color: colorOverride,
+            }
+          : undefined
+      }
       aria-hidden
     >
       <Icon className="h-4 w-4" />
+    </span>
+  );
+}
+
+type CategoryBadgeProps = {
+  icon?: string | null;
+  name: string;
+  className?: string;
+};
+
+/** Read-only colored category label with icon — for transaction lists. */
+export function CategoryBadge({ icon, name, className }: CategoryBadgeProps) {
+  const hex = getCategoryHex(icon, name);
+
+  return (
+    <span
+      className={cn(
+        "category-badge inline-flex max-w-[min(100%,11rem)] shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold tracking-wide sm:max-w-full",
+        className
+      )}
+      style={{
+        backgroundColor: `color-mix(in srgb, ${hex} 16%, transparent)`,
+        color: hex,
+        borderColor: `color-mix(in srgb, ${hex} 32%, transparent)`,
+      }}
+    >
+      <CategoryIcon
+        icon={icon}
+        name={name}
+        className="h-3 w-3 shrink-0"
+        color={hex}
+      />
+      <span className="truncate">{name}</span>
     </span>
   );
 }

@@ -19,7 +19,10 @@ import {
 } from "@/lib/transaction-description";
 import type { TransactionInput } from "@/lib/schemas";
 import { trackEvent } from "@/lib/analytics";
-import { CategoryIcon } from "@/components/categories/category-icon";
+import {
+  CategoryBadge,
+  CategoryIcon,
+} from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { DateQuickPick } from "@/components/ui/date-quick-pick";
@@ -459,26 +462,36 @@ export function TransactionsManager({
                   icon={tx.category?.icon}
                   name={tx.category?.name}
                   framed
+                  className="h-9 w-9 sm:h-8 sm:w-8"
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">
                     {transactionTitle(tx)}
                   </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
-                    <span>{tx.date}</span>
-                    <Badge
-                      variant={
-                        tx.type === "income"
-                          ? "success"
-                          : tx.type === "expense"
-                            ? "danger"
-                            : "default"
-                      }
-                      className="capitalize"
-                    >
-                      {tx.type}
-                    </Badge>
-                    {tx.account && <span>{tx.account.name}</span>}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)] sm:gap-2">
+                    <span className="shrink-0">{tx.date}</span>
+                    {tx.category ? (
+                      <CategoryBadge
+                        icon={tx.category.icon}
+                        name={tx.category.name}
+                      />
+                    ) : (
+                      <Badge
+                        variant={
+                          tx.type === "income"
+                            ? "success"
+                            : tx.type === "expense"
+                              ? "danger"
+                              : "default"
+                        }
+                        className="capitalize"
+                      >
+                        {tx.type}
+                      </Badge>
+                    )}
+                    {tx.account && (
+                      <span className="truncate">{tx.account.name}</span>
+                    )}
                     {tx.is_recurring && (
                       <Badge variant="accent">{tx.recurring_frequency}</Badge>
                     )}

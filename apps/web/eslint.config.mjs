@@ -18,6 +18,9 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Vendored OCR runtime — minified third-party JS, not app source
+      "public/tesseract/**",
+      "public/**/*.min.js",
     ],
   },
 ];
