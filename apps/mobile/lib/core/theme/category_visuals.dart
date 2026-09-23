@@ -345,12 +345,12 @@ class CategoryBadge extends StatelessWidget {
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 6 : 8,
-        vertical: compact ? 2 : 4,
+        horizontal: compact ? 7 : 9,
+        vertical: compact ? 3 : 5,
       ),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: border),
       ),
       child: Row(
@@ -358,17 +358,19 @@ class CategoryBadge extends StatelessWidget {
         children: [
           Icon(
             categoryIconData(icon, name: name),
-            size: compact ? 11 : 13,
+            size: compact ? 12 : 14,
             color: fg,
           ),
-          SizedBox(width: compact ? 3 : 5),
+          SizedBox(width: compact ? 4 : 6),
           Text(
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            softWrap: false,
             style: TextStyle(
-              fontSize: compact ? 10 : 12,
+              fontSize: compact ? 11 : 12,
               fontWeight: FontWeight.w600,
+              height: 1.1,
               color: fg,
             ),
           ),

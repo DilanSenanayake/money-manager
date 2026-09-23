@@ -145,13 +145,14 @@ export default async function DashboardPage() {
                   icon={tx.category?.icon}
                   name={tx.category?.name}
                   framed
+                  className="h-9 w-9 sm:h-8 sm:w-8"
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
                     {transactionTitle(tx)}
                   </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
-                    <span>{tx.date}</span>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)] sm:gap-2">
+                    <span className="shrink-0">{tx.date}</span>
                     {tx.category ? (
                       <CategoryBadge
                         icon={tx.category.icon}

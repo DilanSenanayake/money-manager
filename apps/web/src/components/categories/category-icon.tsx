@@ -239,6 +239,8 @@ type CategoryIconProps = {
   className?: string;
   /** Soft colored tile behind the glyph */
   framed?: boolean;
+  /** Override icon color (e.g. badge hex) */
+  color?: string;
 };
 
 export function CategoryIcon({
@@ -246,6 +248,7 @@ export function CategoryIcon({
   name,
   className,
   framed = false,
+  color: colorOverride,
 }: CategoryIconProps) {
   const Icon = getCategoryIcon(icon, name);
   const color = getCategoryColor(icon, name);
@@ -253,7 +256,8 @@ export function CategoryIcon({
   if (!framed) {
     return (
       <Icon
-        className={cn("h-4 w-4 shrink-0", color.fg, className)}
+        className={cn("h-4 w-4 shrink-0", !colorOverride && color.fg, className)}
+        style={colorOverride ? { color: colorOverride } : undefined}
         aria-hidden
       />
     );
@@ -263,10 +267,18 @@ export function CategoryIcon({
     <span
       className={cn(
         "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-        color.bg,
-        color.fg,
+        !colorOverride && color.bg,
+        !colorOverride && color.fg,
         className
       )}
+      style={
+        colorOverride
+          ? {
+              backgroundColor: `color-mix(in srgb, ${colorOverride} 18%, transparent)`,
+              color: colorOverride,
+            }
+          : undefined
+      }
       aria-hidden
     >
       <Icon className="h-4 w-4" />
@@ -282,17 +294,26 @@ type CategoryBadgeProps = {
 
 /** Read-only colored category label with icon — for transaction lists. */
 export function CategoryBadge({ icon, name, className }: CategoryBadgeProps) {
-  const color = getCategoryColor(icon, name);
+  const hex = getCategoryHex(icon, name);
 
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold tracking-wide",
-        color.chip,
+        "category-badge inline-flex max-w-[min(100%,11rem)] shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold tracking-wide sm:max-w-full",
         className
       )}
+      style={{
+        backgroundColor: `color-mix(in srgb, ${hex} 16%, transparent)`,
+        color: hex,
+        borderColor: `color-mix(in srgb, ${hex} 32%, transparent)`,
+      }}
     >
-      <CategoryIcon icon={icon} name={name} className="h-3 w-3" />
+      <CategoryIcon
+        icon={icon}
+        name={name}
+        className="h-3 w-3 shrink-0"
+        color={hex}
+      />
       <span className="truncate">{name}</span>
     </span>
   );

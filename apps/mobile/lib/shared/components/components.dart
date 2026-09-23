@@ -294,66 +294,74 @@ class TxTile extends StatelessWidget {
             '$title · ${formatMoney(transaction.amount, currency)} · ${transaction.date}',
           );
         },
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        isThreeLine: category != null,
         leading: isTransfer
             ? CircleAvatar(
-                radius: 18,
+                radius: 20,
                 backgroundColor: amountColor.withValues(alpha: 0.12),
                 child: Icon(
                   Icons.swap_horiz_rounded,
                   color: amountColor,
-                  size: 18,
+                  size: 20,
                 ),
               )
             : CategoryMark(
                 icon: category?.icon,
                 name: category?.name,
                 framed: true,
-                size: 18,
+                size: 20,
               ),
         title: Text(
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Row(
-          children: [
-            if (category != null) ...[
-              Flexible(
-                child: CategoryBadge(
-                  icon: category.icon,
-                  name: category.name,
+        subtitle: category != null
+            ? Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CategoryBadge(
+                      icon: category.icon,
+                      name: category.name,
+                    ),
+                    if (meta.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.muted,
+                        ),
+                      ),
+                    ],
+                    if (showTypeBadge) ...[
+                      const SizedBox(height: 4),
+                      _TypeBadge(type: transaction.type),
+                    ],
+                  ],
                 ),
-              ),
-              if (meta.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    meta,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.muted,
+              )
+            : Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      meta.isNotEmpty ? meta : labelForTxType(transaction.type),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
-            ] else
-              Flexible(
-                child: Text(
-                  meta.isNotEmpty ? meta : labelForTxType(transaction.type),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  if (showTypeBadge) ...[
+                    const SizedBox(width: 8),
+                    _TypeBadge(type: transaction.type),
+                  ],
+                ],
               ),
-            if (showTypeBadge) ...[
-              const SizedBox(width: 8),
-              _TypeBadge(type: transaction.type),
-            ],
-          ],
-        ),
         trailing: MoneyText(
           isIncome && !isTransfer
               ? transaction.amount
