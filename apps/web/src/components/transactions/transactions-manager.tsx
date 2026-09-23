@@ -19,10 +19,7 @@ import {
 } from "@/lib/transaction-description";
 import type { TransactionInput } from "@/lib/schemas";
 import { trackEvent } from "@/lib/analytics";
-import {
-  CategoryBadge,
-  CategoryIcon,
-} from "@/components/categories/category-icon";
+import { CategoryIcon } from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { DateQuickPick } from "@/components/ui/date-quick-pick";
@@ -470,12 +467,7 @@ export function TransactionsManager({
                   </p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)] sm:gap-2">
                     <span className="shrink-0">{tx.date}</span>
-                    {tx.category ? (
-                      <CategoryBadge
-                        icon={tx.category.icon}
-                        name={tx.category.name}
-                      />
-                    ) : (
+                    {!tx.category && (
                       <Badge
                         variant={
                           tx.type === "income"
