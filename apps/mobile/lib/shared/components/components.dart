@@ -237,11 +237,10 @@ class TxTile extends StatelessWidget {
     final title = transaction.merchant?.isNotEmpty == true
         ? transaction.merchant!
         : (transaction.category?.name ?? labelForTxType(transaction.type));
-    final metaParts = [
+    final subtitle = [
       transaction.account?.name,
       if (showDate) formatFriendlyDate(transaction.date),
-    ].whereType<String>().where((s) => s.isNotEmpty).toList();
-    final meta = metaParts.join(' · ');
+    ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
     final category = transaction.category;
 
     return Dismissible(
@@ -295,7 +294,6 @@ class TxTile extends StatelessWidget {
           );
         },
         contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        isThreeLine: category != null,
         leading: isTransfer
             ? CircleAvatar(
                 radius: 20,
@@ -318,50 +316,23 @@ class TxTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: category != null
-            ? Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CategoryBadge(
-                      icon: category.icon,
-                      name: category.name,
-                    ),
-                    if (meta.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        meta,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.muted,
-                        ),
-                      ),
-                    ],
-                    if (showTypeBadge) ...[
-                      const SizedBox(height: 4),
-                      _TypeBadge(type: transaction.type),
-                    ],
-                  ],
-                ),
-              )
-            : Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      meta.isNotEmpty ? meta : labelForTxType(transaction.type),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (showTypeBadge) ...[
-                    const SizedBox(width: 8),
-                    _TypeBadge(type: transaction.type),
-                  ],
-                ],
+        subtitle: Row(
+          children: [
+            Flexible(
+              child: Text(
+                subtitle.isNotEmpty
+                    ? subtitle
+                    : labelForTxType(transaction.type),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
+            ),
+            if (showTypeBadge) ...[
+              const SizedBox(width: 8),
+              _TypeBadge(type: transaction.type),
+            ],
+          ],
+        ),
         trailing: MoneyText(
           isIncome && !isTransfer
               ? transaction.amount

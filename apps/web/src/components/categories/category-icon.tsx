@@ -286,39 +286,6 @@ export function CategoryIcon({
   );
 }
 
-type CategoryBadgeProps = {
-  icon?: string | null;
-  name: string;
-  className?: string;
-};
-
-/** Read-only colored category label with icon — for transaction lists. */
-export function CategoryBadge({ icon, name, className }: CategoryBadgeProps) {
-  const hex = getCategoryHex(icon, name);
-
-  return (
-    <span
-      className={cn(
-        "category-badge inline-flex max-w-[min(100%,11rem)] shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold tracking-wide sm:max-w-full",
-        className
-      )}
-      style={{
-        backgroundColor: `color-mix(in srgb, ${hex} 16%, transparent)`,
-        color: hex,
-        borderColor: `color-mix(in srgb, ${hex} 32%, transparent)`,
-      }}
-    >
-      <CategoryIcon
-        icon={icon}
-        name={name}
-        className="h-3 w-3 shrink-0"
-        color={hex}
-      />
-      <span className="truncate">{name}</span>
-    </span>
-  );
-}
-
 type CategoryChipProps = {
   icon?: string | null;
   name: string;

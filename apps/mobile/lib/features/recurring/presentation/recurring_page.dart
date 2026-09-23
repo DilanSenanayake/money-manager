@@ -100,28 +100,16 @@ class RecurringPage extends ConsumerWidget {
                               style: const TextStyle(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 4),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 4,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                if (tx.category != null)
-                                  CategoryBadge(
-                                    icon: tx.category!.icon,
-                                    name: tx.category!.name,
+                            Text(
+                              'Next ${formatFriendlyDate(item.nextDue)} · ${tx.recurringFrequency ?? 'monthly'}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
-                                Text(
-                                  'Next ${formatFriendlyDate(item.nextDue)} · ${tx.recurringFrequency ?? 'monthly'}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                      ),
-                                ),
-                              ],
                             ),
                           ],
                         ),

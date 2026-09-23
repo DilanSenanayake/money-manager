@@ -4,7 +4,7 @@ import { getProfile } from "@/app/actions/settings";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { transactionTitle } from "@/lib/transaction-description";
 import { formatMoney } from "@/lib/utils";
-import { CategoryBadge, CategoryIcon } from "@/components/categories/category-icon";
+import { CategoryIcon } from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,12 +77,6 @@ export default async function RecurringPage() {
                     {transactionTitle(tx)}
                   </p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
-                    {tx.category && (
-                      <CategoryBadge
-                        icon={tx.category.icon}
-                        name={tx.category.name}
-                      />
-                    )}
                     <Badge variant="accent" className="capitalize">
                       {tx.recurring_frequency ?? "monthly"}
                     </Badge>
