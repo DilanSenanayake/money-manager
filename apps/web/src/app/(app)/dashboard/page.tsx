@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Sparkles, Wallet } from "lucide-react";
-import { ActionTiles, PlusTileIcon } from "@/components/layout/action-tiles";
+import { Wallet } from "lucide-react";
+import { PlusTileIcon } from "@/components/layout/action-tiles";
 import { formatMoney } from "@/lib/utils";
 import { transactionTitle } from "@/lib/transaction-description";
 import { getDashboardData } from "@/app/actions/dashboard";
@@ -22,47 +22,28 @@ export default async function DashboardPage() {
       <PageHeader
         title={firstName ? `Welcome back, ${firstName}` : "Welcome back"}
         description="Spend smarter. Save better. Live better."
-      />
-
-      <ActionTiles
-        tiles={[
-          {
-            key: "smart",
-            ariaLabel: "Add with AI — type, paste, speak, or scan",
-            icon: Sparkles,
-            href: "/add?mode=smart",
-            hideLabel: true,
-          },
-          {
-            key: "manual",
-            ariaLabel: "Enter details yourself",
-            icon: PlusTileIcon,
-            href: "/add?mode=manual",
-            hideLabel: true,
-          },
-        ]}
+        actions={
+          <Button asChild>
+            <Link href="/add" className="gap-2" aria-label="Add">
+              <PlusTileIcon className="h-4 w-4" />
+              Add
+            </Link>
+          </Button>
+        }
       />
 
       {isEmpty && (
         <EmptyState
           icon={Wallet}
           title="Start with your first expense"
-          description="Use AI to type, paste, speak, or scan — or + to enter the details yourself."
+          description="Add a purchase with AI or enter the details yourself."
           action={
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button asChild>
-                <Link href="/add?mode=smart" className="gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Add with AI
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/add?mode=manual" className="gap-2">
-                  <PlusTileIcon className="h-4 w-4" />
-                  Enter details
-                </Link>
-              </Button>
-            </div>
+            <Button asChild>
+              <Link href="/add" className="gap-2">
+                <PlusTileIcon className="h-4 w-4" />
+                Add
+              </Link>
+            </Button>
           }
         />
       )}

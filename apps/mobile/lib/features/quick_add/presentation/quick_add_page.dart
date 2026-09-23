@@ -101,23 +101,30 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
     if (mounted) setState(() => _listening = false);
   }
 
-  String _resolvePath(String? mode, String? type) {
+  String? _pathFromQuery(String? mode, String? type) {
     if (type == 'income' || type == 'expense') return 'manual';
     if (mode == 'manual') return 'manual';
-    // receipt | sms | text | voice | smart → smart composer
-    return 'smart';
+    if (mode == 'receipt' ||
+        mode == 'sms' ||
+        mode == 'text' ||
+        mode == 'voice' ||
+        mode == 'smart') {
+      return 'smart';
+    }
+    // No mode → keep whatever the Add tab already shows.
+    return null;
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final params = GoRouterState.of(context).uri.queryParameters;
-    final next = _resolvePath(params['mode'], params['type']);
     final type = params['type'];
     if (type == 'income' || type == 'expense') {
       _type = type!;
     }
-    if (next != _path) {
+    final next = _pathFromQuery(params['mode'], type);
+    if (next != null && next != _path) {
       _path = next;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() {});

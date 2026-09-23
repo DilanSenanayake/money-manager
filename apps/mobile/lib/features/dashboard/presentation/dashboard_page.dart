@@ -58,12 +58,23 @@ class DashboardPage extends ConsumerWidget {
                 padding: AppSpacing.page,
                 children: [
                   FadeUp(
-                    child: Text(
-                      firstName == null ? 'Home' : 'Hi, $firstName',
-                      style: context.texts.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            firstName == null ? 'Home' : 'Hi, $firstName',
+                            style: context.texts.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                        ),
+                        FilledButton.icon(
+                          onPressed: () => context.go(RoutePaths.add),
+                          icon: const Icon(Icons.add_rounded, size: 20),
+                          label: const Text('Add'),
+                        ),
+                      ],
                     ),
                   ),
                   if (empty) ...[
@@ -72,16 +83,10 @@ class DashboardPage extends ConsumerWidget {
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'Start with your first expense',
                       message:
-                          'Use AI to type, paste, speak, or scan — or + to enter the details yourself.',
-                      actionLabel: 'Add with AI',
-                      onAction: () =>
-                          context.go('${RoutePaths.add}?mode=smart'),
-                      secondaryLabel: 'Enter details',
-                      onSecondary: () =>
-                          context.go('${RoutePaths.add}?mode=manual'),
+                          'Add a purchase with AI or enter the details yourself.',
+                      actionLabel: 'Add',
+                      onAction: () => context.go(RoutePaths.add),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    const _CaptureRow(),
                   ] else ...[
                     const SizedBox(height: AppSpacing.lg),
                     FadeUp(
@@ -169,15 +174,6 @@ class DashboardPage extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.xl),
                     _BudgetsCard(data: data),
                     const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Add',
-                      style: context.texts.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const _CaptureRow(),
-                    const SizedBox(height: AppSpacing.lg),
                     _RecentCard(data: data),
                     const SizedBox(height: AppSpacing.md),
                     _AccountsCard(data: data),
@@ -188,31 +184,6 @@ class DashboardPage extends ConsumerWidget {
           },
         ),
       ),
-    );
-  }
-}
-
-class _CaptureRow extends StatelessWidget {
-  const _CaptureRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return CaptureModeGrid(
-      compact: true,
-      modes: [
-        CaptureMode(
-          icon: Icons.auto_awesome_rounded,
-          label: 'Add with AI — type, paste, speak, or scan',
-          iconOnly: true,
-          onTap: () => context.go('${RoutePaths.add}?mode=smart'),
-        ),
-        CaptureMode(
-          icon: Icons.add_rounded,
-          label: 'Enter details yourself',
-          iconOnly: true,
-          onTap: () => context.go('${RoutePaths.add}?mode=manual'),
-        ),
-      ],
     );
   }
 }
