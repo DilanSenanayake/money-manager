@@ -237,12 +237,12 @@ class TxTile extends StatelessWidget {
     final title = transaction.merchant?.isNotEmpty == true
         ? transaction.merchant!
         : (transaction.category?.name ?? labelForTxType(transaction.type));
-    final subtitle = [
+    final metaParts = [
       transaction.account?.name,
       if (showDate) formatFriendlyDate(transaction.date),
-      if (transaction.category != null && transaction.merchant != null)
-        transaction.category!.name,
-    ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
+    ].whereType<String>().where((s) => s.isNotEmpty).toList();
+    final meta = metaParts.join(' · ');
+    final category = transaction.category;
 
     return Dismissible(
       key: ValueKey(transaction.id),
@@ -306,8 +306,8 @@ class TxTile extends StatelessWidget {
                 ),
               )
             : CategoryMark(
-                icon: transaction.category?.icon,
-                name: transaction.category?.name,
+                icon: category?.icon,
+                name: category?.name,
                 framed: true,
                 size: 18,
               ),
@@ -319,13 +319,35 @@ class TxTile extends StatelessWidget {
         ),
         subtitle: Row(
           children: [
-            Flexible(
-              child: Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            if (category != null) ...[
+              Flexible(
+                child: CategoryBadge(
+                  icon: category.icon,
+                  name: category.name,
+                ),
               ),
-            ),
+              if (meta.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.muted,
+                    ),
+                  ),
+                ),
+              ],
+            ] else
+              Flexible(
+                child: Text(
+                  meta.isNotEmpty ? meta : labelForTxType(transaction.type),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             if (showTypeBadge) ...[
               const SizedBox(width: 8),
               _TypeBadge(type: transaction.type),

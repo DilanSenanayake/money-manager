@@ -143,9 +143,41 @@ export const CATEGORY_ICON_OPTIONS = [
   { id: "circle", label: "Other" },
 ] as const;
 
-export function getCategoryIcon(icon?: string | null): LucideIcon {
-  if (!icon) return Circle;
-  return CATEGORY_ICONS[icon] ?? Circle;
+const NAME_TO_ICON: Record<string, string> = {
+  salary: "wallet",
+  freelance: "briefcase",
+  investments: "trending-up",
+  groceries: "shopping-cart",
+  dining: "utensils",
+  transport: "car",
+  shopping: "shopping-bag",
+  utilities: "zap",
+  health: "heart",
+  entertainment: "film",
+  rent: "home",
+  other: "circle",
+};
+
+/** Prefer a known icon key; otherwise map common category names. */
+export function resolveCategoryIconKey(
+  icon?: string | null,
+  name?: string | null
+): string {
+  if (icon && CATEGORY_ICONS[icon]) return icon;
+  if (name) {
+    const fromName = NAME_TO_ICON[name.toLowerCase()];
+    if (fromName) return fromName;
+  }
+  if (icon) return icon;
+  return "circle";
+}
+
+export function getCategoryIcon(
+  icon?: string | null,
+  name?: string | null
+): LucideIcon {
+  const key = resolveCategoryIconKey(icon, name);
+  return CATEGORY_ICONS[key] ?? Circle;
 }
 
 function hashKey(key: string): number {
@@ -180,21 +212,6 @@ const CATEGORY_HEX: Record<string, string> = {
   circle: "#57534e",
 };
 
-const NAME_TO_ICON: Record<string, string> = {
-  salary: "wallet",
-  freelance: "briefcase",
-  investments: "trending-up",
-  groceries: "shopping-cart",
-  dining: "utensils",
-  transport: "car",
-  shopping: "shopping-bag",
-  utilities: "zap",
-  health: "heart",
-  entertainment: "film",
-  rent: "home",
-  other: "circle",
-};
-
 export function getCategoryHex(
   icon?: string | null,
   name?: string | null
@@ -210,9 +227,10 @@ export function getCategoryColor(
   icon?: string | null,
   name?: string | null
 ): CategoryColor {
-  if (icon && CATEGORY_COLORS[icon]) return CATEGORY_COLORS[icon];
-  const key = (name || icon || "other").toLowerCase();
-  return FALLBACK_COLORS[hashKey(key) % FALLBACK_COLORS.length];
+  const key = resolveCategoryIconKey(icon, name);
+  if (CATEGORY_COLORS[key]) return CATEGORY_COLORS[key];
+  const hashSource = (name || icon || "other").toLowerCase();
+  return FALLBACK_COLORS[hashKey(hashSource) % FALLBACK_COLORS.length];
 }
 
 type CategoryIconProps = {
@@ -229,7 +247,7 @@ export function CategoryIcon({
   className,
   framed = false,
 }: CategoryIconProps) {
-  const Icon = getCategoryIcon(icon);
+  const Icon = getCategoryIcon(icon, name);
   const color = getCategoryColor(icon, name);
 
   if (!framed) {
@@ -252,6 +270,30 @@ export function CategoryIcon({
       aria-hidden
     >
       <Icon className="h-4 w-4" />
+    </span>
+  );
+}
+
+type CategoryBadgeProps = {
+  icon?: string | null;
+  name: string;
+  className?: string;
+};
+
+/** Read-only colored category label with icon — for transaction lists. */
+export function CategoryBadge({ icon, name, className }: CategoryBadgeProps) {
+  const color = getCategoryColor(icon, name);
+
+  return (
+    <span
+      className={cn(
+        "inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold tracking-wide",
+        color.chip,
+        className
+      )}
+    >
+      <CategoryIcon icon={icon} name={name} className="h-3 w-3" />
+      <span className="truncate">{name}</span>
     </span>
   );
 }

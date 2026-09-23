@@ -320,6 +320,64 @@ class CategoryChoiceChip extends StatelessWidget {
   }
 }
 
+/// Read-only colored category label with icon — for transaction lists.
+class CategoryBadge extends StatelessWidget {
+  const CategoryBadge({
+    super.key,
+    required this.name,
+    this.icon,
+    this.compact = true,
+  });
+
+  final String name;
+  final String? icon;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = categoryStyle(icon: icon, name: name);
+    final dark = context.isDark;
+    final bg = dark ? style.hex.withValues(alpha: 0.18) : style.chipBackground;
+    final fg = dark
+        ? Color.lerp(style.hex, Colors.white, 0.5)!
+        : style.foreground;
+    final border = style.chipBorder.withValues(alpha: dark ? 0.4 : 1);
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 6 : 8,
+        vertical: compact ? 2 : 4,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            categoryIconData(icon, name: name),
+            size: compact ? 11 : 13,
+            color: fg,
+          ),
+          SizedBox(width: compact ? 3 : 5),
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: compact ? 10 : 12,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class CategoryIconPicker extends StatelessWidget {
   const CategoryIconPicker({
     super.key,

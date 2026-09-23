@@ -4,6 +4,7 @@ import { getProfile } from "@/app/actions/settings";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { transactionTitle } from "@/lib/transaction-description";
 import { formatMoney } from "@/lib/utils";
+import { CategoryBadge, CategoryIcon } from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,16 +66,29 @@ export default async function RecurringPage() {
               key={tx.id}
               className="flex flex-col gap-2 rounded-xl px-2 py-3 transition-colors hover:bg-[var(--background)] sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
-              <div className="min-w-0">
-                <p className="truncate font-medium">
-                  {transactionTitle(tx)}
-                </p>
-                <div className="mt-1.5 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-                  <Badge variant="accent" className="capitalize">
-                    {tx.recurring_frequency ?? "monthly"}
-                  </Badge>
-                  <span>Next due {tx.nextDue}</span>
-                  {tx.account && <span>{tx.account.name}</span>}
+              <div className="flex min-w-0 items-center gap-3">
+                <CategoryIcon
+                  icon={tx.category?.icon}
+                  name={tx.category?.name}
+                  framed
+                />
+                <div className="min-w-0">
+                  <p className="truncate font-medium">
+                    {transactionTitle(tx)}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+                    {tx.category && (
+                      <CategoryBadge
+                        icon={tx.category.icon}
+                        name={tx.category.name}
+                      />
+                    )}
+                    <Badge variant="accent" className="capitalize">
+                      {tx.recurring_frequency ?? "monthly"}
+                    </Badge>
+                    <span>Next due {tx.nextDue}</span>
+                    {tx.account && <span>{tx.account.name}</span>}
+                  </div>
                 </div>
               </div>
               <p className="shrink-0 text-sm font-semibold tabular-nums text-[var(--danger)] sm:text-base">

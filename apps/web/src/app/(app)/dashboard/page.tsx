@@ -5,6 +5,10 @@ import { formatMoney } from "@/lib/utils";
 import { transactionTitle } from "@/lib/transaction-description";
 import { getDashboardData } from "@/app/actions/dashboard";
 import { BudgetAlerts, BudgetBars } from "@/components/budgets/budget-bars";
+import {
+  CategoryBadge,
+  CategoryIcon,
+} from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,24 +140,38 @@ export default async function DashboardPage() {
               key={tx.id}
               className="flex items-center justify-between gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-[var(--background)]"
             >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {transactionTitle(tx)}
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
-                  <span>{tx.date}</span>
-                  <Badge
-                    variant={
-                      tx.type === "income"
-                        ? "success"
-                        : tx.type === "expense"
-                          ? "danger"
-                          : "default"
-                    }
-                    className="capitalize"
-                  >
-                    {tx.type}
-                  </Badge>
+              <div className="flex min-w-0 items-center gap-3">
+                <CategoryIcon
+                  icon={tx.category?.icon}
+                  name={tx.category?.name}
+                  framed
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {transactionTitle(tx)}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+                    <span>{tx.date}</span>
+                    {tx.category ? (
+                      <CategoryBadge
+                        icon={tx.category.icon}
+                        name={tx.category.name}
+                      />
+                    ) : (
+                      <Badge
+                        variant={
+                          tx.type === "income"
+                            ? "success"
+                            : tx.type === "expense"
+                              ? "danger"
+                              : "default"
+                        }
+                        className="capitalize"
+                      >
+                        {tx.type}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
               <p

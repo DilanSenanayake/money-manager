@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/dates.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
@@ -368,7 +369,23 @@ class _ActivityFilterSheetState extends ConsumerState<_ActivityFilterSheet> {
                 ...categories.map(
                   (c) => DropdownMenuItem<String?>(
                     value: c.id,
-                    child: Text(c.name),
+                    child: Row(
+                      children: [
+                        CategoryMark(
+                          icon: c.icon,
+                          name: c.name,
+                          framed: true,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            c.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
