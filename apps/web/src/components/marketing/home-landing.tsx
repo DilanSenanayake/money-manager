@@ -24,10 +24,7 @@ import { CURRENCIES } from "@/lib/schemas";
 import { formatMoney, cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 import { BrandMark } from "@/components/brand/brand-mark";
-import {
-  CategoryBadge,
-  CategoryIcon,
-} from "@/components/categories/category-icon";
+import { CategoryIcon } from "@/components/categories/category-icon";
 import { SiteFooter } from "@/components/layout/site-footer";
 
 type CaptureMode = "text" | "sms" | "receipt";
@@ -725,9 +722,9 @@ function AppPreview({
                   />
                   <div className="min-w-0">
                     <p className="truncate font-medium">{tx.merchant}</p>
-                    <div className="mt-0.5">
-                      <CategoryBadge name={tx.category} />
-                    </div>
+                    <p className="truncate text-[11px] text-[var(--muted)]">
+                      {tx.category}
+                    </p>
                   </div>
                 </div>
                 <p
