@@ -246,9 +246,23 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Ledgerly", policy =>
     {
-        policy.WithOrigins(cors.Origins.Length > 0 ? cors.Origins : ["http://localhost:3000"])
-            .WithHeaders("Authorization", "Content-Type", "Accept")
+        policy.WithHeaders("Authorization", "Content-Type", "Accept")
             .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
+
+        if (builder.Environment.IsDevelopment())
+        {
+            // Flutter web (Chrome) uses a fresh localhost port each run.
+            policy.SetIsOriginAllowed(origin =>
+            {
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                    return false;
+                return uri.Host is "localhost" or "127.0.0.1";
+            });
+        }
+        else
+        {
+            policy.WithOrigins(cors.Origins.Length > 0 ? cors.Origins : ["http://localhost:3000"]);
+        }
     });
 });
 

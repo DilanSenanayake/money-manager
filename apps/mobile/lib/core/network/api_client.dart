@@ -133,6 +133,7 @@ class LedgerlyApi {
   }) async {
     final token = await _tokenProvider();
     if (token == null || token.isEmpty) {
+      await _dropSession();
       throw const AuthFailure('Please sign in again.');
     }
 
@@ -200,6 +201,7 @@ class _AuthInterceptor extends QueuedInterceptor {
     try {
       final token = await refreshToken!();
       if (token == null || token.isEmpty) {
+        await _dropSession();
         handler.next(err);
         return;
       }
@@ -209,7 +211,14 @@ class _AuthInterceptor extends QueuedInterceptor {
       final response = await dio.fetch<dynamic>(request);
       handler.resolve(response);
     } catch (_) {
+      await _dropSession();
       handler.next(err);
     }
   }
+}
+
+Future<void> _dropSession() async {
+  try {
+    await Supabase.instance.client.auth.signOut();
+  } catch (_) {}
 }
