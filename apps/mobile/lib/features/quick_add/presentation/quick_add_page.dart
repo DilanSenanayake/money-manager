@@ -422,7 +422,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
                     icon: Icons.account_balance_wallet_outlined,
                     title: 'Add a wallet first',
                     message:
-                        'You need an account before logging activity. Add cash, bank, or a card.',
+                        'You need a wallet before you can add an expense. Add cash, bank, or a card.',
                     actionLabel: 'Add account',
                     onAction: () => context.push(RoutePaths.accounts),
                   );

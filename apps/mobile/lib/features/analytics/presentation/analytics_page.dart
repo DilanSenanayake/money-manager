@@ -36,7 +36,7 @@ class AnalyticsPage extends ConsumerWidget {
               icon: Icons.insights_outlined,
               title: 'Not enough activity yet',
               message:
-                  'Add a few purchases this month to see where money is going.',
+                  'Add a few expenses this month to see where money is going.',
               actionLabel: 'Add',
               onAction: () => context.go(RoutePaths.add),
             );

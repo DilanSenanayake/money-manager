@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
-export const alt = "Smart Money Manager - Take control of your money";
+export const alt = "Smart Money Manager - Add an expense in seconds";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const runtime = "nodejs";
@@ -53,7 +53,7 @@ export default async function OpenGraphImage() {
             fontSize: 28,
           }}
         >
-          Take control of your money
+          Add an expense in seconds
         </div>
       </div>
     ),

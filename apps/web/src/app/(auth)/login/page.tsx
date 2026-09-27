@@ -32,7 +32,7 @@ export default function LoginPage() {
           <div>
             <CardTitle className="font-display text-2xl">Welcome back</CardTitle>
             <CardDescription className="mt-1.5">
-              Sign in to spend smarter and save better
+              A new expense still takes seconds with AI.
             </CardDescription>
           </div>
         </CardHeader>

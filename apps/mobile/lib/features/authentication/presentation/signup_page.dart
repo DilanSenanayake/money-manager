@@ -119,7 +119,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Use a real email address. We’ll seed starter categories and wallets for you.',
+                        'Use a real email address. We’ll seed starter categories and wallets. After that, AI makes a new expense take seconds — you confirm it.',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

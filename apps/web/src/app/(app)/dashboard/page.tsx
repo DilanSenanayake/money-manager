@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     <div className="page-stack">
       <PageHeader
         title={firstName ? `Welcome back, ${firstName}` : "Welcome back"}
-        description="Spend smarter. Save better. Live better."
+        description="A new expense takes seconds. AI fills the details. You confirm."
         actions={
           <Button asChild>
             <Link href="/add" className="gap-2" aria-label="Add">
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
         <EmptyState
           icon={Wallet}
           title="Start with your first expense"
-          description="Add a purchase with AI or enter the details yourself."
+          description="Add an expense with AI or enter the details yourself."
           action={
             <Button asChild>
               <Link href="/add" className="gap-2">

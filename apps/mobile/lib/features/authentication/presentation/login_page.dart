@@ -94,7 +94,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Sign in to spend smarter and save better.',
+                        'Welcome back. A new expense still takes seconds with AI.',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

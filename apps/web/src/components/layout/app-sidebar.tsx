@@ -76,7 +76,7 @@ export function AppSidebar() {
         <Link href="/dashboard" className="inline-flex items-center gap-2.5">
           <BrandMark
             size="sm"
-            subtitle="Spend smarter. Save better."
+            subtitle="Add it in seconds, with AI"
           />
         </Link>
       </div>

@@ -83,7 +83,7 @@ class DashboardPage extends ConsumerWidget {
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'Start with your first expense',
                       message:
-                          'Add a purchase with AI or enter the details yourself.',
+                          'Add an expense with AI or enter the details yourself.',
                       actionLabel: 'Add',
                       onAction: () => context.go(RoutePaths.add),
                     ),

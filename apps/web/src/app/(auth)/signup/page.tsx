@@ -34,7 +34,7 @@ export default function SignupPage() {
           <div>
             <CardTitle className="font-display text-2xl">Create account</CardTitle>
             <CardDescription className="mt-1.5">
-              Start spending smarter — set your currency and you&apos;re in
+              Choose your currency. AI can fill your first expense in seconds — you confirm it.
             </CardDescription>
           </div>
         </CardHeader>

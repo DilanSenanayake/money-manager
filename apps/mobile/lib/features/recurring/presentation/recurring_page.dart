@@ -66,7 +66,7 @@ class RecurringPage extends ConsumerWidget {
               icon: Icons.event_repeat_outlined,
               title: 'No upcoming bills yet',
               message:
-                  'When you add a purchase, mark it as recurring to see the next due date here.',
+                  'When you add an expense, mark it as recurring to see the next due date here.',
               actionLabel: 'Go to activity',
               onAction: () => context.go(RoutePaths.activity),
             );

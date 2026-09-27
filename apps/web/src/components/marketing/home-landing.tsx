@@ -189,7 +189,9 @@ export function HomeLanding() {
     if (!draft) return;
     setLedger((rows) => [draft, ...rows].slice(0, 6));
     setDraft(null);
-    toast.success("Saved in the demo. In the app, you confirm the same way.");
+    toast.success(
+      "Added to the preview. In the app, AI fills this in just as quickly, and you confirm."
+    );
   }
 
   return (
@@ -200,11 +202,11 @@ export function HomeLanding() {
             <BrandMark size="sm" priority />
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-[var(--muted)] md:flex">
+            <a href="#why" className="hover:text-[var(--foreground)]">
+              What you get
+            </a>
             <a href="#demo" className="hover:text-[var(--foreground)]">
               Try it
-            </a>
-            <a href="#why" className="hover:text-[var(--foreground)]">
-              Why it helps
             </a>
             <a href="#app" className="hover:text-[var(--foreground)]">
               The app
@@ -233,12 +235,17 @@ export function HomeLanding() {
 
       <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-10 sm:px-6 sm:py-14 md:grid-cols-[1.08fr_0.92fr] md:gap-10 md:py-20">
         <div className="stagger max-w-xl">
+          <p className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-hover)]">
+            <Sparkles className="h-3.5 w-3.5" />
+            With AI, it takes seconds
+          </p>
           <h1 className="font-display text-[2rem] leading-[1.12] tracking-tight text-[var(--foreground)] sm:text-4xl md:text-[3.15rem] md:leading-[1.08]">
-            Take control of your money.
+            Add an expense in seconds.
           </h1>
           <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-[var(--muted)] sm:text-base md:text-lg">
-            See where it goes. Add a purchase in seconds. Nothing is saved until
-            you say yes.
+            Type a line, paste a bank message, or snap a receipt. AI fills the
+            amount, category, and account for you. A quick look, and it is
+            saved.
           </p>
           <div className="mt-7 flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <Button asChild size="lg" className="w-full shadow-[var(--shadow-md)] sm:w-auto">
@@ -268,7 +275,7 @@ export function HomeLanding() {
             </li>
             <li className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent-hover)]" />
-              Your data stays private - only you confirm what is saved.
+              AI does the typing. You only confirm the save.
             </li>
             <li className="flex items-start gap-2">
               <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent-hover)]" />
@@ -315,24 +322,24 @@ export function HomeLanding() {
 
       <section id="why" className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 sm:pb-6">
         <p className="mb-3 max-w-2xl text-sm text-[var(--muted)]">
-          Built to feel calm - help without taking over.
+          The slow part of tracking money is the form. AI skips it.
         </p>
         <div className="grid gap-3 md:grid-cols-3">
           {[
             {
-              icon: ShieldCheck,
-              title: "You stay in control",
-              body: "AI can fill the form. You always confirm. Nothing is saved without you.",
+              icon: Sparkles,
+              title: "In before you forget",
+              body: "A line, a bank text, or a photo is enough. AI pulls out the amount, category, and account.",
             },
             {
-              icon: ClipboardPaste,
-              title: "Capture life as it happens",
-              body: "A photo, a bank message, or one short line - so logging money takes seconds, not a chore.",
+              icon: ShieldCheck,
+              title: "A glance, then it is yours",
+              body: "The details appear for a quick look. Nothing is saved until you confirm.",
             },
             {
               icon: Wallet,
-              title: "See the full picture",
-              body: "Wallets, budgets, and trends in one place, so you know where you stand.",
+              title: "Then the month is obvious",
+              body: "Income, spend, a budget that warns as it fills, and bills that come back, in your currency.",
             },
           ].map(({ icon: Icon, title, body }) => (
             <div key={title} className="surface p-5">
@@ -354,10 +361,11 @@ export function HomeLanding() {
             Interactive demo
           </p>
           <h2 className="mt-2 font-display text-2xl tracking-tight sm:text-3xl">
-            Try it before you sign up
+            Feel how quick it is
           </h2>
           <p className="mt-2 text-sm text-[var(--muted)] sm:text-base">
-            No account needed. Confirm a sample and watch the home screen update.
+            Try a sample. This preview fills the details the way AI does in the
+            app. No account. Nothing is saved.
           </p>
         </div>
 
@@ -414,7 +422,7 @@ export function HomeLanding() {
                     )}
                   </p>
                   <p className="mt-3 text-xs text-[var(--accent-hover)]">
-                    Tap to read. In the app, this is your camera.
+                    Tap to try it. In the app, AI reads the photo from your camera.
                   </p>
                 </button>
               ) : (
@@ -458,7 +466,7 @@ export function HomeLanding() {
                   onClick={() => void runParse()}
                 >
                   <Sparkles className="h-4 w-4" />
-                  {busy ? "Reading…" : "Fill the form"}
+                  {busy ? "Filling it in…" : "Fill it in"}
                 </Button>
               )}
             </div>
@@ -470,7 +478,7 @@ export function HomeLanding() {
             </p>
             {busy ? (
               <p className="mt-6 text-sm text-[var(--muted)]">
-                Finding the amount and details…
+                Filling in the amount and details…
               </p>
             ) : draft ? (
               <div className="mt-4 space-y-4">
@@ -488,7 +496,7 @@ export function HomeLanding() {
                   </Badge>
                 </div>
                 <p className="text-xs leading-relaxed text-[var(--muted)]">
-                  This is the confirm step. Nothing is saved until you agree.
+                  One look, then it is yours. Nothing is saved until you agree.
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button className="w-full sm:w-auto" onClick={confirmDraft}>
@@ -505,8 +513,8 @@ export function HomeLanding() {
               </div>
             ) : (
               <p className="mt-6 text-sm leading-relaxed text-[var(--muted)]">
-                Try a sample. You will see a draft, then confirm it into the
-                preview.
+                Try a sample. The details appear in a moment, then you confirm
+                them into the preview.
               </p>
             )}
           </div>
@@ -519,10 +527,11 @@ export function HomeLanding() {
             How the app feels
           </p>
           <h2 className="mt-2 font-display text-2xl tracking-tight sm:text-3xl">
-            Built for everyday use
+            Everyday money, without the chore
           </h2>
           <p className="mt-2 text-sm text-[var(--muted)] sm:text-base">
-            After you confirm, it is a calm home for balances, budgets, and bills.
+            Once AI has helped an expense in, balances, budgets, and bills stay
+            easy to see.
           </p>
         </div>
         <AppPreview
@@ -567,14 +576,14 @@ export function HomeLanding() {
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 sm:py-14 md:flex-row md:items-center">
           <div className="max-w-lg">
             <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
-              Ready to feel in control?
+              Your first one takes seconds
             </h2>
             <p className="mt-2 text-sm text-[var(--muted)] sm:text-base">
-              Create a free account, choose your currency, and add your first
-              purchase when you are ready.
+              Create a free account, choose your currency, and let AI fill in
+              the details. You confirm.
             </p>
             <p className="mt-3 text-xs text-[var(--muted-fg)]">
-              No credit card. No bank login. Your data stays private.
+              No credit card. No bank login. The app does not read your text inbox.
             </p>
           </div>
           <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto">

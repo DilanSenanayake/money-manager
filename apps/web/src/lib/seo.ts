@@ -4,9 +4,9 @@ import { getSiteUrl } from "@/lib/env";
 export const SEO = {
   name: "Smart Money Manager",
   shortName: "Smart Money",
-  title: "Smart Money Manager - Take control of your money",
+  title: "Smart Money Manager - Add an expense in seconds",
   description:
-    "See where your money goes. Add a purchase in seconds, confirm every save, and budget in your currency. Free to start. No bank login.",
+    "Type a line, paste a bank message, or snap a receipt. AI fills the details so it takes a moment. You confirm the save. Free to start. No bank login.",
   locale: "en_US",
 } as const;
 
