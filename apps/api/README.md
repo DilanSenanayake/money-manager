@@ -66,7 +66,16 @@ The API is **stateless** (no server sessions). It validates the Supabase access 
 | POST | `/v1/ai/parse-receipt` | OCR text → structured draft |
 | POST | `/v1/ai/parse-sms` | Bank SMS → draft |
 | POST | `/v1/ai/parse-text` | One-liner → draft |
-| POST | `/v1/ai/save-reviewed` | Persist after user confirm |
+| POST | `/v1/ai/save-reviewed` | Persist after user confirm. If payee, category, or account changed, upsert that user's `fill_feedback` row |
+
+## Review feedback
+
+`fill_feedback` (migration `006_fill_feedback.sql`) stores one combination per signed-in user and payee: `payee_key`, `display_name`, `category_id`, `account_id`.
+
+- Saved only when the review sheet changes payee, category, or account. Unchanged saves and manual transactions do not write a row.
+- `payee_key` is the normalized words from the original text. The label the user types is `display_name` and is not the lookup key.
+- The next parse copies category and account when those words appear again. Amount and date always come from the new text.
+- RLS is `auth.uid() = user_id`. Another user's corrections are never read.
 
 ## Docker
 

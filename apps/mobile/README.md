@@ -12,6 +12,7 @@ Lives under **`apps/mobile`** alongside:
 - Auth: **Supabase Auth** (email/password, secure session storage)
 - Data + AI: **Ledgerly.Api** REST `/v1/*` with `Authorization: Bearer <access_token>`
 - Receipt OCR runs on-device; only extracted text is sent to `/v1/ai/parse-receipt`
+- Changing payee, category, or account on the review sheet is sent back with the original draft. The API stores that combination in `fill_feedback` for this user only.
 
 ## Setup
 

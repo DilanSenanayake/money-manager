@@ -84,12 +84,14 @@ Or run the API in Docker against the same env file you will use in production (m
 
 ## 4. Database setup
 
-Run **in order**, once per environment. Never edit an already-applied file — add `005_….sql` instead.
+Run **in order**, once per environment. Never edit an already-applied file — add the next numbered migration instead.
 
 1. `supabase/migrations/001_initial.sql` — tables, RLS, signup seed, balance triggers
 2. `supabase/migrations/002_other_budget.sql`
 3. `supabase/migrations/003_credit_balance_polarity.sql`
 4. `supabase/migrations/004_production_hardening.sql` — ownership trigger, UPDATE `WITH CHECK`, composite indexes
+5. `supabase/migrations/005_delete_own_account.sql`
+6. `supabase/migrations/006_fill_feedback.sql` — per-user payee, category, and account corrections from the smart-add review sheet
 
 No additional index migration is required for launch. Existing indexes cover `user_id`, `(user_id, date)`, and `(user_id, category_id, date)`.
 
@@ -126,7 +128,7 @@ npm start
 ### A. Supabase
 
 1. Create/use one project for web + API.
-2. Run migrations 001–004.
+2. Run migrations 001–006.
 3. Authentication → URL configuration: add the production web origin and `https://<your-domain>/**` redirect URLs.
 4. Enable Point-in-Time Recovery or scheduled backups (paid) — or cron `pg_dump` on the free tier.
 5. Confirm Email provider is on; customize templates if users will see them.

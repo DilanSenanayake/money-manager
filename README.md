@@ -92,6 +92,7 @@ See [`apps/mobile/README.md`](./apps/mobile/README.md).
 - Analytics + recurring bills
 - Multi-currency + manual exchange rates
 - AI never auto-saves — confirm step required
+- A review edit to payee, category, or account is remembered for that user and reused on the next fill
 
 ## License
 

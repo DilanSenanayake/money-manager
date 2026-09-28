@@ -160,6 +160,7 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 
 - Confirm modal shows amount, type, category chips, account — extra fields under “More”
 - AI never auto-saves
+- If the user changes the payee, category, or account before save, that combination is stored in `fill_feedback` and reused the next time the same payee appears. Amount and date are not remembered. Quick manual add does not write this table.
 - `/import` redirects to `/add`
 - Components: `quick-add-panel.tsx`, `ai-review-modal.tsx`
 - Actions: `parseReceiptText` (after client OCR), `parseBankSms`, `parseQuickText`, `saveReviewedTransaction`
@@ -220,6 +221,9 @@ Run in order:
 1. `001_initial.sql`
 2. `002_other_budget.sql`
 3. `003_credit_balance_polarity.sql` — credit cards use positive “owed”; charges increase owed, payments decrease it
+4. `004_production_hardening.sql`
+5. `005_delete_own_account.sql`
+6. `006_fill_feedback.sql` — per-user payee corrections from the review sheet
 
 ### Tables
 
@@ -230,6 +234,7 @@ Run in order:
 | `categories` | Income/expense categories + optional monthly budget |
 | `transactions` | Income, expense, transfer rows |
 | `exchange_rates` | Per-user manual FX rates |
+| `fill_feedback` | One row per user and payee: the category and account they kept after editing a smart-add review |
 
 ### Triggers & functions
 
@@ -241,6 +246,28 @@ Run in order:
 
 - RLS enabled on all public tables  
 - Policies restrict rows to `auth.uid() = user_id` (or `id` for profiles)  
+- `fill_feedback` is included. A lookup only loads the signed-in user's rows, so one person's payee correction is never applied to someone else.
+
+### Review feedback (`fill_feedback`)
+
+Written by `POST /v1/ai/save-reviewed` only when the review sheet differs from the draft in payee, category, or account. The row stores the combination they saved:
+
+| Column | Role |
+|--------|------|
+| `payee_key` | Match words from the original text (`POS-KEELLS SUPER` → `keells super`). Unique with `user_id`. |
+| `display_name` | Label they typed. Not used for matching. |
+| `category_id` | Category they kept |
+| `account_id` | Account they kept |
+
+Amount and date stay on `transactions` only. The next receipt, SMS, or note is filled from this row when every word of `payee_key` appears in the new text. The longest matching key wins. Logic lives in `apps/api/src/Ledgerly.Api/Helpers/FillFeedback.cs`.
+
+If the table is created from DBeaver rather than the Supabase SQL editor, reload the API schema cache or the save is invisible to PostgREST:
+
+```sql
+grant select, insert, update, delete on public.fill_feedback to authenticated;
+grant all on public.fill_feedback to service_role;
+notify pgrst, 'reload schema';
+```
 
 ---
 
@@ -280,7 +307,7 @@ Never commit secrets. With asymmetric JWT signing keys (default on newer Supabas
 
 1. `cd apps/web && npm install`
 2. Configure `apps/web/.env.local` (see §6) — set `NEXT_PUBLIC_API_URL` to local API or VM
-3. In Supabase SQL Editor, run migrations in order: `001_initial.sql`, `002_other_budget.sql`, `003_credit_balance_polarity.sql`, `004_production_hardening.sql`
+3. In Supabase SQL Editor, run migrations in order: `001_initial.sql` through `006_fill_feedback.sql` (see §5)
 4. Enable Email provider in Supabase Auth
 5. `npm run dev` → http://localhost:3000
 
@@ -438,7 +465,7 @@ cd apps/web && npm test
 1. **Shared .NET API** — web and mobile share one REST backend (`apps/api`); business logic lives once.  
 2. **30-second add first** — `/add` is the primary daily action; secondary tools live under More.  
 3. **Supabase Auth + JWT to API** — clients login with Supabase; API validates and forwards the token for RLS.  
-4. **Human-in-the-loop AI** — extraction always goes through a review step; nothing saves until the user confirms.  
+4. **Human-in-the-loop AI** — extraction always goes through a review step; nothing saves until the user confirms. A changed payee, category, or account is remembered per user in `fill_feedback` and applied on the next fill for that payee.  
 5. **Groq free-tier AI** — keeps cost at zero; fallback across available Groq models on rate limits.  
 6. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
 7. **RLS by default** — every table is user-scoped; no service-role key in clients.  
