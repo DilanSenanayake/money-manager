@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Ledgerly.Api.Infrastructure.Llm;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ledgerly.Api.Models;
@@ -209,6 +210,22 @@ public sealed class AiReviewSaveRequest
 
     [JsonPropertyName("recurring_frequency")]
     public string? RecurringFrequency { get; set; }
+
+    /// <summary>Category shown when the review sheet opened. Null when the client has no baseline.</summary>
+    [JsonPropertyName("proposed_category_id")]
+    public Guid? ProposedCategoryId { get; set; }
+
+    [JsonPropertyName("proposed_account_id")]
+    public Guid? ProposedAccountId { get; set; }
+
+    [MaxLength(200)]
+    [JsonPropertyName("proposed_merchant")]
+    public string? ProposedMerchant { get; set; }
+
+    /// <summary>Match word from the original text, echoed so a renamed label stays on the same row.</summary>
+    [MaxLength(80)]
+    [JsonPropertyName("payee_key")]
+    public string? PayeeKey { get; set; }
 }
 
 public sealed class ReceiptExtraction
@@ -233,6 +250,18 @@ public sealed class ReceiptExtraction
 
     [JsonPropertyName("notes")]
     public string? Notes { get; set; }
+
+    [JsonPropertyName("category_id")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? CategoryId { get; set; }
+
+    [JsonPropertyName("account_id")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? AccountId { get; set; }
+
+    [JsonPropertyName("payee_key")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? PayeeKey { get; set; }
 }
 
 public sealed class ReceiptLineItem
@@ -269,6 +298,18 @@ public sealed class SmsExtraction
 
     [JsonPropertyName("notes")]
     public string? Notes { get; set; }
+
+    [JsonPropertyName("category_id")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? CategoryId { get; set; }
+
+    [JsonPropertyName("account_id")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? AccountId { get; set; }
+
+    [JsonPropertyName("payee_key")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? PayeeKey { get; set; }
 }
 
 public sealed class QuickTextExtraction
@@ -293,6 +334,18 @@ public sealed class QuickTextExtraction
 
     [JsonPropertyName("notes")]
     public string? Notes { get; set; }
+
+    [JsonPropertyName("category_id")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? CategoryId { get; set; }
+
+    [JsonPropertyName("account_id")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? AccountId { get; set; }
+
+    [JsonPropertyName("payee_key")]
+    [JsonConverter(typeof(LooseStringJsonConverter))]
+    public string? PayeeKey { get; set; }
 }
 
 public sealed class BudgetProgress

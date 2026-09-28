@@ -63,7 +63,12 @@ public interface ISupabaseRestClient
     Task<T?> InsertAsync<T>(string table, object payload, CancellationToken ct = default);
     Task InsertManyAsync(string table, object payload, CancellationToken ct = default);
     Task UpdateAsync(string table, string filterQuery, object payload, CancellationToken ct = default);
-    Task UpsertAsync(string table, object payload, string onConflict, CancellationToken ct = default);
+    Task UpsertAsync(
+        string table,
+        object payload,
+        string onConflict,
+        CancellationToken ct = default,
+        bool includeNulls = false);
     Task DeleteAsync(string table, string filterQuery, CancellationToken ct = default);
 }
 
@@ -159,13 +164,18 @@ public sealed class SupabaseRestClient(
             throw new InvalidOperationException(ParseError(body, response.StatusCode));
     }
 
-    public async Task UpsertAsync(string table, object payload, string onConflict, CancellationToken ct = default)
+    public async Task UpsertAsync(
+        string table,
+        object payload,
+        string onConflict,
+        CancellationToken ct = default,
+        bool includeNulls = false)
     {
         using var request = CreateRequest(
             HttpMethod.Post,
             $"{table}?on_conflict={onConflict}",
             "resolution=merge-duplicates,return=representation");
-        request.Content = JsonContent(payload);
+        request.Content = JsonContent(payload, includeNulls);
         using var response = await Client.SendAsync(request, ct);
         var body = await response.Content.ReadAsStringAsync(ct);
         if (!response.IsSuccessStatusCode)

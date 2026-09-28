@@ -122,6 +122,21 @@ public sealed class Transaction
     public Category? Category { get; set; }
 }
 
+public sealed class FillFeedbackRow
+{
+    [JsonPropertyName("payee_key")]
+    public string PayeeKey { get; set; } = "";
+
+    [JsonPropertyName("display_name")]
+    public string? DisplayName { get; set; }
+
+    [JsonPropertyName("category_id")]
+    public Guid? CategoryId { get; set; }
+
+    [JsonPropertyName("account_id")]
+    public Guid? AccountId { get; set; }
+}
+
 public sealed class ExchangeRate
 {
     [JsonPropertyName("id")]

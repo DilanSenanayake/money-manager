@@ -129,3 +129,92 @@ public class GroqErrorFormattingTests
         Assert.Equal("We're a bit busy right now. Please wait a minute and try again.", message);
     }
 }
+
+public class FillFeedbackTests
+{
+    [Theory]
+    [InlineData("POS-KEELLS SUPER", "keells super")]
+    [InlineData("Dialog", "dialog")]
+    [InlineData("Rent", "rent")]
+    [InlineData("Unknown", null)]
+    [InlineData("", null)]
+    public void PayeeKey_keeps_the_words_that_will_appear_again(string merchant, string? expected)
+    {
+        Assert.Equal(expected, FillFeedback.PayeeKey(merchant));
+    }
+
+    [Fact]
+    public void Match_requires_every_word_and_prefers_the_longer_key()
+    {
+        var keells = Row("keells");
+        var keellsSuper = Row("keells super");
+        var dialog = Row("dialog");
+
+        var hit = FillFeedback.Match(
+            [dialog, keells, keellsSuper],
+            "A/c XX4521 debited LKR 3180 for POS-KEELLS SUPER");
+
+        Assert.Equal("keells super", hit?.PayeeKey);
+        Assert.Null(FillFeedback.Match([keells], "Weekly shop"));
+    }
+
+    [Fact]
+    public void FromReview_skips_an_unchanged_save()
+    {
+        var category = Guid.NewGuid();
+        var account = Guid.NewGuid();
+        var change = FillFeedback.FromReview(Input(
+            category, account, "Keells",
+            category, account, "Keells"));
+
+        Assert.Null(change);
+    }
+
+    [Fact]
+    public void FromReview_stores_the_whole_combination_when_category_changes()
+    {
+        var groceries = Guid.NewGuid();
+        var household = Guid.NewGuid();
+        var account = Guid.NewGuid();
+
+        var change = FillFeedback.FromReview(Input(
+            groceries, account, "POS-KEELLS SUPER",
+            household, account, "Keells",
+            payeeKey: "keells super"));
+
+        Assert.NotNull(change);
+        Assert.Equal("keells super", change!.PayeeKey);
+        Assert.Equal("Keells", change.DisplayName);
+        Assert.Equal(household, change.CategoryId);
+        Assert.Equal(account, change.AccountId);
+    }
+
+    [Fact]
+    public void FromReview_without_a_baseline_does_not_store()
+    {
+        var change = FillFeedback.FromReview(new FillFeedbackInput(
+            false, "keells", null, null, null, "Keells", Guid.NewGuid(), Guid.NewGuid()));
+
+        Assert.Null(change);
+    }
+
+    private static FillFeedbackRow Row(string key) => new() { PayeeKey = key };
+
+    private static FillFeedbackInput Input(
+        Guid proposedCategory,
+        Guid proposedAccount,
+        string proposedMerchant,
+        Guid savedCategory,
+        Guid savedAccount,
+        string savedMerchant,
+        string? payeeKey = null) =>
+        new(
+            true,
+            payeeKey,
+            proposedMerchant,
+            proposedCategory,
+            proposedAccount,
+            savedMerchant,
+            savedCategory,
+            savedAccount);
+}

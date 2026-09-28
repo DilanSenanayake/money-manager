@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { saveReviewedTransaction } from "@/app/actions/ai";
@@ -60,6 +60,43 @@ type Props = {
   ocrText?: string | null;
 };
 
+function ownedAccountId(
+  accounts: Account[],
+  accountId: string | null | undefined,
+  fallback: string
+) {
+  if (accountId && accounts.some((a) => a.id === accountId)) return accountId;
+  return fallback;
+}
+
+function ownedCategoryId(
+  categories: Category[],
+  type: "income" | "expense",
+  categoryId: string | null | undefined,
+  ...hints: (string | null | undefined)[]
+) {
+  if (
+    categoryId &&
+    categories.some((c) => c.id === categoryId && c.type === type)
+  ) {
+    return categoryId;
+  }
+  return matchCategoryId(categories, type, ...hints);
+}
+
+function payeeKeyOf(extraction: Extraction): string | null {
+  if (!extraction || !("payee_key" in extraction)) return null;
+  const key = extraction.payee_key;
+  return typeof key === "string" && key.trim() ? key.trim() : null;
+}
+
+type FillBaseline = {
+  account_id: string;
+  category_id: string | null;
+  merchant: string | null;
+  payee_key: string | null;
+};
+
 function toReviewForm(
   extraction: Extraction,
   accounts: Account[],
@@ -74,10 +111,11 @@ function toReviewForm(
     const text = extraction as QuickTextExtraction;
     const type = text.type === "income" ? "income" : "expense";
     return {
-      account_id: defaultAccount,
-      category_id: matchCategoryId(
+      account_id: ownedAccountId(accounts, text.account_id, defaultAccount),
+      category_id: ownedCategoryId(
         categories,
         type,
+        text.category_id,
         text.category,
         text.merchant,
         text.notes
@@ -95,8 +133,8 @@ function toReviewForm(
   if (source === "sms" && extraction) {
     const sms = extraction as SmsExtraction;
     const type = sms.type === "Credit" ? "income" : "expense";
-    let accountId = defaultAccount;
-    if (sms.account_hint) {
+    let accountId = ownedAccountId(accounts, sms.account_id, defaultAccount);
+    if (!sms.account_id && sms.account_hint) {
       const hint = sms.account_hint.toLowerCase();
       const found = accounts.find(
         (a) =>
@@ -107,9 +145,10 @@ function toReviewForm(
     }
     return {
       account_id: accountId,
-      category_id: matchCategoryId(
+      category_id: ownedCategoryId(
         categories,
         type,
+        sms.category_id,
         sms.merchant,
         sms.notes
       ),
@@ -141,10 +180,11 @@ function toReviewForm(
       : receipt?.notes;
   const ocrHint = sanitizeOcrForCategoryHints(ocrText);
   return {
-    account_id: defaultAccount,
-    category_id: matchCategoryId(
+    account_id: ownedAccountId(accounts, receipt?.account_id, defaultAccount),
+    category_id: ownedCategoryId(
       categories,
       type,
+      receipt?.category_id,
       receipt?.category,
       receipt?.merchant,
       lineNames,
@@ -177,24 +217,36 @@ export function AiReviewModal({
   const router = useRouter();
   const [form, setForm] = useState<AiReviewSave | null>(null);
   const [saving, setSaving] = useState(false);
+  const baselineRef = useRef<FillBaseline | null>(null);
 
   useEffect(() => {
     if (!open) {
+      baselineRef.current = null;
       setForm(null);
       return;
     }
-    if (initialForm) {
-      setForm({
-        ...initialForm,
-        merchant: fromMerchantAndNotes(
-          initialForm.merchant,
-          initialForm.notes
-        ),
-        notes: null,
-      });
-    } else if (extraction) {
-      setForm(toReviewForm(extraction, accounts, categories, source, ocrText));
+    const next = initialForm
+      ? {
+          ...initialForm,
+          merchant: fromMerchantAndNotes(
+            initialForm.merchant,
+            initialForm.notes
+          ),
+          notes: null,
+        }
+      : extraction
+        ? toReviewForm(extraction, accounts, categories, source, ocrText)
+        : null;
+    if (next) {
+      const proposed = toMerchantAndNotes(next.merchant ?? "");
+      baselineRef.current = {
+        account_id: next.account_id,
+        category_id: next.category_id ?? null,
+        merchant: proposed.merchant,
+        payee_key: payeeKeyOf(extraction),
+      };
     }
+    setForm(next);
   }, [open, extraction, accounts, categories, source, initialForm, ocrText]);
 
   const relevantCategories = form
@@ -341,27 +393,25 @@ export function AiReviewModal({
                       const { merchant, notes } = toMerchantAndNotes(
                         form.merchant ?? ""
                       );
-                      const selected = categories.find(
-                        (c) => c.id === form.category_id
-                      );
-                      const needsRematch =
-                        !form.category_id ||
-                        selected?.name.toLowerCase() === "other";
-                      const categoryId = needsRematch
-                        ? matchCategoryId(
-                            categories,
-                            form.type,
-                            selected?.name,
-                            merchant,
-                            notes,
-                            sanitizeOcrForCategoryHints(ocrText)
-                          ) ?? form.category_id
-                        : form.category_id;
+                      const categoryId =
+                        form.category_id ??
+                        matchCategoryId(
+                          categories,
+                          form.type,
+                          merchant,
+                          notes,
+                          sanitizeOcrForCategoryHints(ocrText)
+                        );
+                      const baseline = baselineRef.current;
                       const result = await saveReviewedTransaction({
                         ...form,
                         category_id: categoryId,
                         merchant,
                         notes,
+                        proposed_category_id: baseline?.category_id ?? null,
+                        proposed_account_id: baseline?.account_id || null,
+                        proposed_merchant: baseline?.merchant ?? null,
+                        payee_key: baseline?.payee_key ?? null,
                       });
                       if (result.error) {
                         toast.error(result.error);

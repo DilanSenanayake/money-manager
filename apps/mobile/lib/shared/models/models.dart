@@ -518,6 +518,9 @@ class ReceiptExtraction {
     required this.category,
     this.lineItems = const [],
     this.notes,
+    this.categoryId,
+    this.accountId,
+    this.payeeKey,
   });
 
   final String merchant;
@@ -527,6 +530,9 @@ class ReceiptExtraction {
   final String category;
   final List<ReceiptLineItem> lineItems;
   final String? notes;
+  final String? categoryId;
+  final String? accountId;
+  final String? payeeKey;
 
   factory ReceiptExtraction.fromJson(Map<String, dynamic> json) {
     return ReceiptExtraction(
@@ -540,6 +546,9 @@ class ReceiptExtraction {
           .map((e) => ReceiptLineItem.fromJson(asMap(e)))
           .toList(),
       notes: asNullableString(json['notes']),
+      categoryId: asNullableString(json['category_id']),
+      accountId: asNullableString(json['account_id']),
+      payeeKey: asNullableString(json['payee_key']),
     );
   }
 }
@@ -553,6 +562,9 @@ class SmsExtraction {
     this.currency,
     this.accountHint,
     this.notes,
+    this.categoryId,
+    this.accountId,
+    this.payeeKey,
   });
 
   final double amount;
@@ -562,6 +574,9 @@ class SmsExtraction {
   final String? currency;
   final String? accountHint;
   final String? notes;
+  final String? categoryId;
+  final String? accountId;
+  final String? payeeKey;
 
   bool get isIncome {
     final value = type.toLowerCase();
@@ -577,6 +592,9 @@ class SmsExtraction {
       currency: asNullableString(json['currency']),
       accountHint: asNullableString(json['account_hint']),
       notes: asNullableString(json['notes']),
+      categoryId: asNullableString(json['category_id']),
+      accountId: asNullableString(json['account_id']),
+      payeeKey: asNullableString(json['payee_key']),
     );
   }
 }
@@ -590,6 +608,9 @@ class QuickTextExtraction {
     required this.category,
     this.currency,
     this.notes,
+    this.categoryId,
+    this.accountId,
+    this.payeeKey,
   });
 
   final double amount;
@@ -599,6 +620,9 @@ class QuickTextExtraction {
   final String category;
   final String? currency;
   final String? notes;
+  final String? categoryId;
+  final String? accountId;
+  final String? payeeKey;
 
   factory QuickTextExtraction.fromJson(Map<String, dynamic> json) {
     return QuickTextExtraction(
@@ -609,6 +633,9 @@ class QuickTextExtraction {
       category: asString(json['category'], 'Other'),
       currency: asNullableString(json['currency']),
       notes: asNullableString(json['notes']),
+      categoryId: asNullableString(json['category_id']),
+      accountId: asNullableString(json['account_id']),
+      payeeKey: asNullableString(json['payee_key']),
     );
   }
 }
@@ -624,6 +651,10 @@ class AiReviewSave {
     this.notes,
     this.isRecurring = false,
     this.recurringFrequency,
+    this.proposedCategoryId,
+    this.proposedAccountId,
+    this.proposedMerchant,
+    this.payeeKey,
   });
 
   final String accountId;
@@ -635,6 +666,10 @@ class AiReviewSave {
   final String? notes;
   final bool isRecurring;
   final String? recurringFrequency;
+  final String? proposedCategoryId;
+  final String? proposedAccountId;
+  final String? proposedMerchant;
+  final String? payeeKey;
 
   Map<String, dynamic> toJson() => {
         'account_id': accountId,
@@ -647,6 +682,10 @@ class AiReviewSave {
         'is_recurring': isRecurring,
         'recurring_frequency':
             isRecurring ? (recurringFrequency ?? 'monthly') : null,
+        'proposed_category_id': proposedCategoryId,
+        'proposed_account_id': proposedAccountId,
+        'proposed_merchant': proposedMerchant,
+        'payee_key': payeeKey,
       };
 }
 

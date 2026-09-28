@@ -54,6 +54,37 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
   String? _accountId;
   String? _categoryId;
   bool _loading = false;
+  String? _proposedAccountId;
+  String? _proposedCategoryId;
+  late final String _proposedMerchant;
+  String? _payeeKey;
+  bool _categoryBaselineSet = false;
+
+  ({String? categoryId, String? accountId, String? payeeKey}) get _feedback {
+    final extraction = widget.extraction;
+    if (extraction is ReceiptExtraction) {
+      return (
+        categoryId: extraction.categoryId,
+        accountId: extraction.accountId,
+        payeeKey: extraction.payeeKey,
+      );
+    }
+    if (extraction is SmsExtraction) {
+      return (
+        categoryId: extraction.categoryId,
+        accountId: extraction.accountId,
+        payeeKey: extraction.payeeKey,
+      );
+    }
+    if (extraction is QuickTextExtraction) {
+      return (
+        categoryId: extraction.categoryId,
+        accountId: extraction.accountId,
+        payeeKey: extraction.payeeKey,
+      );
+    }
+    return (categoryId: null, accountId: null, payeeKey: null);
+  }
 
   @override
   void initState() {
@@ -64,6 +95,8 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
     _notes = TextEditingController(text: parsed.notes ?? '');
     _type = parsed.type;
     _date = parsed.date.isEmpty ? localDateYYYYMMDD() : parsed.date;
+    _proposedMerchant = parsed.merchant;
+    _payeeKey = _feedback.payeeKey;
   }
 
   @override
@@ -124,25 +157,31 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
     }
     setState(() => _loading = true);
     try {
+      final savedCategory = _categoryId ??
+          matchCategoryId(
+            categories.where((c) => c.type == _type).toList(),
+            _type,
+            [
+              _parsed().category,
+              _merchant.text,
+              _notes.text,
+            ],
+          );
       await ref.read(aiRepositoryProvider).saveReviewed(
             AiReviewSave(
               accountId: _accountId!,
-              categoryId: _categoryId ??
-                  matchCategoryId(
-                    categories.where((c) => c.type == _type).toList(),
-                    _type,
-                    [
-                      _parsed().category,
-                      _merchant.text,
-                      _notes.text,
-                    ],
-                  ),
+              categoryId: savedCategory,
               amount: amount,
               type: _type,
               date: _date,
               merchant:
                   _merchant.text.trim().isEmpty ? null : _merchant.text.trim(),
               notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+              proposedCategoryId:
+                  _categoryId == null ? savedCategory : _proposedCategoryId,
+              proposedAccountId: _proposedAccountId ?? _accountId,
+              proposedMerchant: _proposedMerchant,
+              payeeKey: _payeeKey,
             ),
           );
       ref.invalidate(dashboardProvider);
@@ -164,8 +203,30 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountsProvider).valueOrNull ?? [];
     final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
-    _accountId ??= accounts.isNotEmpty ? accounts.first.id : null;
+    if (accounts.isNotEmpty && _proposedAccountId == null) {
+      final hinted = _feedback.accountId;
+      final initial = hinted != null && accounts.any((a) => a.id == hinted)
+          ? hinted
+          : accounts.first.id;
+      _proposedAccountId = initial;
+      _accountId ??= initial;
+    } else {
+      _accountId ??= accounts.isNotEmpty ? accounts.first.id : null;
+    }
     final filtered = categories.where((c) => c.type == _type).toList();
+    if (!_categoryBaselineSet && filtered.isNotEmpty) {
+      _categoryBaselineSet = true;
+      final hinted = _feedback.categoryId;
+      final parsed = _parsed();
+      _proposedCategoryId = hinted != null && filtered.any((c) => c.id == hinted)
+          ? hinted
+          : matchCategoryId(filtered, parsed.type, [
+              parsed.category,
+              parsed.merchant,
+              parsed.notes,
+            ]);
+      _categoryId ??= _proposedCategoryId;
+    }
     final selectedCategoryId = _categoryId ??
         matchCategoryId(filtered, _type, [
           _parsed().category,

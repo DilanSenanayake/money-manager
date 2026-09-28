@@ -95,6 +95,17 @@ public sealed class AiService(
                     result.Category = matchedName;
             }
 
+            await ApplySavedFeedbackAsync(
+                result.Merchant,
+                text,
+                CategoryTypes.Expense,
+                name => result.Category = name,
+                categoryId => result.CategoryId = categoryId,
+                accountId => result.AccountId = accountId,
+                name => result.Merchant = name,
+                key => result.PayeeKey = key,
+                ct);
+
             return Result<ReceiptExtraction>.Ok(result);
         }
         catch (Exception ex)
@@ -137,6 +148,16 @@ public sealed class AiService(
 
             var result = await llm.GenerateObjectAsync<SmsExtraction>(prompt, schema, ct);
             NormalizeSms(result);
+            await ApplySavedFeedbackAsync(
+                result.Merchant,
+                trimmed,
+                result.Type == "Credit" ? CategoryTypes.Income : CategoryTypes.Expense,
+                _ => { },
+                categoryId => result.CategoryId = categoryId,
+                accountId => result.AccountId = accountId,
+                name => result.Merchant = name,
+                key => result.PayeeKey = key,
+                ct);
             return Result<SmsExtraction>.Ok(result);
         }
         catch (Exception ex)
@@ -183,6 +204,16 @@ public sealed class AiService(
 
             var result = await llm.GenerateObjectAsync<QuickTextExtraction>(prompt, schema, ct);
             SanitizeQuickText(result);
+            await ApplySavedFeedbackAsync(
+                result.Merchant,
+                trimmed,
+                result.Type,
+                name => result.Category = name,
+                categoryId => result.CategoryId = categoryId,
+                accountId => result.AccountId = accountId,
+                name => result.Merchant = name,
+                key => result.PayeeKey = key,
+                ct);
             return Result<QuickTextExtraction>.Ok(result);
         }
         catch (Exception ex)
@@ -221,28 +252,17 @@ public sealed class AiService(
                 .ToList();
 
             Guid? categoryId = request.CategoryId;
-            var selectedName = categoryId is Guid cid
-                ? cats.FirstOrDefault(c => c.Id == cid)?.Name
-                : null;
-            var resolved = CategoryMatcher.MatchCategoryId(
-                cats,
-                request.Type,
-                selectedName,
-                request.Merchant,
-                request.Notes);
-
-            if (categoryId is Guid selected && cats.Any(c => c.Id == selected))
+            if (categoryId is not Guid selected || cats.All(c => c.Id != selected))
             {
-                // Keep explicit pick unless it's the weak "Other" fallback and we found better
-                var isOther = selectedName?.Equals("Other", StringComparison.OrdinalIgnoreCase) == true;
-                if (!isOther || resolved is null || resolved == selected)
-                    categoryId = selected;
-                else
-                    categoryId = resolved;
-            }
-            else
-            {
-                categoryId = resolved;
+                var selectedName = categoryId is Guid cid
+                    ? cats.FirstOrDefault(c => c.Id == cid)?.Name
+                    : null;
+                categoryId = CategoryMatcher.MatchCategoryId(
+                    cats,
+                    request.Type,
+                    selectedName,
+                    request.Merchant,
+                    request.Notes);
             }
 
             await supabase.InsertAsync<Transaction>("transactions", new
@@ -263,12 +283,96 @@ public sealed class AiService(
                     : null,
             }, ct);
 
+            await RememberFillFeedbackAsync(request, categoryId, ct);
             return Result<Guid?>.Ok(categoryId);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "AI save-reviewed failed for user {UserId}", user.UserId);
             return Result<Guid?>.Fail(OwnershipGuards.GenericError);
+        }
+    }
+
+    private async Task ApplySavedFeedbackAsync(
+        string? merchant,
+        string sourceText,
+        string categoryType,
+        Action<string> setCategoryName,
+        Action<string?> setCategoryId,
+        Action<string?> setAccountId,
+        Action<string> setMerchant,
+        Action<string?> setPayeeKey,
+        CancellationToken ct)
+    {
+        setPayeeKey(FillFeedback.PayeeKey(merchant));
+        try
+        {
+            var rows = await supabase.GetListAsync<FillFeedbackRow>(
+                "fill_feedback",
+                $"select=payee_key,display_name,category_id,account_id&user_id=eq.{user.UserId}",
+                ct);
+            var hit = FillFeedback.Match(rows, sourceText, merchant);
+            if (hit is null) return;
+
+            setPayeeKey(hit.PayeeKey);
+            if (!string.IsNullOrWhiteSpace(hit.DisplayName))
+                setMerchant(hit.DisplayName);
+            if (hit.AccountId is Guid accountId)
+                setAccountId(accountId.ToString());
+            if (hit.CategoryId is not Guid categoryId) return;
+
+            var category = (await categories.GetAllAsync(ct))
+                .FirstOrDefault(c => c.Id == categoryId && c.Type == categoryType);
+            if (category is null) return;
+
+            setCategoryName(category.Name);
+            setCategoryId(category.Id.ToString());
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Fill feedback lookup skipped for user {UserId}", user.UserId);
+        }
+    }
+
+    private async Task RememberFillFeedbackAsync(
+        AiReviewSaveRequest request,
+        Guid? savedCategoryId,
+        CancellationToken ct)
+    {
+        var hasBaseline = request.ProposedMerchant is not null
+            || request.ProposedCategoryId is not null
+            || request.ProposedAccountId is not null;
+        var change = FillFeedback.FromReview(new FillFeedbackInput(
+            hasBaseline,
+            request.PayeeKey,
+            request.ProposedMerchant,
+            request.ProposedCategoryId,
+            request.ProposedAccountId,
+            request.Merchant,
+            savedCategoryId,
+            request.AccountId));
+        if (change is null) return;
+
+        try
+        {
+            await supabase.UpsertAsync(
+                "fill_feedback",
+                new
+                {
+                    user_id = user.UserId,
+                    payee_key = change.PayeeKey,
+                    display_name = change.DisplayName,
+                    category_id = change.CategoryId,
+                    account_id = change.AccountId,
+                    updated_at = DateTimeOffset.UtcNow,
+                },
+                "user_id,payee_key",
+                ct,
+                includeNulls: true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Fill feedback was not saved for user {UserId}", user.UserId);
         }
     }
 

@@ -120,6 +120,9 @@ export const receiptExtractionSchema = z.object({
     .describe("Individual line items when visible")
     .default([]),
   notes: z.string().nullable().optional().describe("Extra notes from the receipt"),
+  category_id: z.string().uuid().nullable().optional(),
+  account_id: z.string().uuid().nullable().optional(),
+  payee_key: z.string().max(80).nullable().optional(),
 });
 
 /** Shared by forms and Gemini generateObject for SMS / bank alert parsing */
@@ -139,6 +142,9 @@ export const smsExtractionSchema = z.object({
     .optional()
     .describe("Account last-4 or name hint from the message"),
   notes: z.string().nullable().optional(),
+  category_id: z.string().uuid().nullable().optional(),
+  account_id: z.string().uuid().nullable().optional(),
+  payee_key: z.string().max(80).nullable().optional(),
 });
 
 /** One-line natural language: "Coffee 450 at Starbucks" / "Salary 120000" */
@@ -160,6 +166,9 @@ export const quickTextExtractionSchema = z.object({
     ),
   currency: currencySchema.optional().describe("Currency if mentioned"),
   notes: z.string().nullable().optional(),
+  category_id: z.string().uuid().nullable().optional(),
+  account_id: z.string().uuid().nullable().optional(),
+  payee_key: z.string().max(80).nullable().optional(),
 });
 
 export const aiReviewSaveSchema = z.object({
@@ -172,6 +181,10 @@ export const aiReviewSaveSchema = z.object({
   notes: z.string().max(1000).optional().nullable(),
   is_recurring: z.boolean().default(false),
   recurring_frequency: recurringFrequencySchema.nullable().optional(),
+  proposed_category_id: z.string().uuid().nullable().optional(),
+  proposed_account_id: z.string().uuid().nullable().optional(),
+  proposed_merchant: z.string().max(200).nullable().optional(),
+  payee_key: z.string().max(80).nullable().optional(),
 });
 
 export type ProfileInput = z.infer<typeof profileSchema>;
