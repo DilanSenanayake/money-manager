@@ -1,0 +1,6 @@
+# Copy to android/key.properties. Do not commit key.properties or the keystore.
+# storeFile must be an absolute path outside the repository.
+storePassword=
+keyPassword=
+keyAlias=upload
+storeFile=

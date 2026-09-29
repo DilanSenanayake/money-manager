@@ -25,6 +25,11 @@
 *.pem
 *.key
 
+# Android upload keystore (Play App Signing). Never commit these.
+*.jks
+*.keystore
+**/key.properties
+
 # debug
 npm-debug.log*
 yarn-debug.log*
