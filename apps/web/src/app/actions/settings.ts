@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { apiMutate, apiRequest } from "@/lib/api/client";
+import { apiMutate, apiRequest, apiText } from "@/lib/api/client";
 import type { ActionResult } from "@/lib/api/result";
 import {
   exchangeRateSchema,
@@ -54,6 +54,28 @@ export async function upsertExchangeRate(
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   return { success: true };
+}
+
+export async function downloadTransactionsExport(
+  format: "csv" | "json",
+): Promise<{ filename: string; content: string } | { error: string }> {
+  const path =
+    format === "csv"
+      ? "/v1/export/transactions.csv"
+      : "/v1/export/transactions.json";
+  const accept = format === "csv" ? "text/csv" : "application/json";
+  try {
+    const content = await apiText(path, accept);
+    return {
+      filename:
+        format === "csv"
+          ? "smart-money-manager-transactions.csv"
+          : "smart-money-manager-transactions.json",
+      content,
+    };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Export failed" };
+  }
 }
 
 export async function deleteExchangeRate(id: string): Promise<ActionResult> {

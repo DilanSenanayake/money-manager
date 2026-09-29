@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
+import '../../../core/utils/money_input.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/labels.dart';
@@ -226,7 +227,7 @@ class _CategoryEditorSheet extends StatefulWidget {
   final String initialIcon;
   final String type;
   final double? initialBudget;
-  final Future<void> Function(String name, String icon, double? budget)
+  final Future<void> Function(String name, String icon, String? budget)
       onSubmit;
 
   @override
@@ -316,13 +317,18 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
               }
               setState(() => _saving = true);
               try {
-                await widget.onSubmit(
-                  name,
-                  _icon,
-                  _budgetCtrl.text.trim().isEmpty
-                      ? null
-                      : double.tryParse(_budgetCtrl.text),
-                );
+                final budgetText = _budgetCtrl.text.trim();
+                String? budget;
+                if (budgetText.isNotEmpty) {
+                  budget = canonicalMoney(budgetText, allowZero: true);
+                  if (budget == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Enter a valid budget')),
+                    );
+                    return;
+                  }
+                }
+                await widget.onSubmit(name, _icon, budget);
                 if (context.mounted) Navigator.pop(context);
               } finally {
                 if (mounted) setState(() => _saving = false);

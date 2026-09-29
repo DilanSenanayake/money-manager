@@ -8,10 +8,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/security/app_lock_controller.dart';
+import '../../../core/utils/permission_prompt.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/ocr/receipt_ocr.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/money_input.dart';
 import '../../../core/utils/smart_input.dart';
 import '../../../core/voice/voice_input.dart';
 import '../../../shared/components/components.dart';
@@ -71,6 +74,16 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
       if (mounted) setState(() => _listening = false);
       return;
     }
+    final allow = await confirmPermissionUse(
+      context,
+      title: 'Microphone',
+      message:
+          'Voice input uses the microphone to turn a short description into text. On many phones that audio is sent to Google’s speech service. The words can then be sent for Smart Add. Nothing is saved until you confirm.',
+    );
+    if (!allow || !mounted) return;
+    ref
+        .read(appLockControllerProvider.notifier)
+        .suppressFor(const Duration(minutes: 5));
     await _voice.start(
       onWords: (words) {
         if (!mounted) return;
@@ -181,8 +194,8 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
   }
 
   Future<void> _saveManual() async {
-    final amount = double.tryParse(_amount.text.trim());
-    if (amount == null || amount <= 0) {
+    final amount = canonicalMoney(_amount.text);
+    if (amount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid amount')),
       );
@@ -234,6 +247,18 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
   }
 
   Future<void> _pickReceipt({required ImageSource source}) async {
+    final camera = source == ImageSource.camera;
+    final allow = await confirmPermissionUse(
+      context,
+      title: camera ? 'Camera' : 'Photos',
+      message: camera
+          ? 'The camera takes a photo of a receipt. The photo stays on this phone. Only the text read from it is sent, and nothing is saved until you confirm.'
+          : 'Choose a receipt photo. The image stays on this phone. Only the text read from it is sent, and nothing is saved until you confirm.',
+    );
+    if (!allow || !mounted) return;
+    ref
+        .read(appLockControllerProvider.notifier)
+        .suppressFor(const Duration(minutes: 5));
     try {
       final picked = await _picker.pickImage(
         source: source,

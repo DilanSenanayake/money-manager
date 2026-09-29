@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/accounts";
 import type { Account } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
+import { asMoneyInput } from "@/lib/money";
 import { CURRENCIES, type AccountInput } from "@/lib/schemas";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ export function AccountsManager({
   const blank = (): AccountInput => ({
     name: "",
     type: "checking",
-    balance: 0,
+    balance: "",
     currency: (CURRENCIES.includes(defaultCurrency as (typeof CURRENCIES)[number])
       ? defaultCurrency
       : "USD") as AccountInput["currency"],
@@ -64,7 +65,7 @@ export function AccountsManager({
     setForm({
       name: account.name,
       type: account.type,
-      balance: Number(account.balance),
+      balance: asMoneyInput(account.balance),
       currency: account.currency as AccountInput["currency"],
     });
     setOpen(true);
@@ -77,9 +78,13 @@ export function AccountsManager({
 
   function submit() {
     startTransition(async () => {
+      const payload = {
+        ...form,
+        balance: form.balance.trim() === "" ? "0.00" : form.balance,
+      };
       const result = editing
-        ? await updateAccount(editing.id, form)
-        : await createAccount(form);
+        ? await updateAccount(editing.id, payload)
+        : await createAccount(payload);
       if (result.error) {
         toast.error(result.error);
         return;
@@ -149,7 +154,7 @@ export function AccountsManager({
                     value={form.balance}
                     disabled={Boolean(editing)}
                     onChange={(e) =>
-                      setForm({ ...form, balance: Number(e.target.value) })
+                      setForm({ ...form, balance: e.target.value })
                     }
                   />
                   {editing && (

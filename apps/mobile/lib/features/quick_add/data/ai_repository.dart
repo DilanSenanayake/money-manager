@@ -78,7 +78,7 @@ class AiRepository {
   }
 
   Future<String?> saveReviewed(AiReviewSave input) async {
-    if (input.amount <= 0) {
+    if (input.amount == '0.00') {
       throw const ValidationFailure('Amount must be greater than zero');
     }
     try {

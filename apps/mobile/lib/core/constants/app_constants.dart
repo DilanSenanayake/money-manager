@@ -23,6 +23,7 @@ class AppConstants {
 
 class RoutePaths {
   static const splash = '/';
+  static const consent = '/consent';
   static const login = '/login';
   static const signup = '/signup';
   static const home = '/home';

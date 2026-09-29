@@ -406,7 +406,7 @@ class TransactionInput {
 
   final String accountId;
   final String? categoryId;
-  final double amount;
+  final String amount;
   final String type;
   final String date;
   final String? merchant;
@@ -659,7 +659,7 @@ class AiReviewSave {
 
   final String accountId;
   final String? categoryId;
-  final double amount;
+  final String amount;
   final String type;
   final String date;
   final String? merchant;

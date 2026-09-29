@@ -1,12 +1,9 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:local_auth/local_auth.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/security/consent_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/auth_repository.dart';
@@ -19,9 +16,6 @@ class SplashPage extends ConsumerStatefulWidget {
 }
 
 class _SplashPageState extends ConsumerState<SplashPage> {
-  bool _needsUnlock = false;
-  bool _unlocking = false;
-
   @override
   void initState() {
     super.initState();
@@ -32,65 +26,18 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
+    if (!ref.read(consentAcceptedProvider)) {
+      context.go(RoutePaths.consent);
+      return;
+    }
+
     final session = ref.read(authRepositoryProvider).currentSession;
     if (session == null) {
       context.go(RoutePaths.login);
       return;
     }
 
-    final unlocked = await _authenticate();
-    if (!mounted) return;
-    if (!unlocked) {
-      setState(() => _needsUnlock = true);
-      return;
-    }
     context.go(RoutePaths.home);
-  }
-
-  /// Huawei EMUI / Android 9 FingerprintManager can block the UI thread
-  /// inside [LocalAuthentication.authenticate], so Dart timeouts never fire.
-  /// Skip the lock on Android; keep a guarded prompt on iOS only.
-  Future<bool> _authenticate() async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
-      return true;
-    }
-    try {
-      final auth = LocalAuthentication();
-      final supported = await auth
-          .isDeviceSupported()
-          .timeout(const Duration(seconds: 2), onTimeout: () => false);
-      if (!supported) return true;
-
-      final enrolled = await auth
-          .getAvailableBiometrics()
-          .timeout(const Duration(seconds: 2), onTimeout: () => <BiometricType>[]);
-      if (enrolled.isEmpty) return true;
-
-      return await auth
-          .authenticate(
-            localizedReason: 'Unlock ${AppConstants.appName}',
-            options: const AuthenticationOptions(
-              biometricOnly: true,
-              stickyAuth: false,
-              useErrorDialogs: false,
-            ),
-          )
-          .timeout(const Duration(seconds: 8), onTimeout: () => true);
-    } on TimeoutException {
-      return true;
-    } catch (_) {
-      return true;
-    }
-  }
-
-  Future<void> _retryUnlock() async {
-    setState(() => _unlocking = true);
-    final unlocked = await _authenticate();
-    if (!mounted) return;
-    setState(() => _unlocking = false);
-    if (unlocked) {
-      context.go(RoutePaths.home);
-    }
   }
 
   @override
@@ -164,27 +111,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                if (_needsUnlock) ...[
-                  const Text(
-                    'Unlock to continue',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 16),
-                  AppButton(
-                    label: 'Unlock',
-                    loading: _unlocking,
-                    onPressed: _retryUnlock,
-                    icon: Icons.lock_open_rounded,
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      await ref.read(authRepositoryProvider).signOut();
-                      if (context.mounted) context.go(RoutePaths.login);
-                    },
-                    child: const Text('Sign out'),
-                  ),
-                ] else
-                  const IndeterminateBar(),
+                const IndeterminateBar(),
               ],
             ),
           ),

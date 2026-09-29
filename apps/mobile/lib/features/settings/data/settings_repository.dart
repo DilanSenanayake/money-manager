@@ -66,7 +66,7 @@ class SettingsRepository {
   Future<void> upsertExchangeRate({
     required String fromCurrency,
     required String toCurrency,
-    required double rate,
+    required String rate,
   }) async {
     try {
       await _api.mutate(
@@ -78,6 +78,17 @@ class SettingsRepository {
           'rate': rate,
         },
       );
+    } catch (e) {
+      throw mapException(e);
+    }
+  }
+
+  Future<String> downloadExport(String format) async {
+    final path = format == 'json'
+        ? '/v1/export/transactions.json'
+        : '/v1/export/transactions.csv';
+    try {
+      return await _api.getPlain(path);
     } catch (e) {
       throw mapException(e);
     }

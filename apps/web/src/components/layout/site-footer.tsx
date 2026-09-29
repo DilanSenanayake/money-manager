@@ -23,6 +23,18 @@ export function SiteFooter({ className }: { className?: string }) {
           >
             Privacy
           </Link>
+          <Link
+            href="/disclaimer"
+            className="font-medium hover:text-[var(--foreground)]"
+          >
+            Disclaimer
+          </Link>
+          <Link
+            href="/account-deletion"
+            className="font-medium hover:text-[var(--foreground)]"
+          >
+            Delete account
+          </Link>
         </nav>
       </div>
     </footer>

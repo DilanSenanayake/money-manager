@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/error/exception_mapper.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/network/supabase_client.dart';
+import '../../../core/security/consent_store.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(SupabaseBootstrap.client);
@@ -58,6 +59,7 @@ class AuthRepository {
     required String baseCurrency,
   }) async {
     try {
+      final consent = await ConsentStore().read();
       final response = await _client.auth.signUp(
         email: email.trim(),
         password: password,
@@ -66,6 +68,8 @@ class AuthRepository {
               ? email.split('@').first
               : displayName.trim(),
           'base_currency': baseCurrency,
+          if (consent != null) 'consent_version': consent.version,
+          if (consent != null) 'consent_accepted_at': consent.acceptedAt,
         },
       );
 

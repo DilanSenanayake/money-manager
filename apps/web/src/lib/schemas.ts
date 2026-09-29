@@ -1,4 +1,22 @@
 import { z } from "zod";
+import { canonicalMoney, canonicalRate } from "@/lib/money";
+
+function moneyString(allowZero = false) {
+  return z.union([z.string(), z.number()]).transform((value, ctx) => {
+    const text =
+      typeof value === "number"
+        ? Number.isFinite(value)
+          ? value.toFixed(2)
+          : ""
+        : value;
+    const canonical = canonicalMoney(text, { allowZero });
+    if (!canonical) {
+      ctx.addIssue({ code: "custom", message: "Enter a valid amount" });
+      return z.NEVER;
+    }
+    return canonical;
+  });
+}
 
 export const CURRENCIES = [
   "USD",
@@ -52,7 +70,7 @@ export const profileSchema = z.object({
 export const accountSchema = z.object({
   name: z.string().min(1).max(100),
   type: accountTypeSchema,
-  balance: z.coerce.number(),
+  balance: moneyString(true),
   currency: currencySchema,
 });
 
@@ -61,17 +79,25 @@ export const categorySchema = z.object({
   icon: z.string().min(1).max(50).default("circle"),
   type: categoryTypeSchema,
   // Don't coerce null/"" to 0 — that broke clearing budgets
-  monthly_budget: z.preprocess((value) => {
-    if (value === "" || value === null || value === undefined) return null;
-    const n = typeof value === "number" ? value : Number(value);
-    return Number.isFinite(n) ? n : null;
-  }, z.number().min(0).nullable()),
+  monthly_budget: z
+    .union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((value, ctx) => {
+      if (value === "" || value === null || value === undefined) return null;
+      const text = typeof value === "number" ? value.toFixed(2) : value;
+      const canonical = canonicalMoney(text, { allowZero: true });
+      if (!canonical) {
+        ctx.addIssue({ code: "custom", message: "Enter a valid budget" });
+        return z.NEVER;
+      }
+      return canonical;
+    }),
 });
 
 export const transactionSchema = z.object({
   account_id: z.string().uuid(),
   category_id: z.string().uuid().nullable().optional(),
-  amount: z.coerce.number().positive(),
+  amount: moneyString(),
   type: transactionTypeSchema,
   date: z.string().min(1),
   merchant: z.string().max(200).optional().nullable(),
@@ -93,7 +119,15 @@ export const transactionFilterSchema = z.object({
 export const exchangeRateSchema = z.object({
   from_currency: currencySchema,
   to_currency: currencySchema,
-  rate: z.coerce.number().positive(),
+  rate: z.union([z.string(), z.number()]).transform((value, ctx) => {
+    const text = typeof value === "number" ? String(value) : value;
+    const canonical = canonicalRate(text);
+    if (!canonical) {
+      ctx.addIssue({ code: "custom", message: "Enter a valid rate" });
+      return z.NEVER;
+    }
+    return canonical;
+  }),
 });
 
 export const receiptLineItemSchema = z.object({
@@ -174,7 +208,7 @@ export const quickTextExtractionSchema = z.object({
 export const aiReviewSaveSchema = z.object({
   account_id: z.string().uuid(),
   category_id: z.string().uuid().nullable().optional(),
-  amount: z.coerce.number().positive(),
+  amount: moneyString(),
   type: z.enum(["income", "expense"]),
   date: z.string().min(1),
   merchant: z.string().max(200).optional().nullable(),

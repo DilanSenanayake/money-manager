@@ -9,6 +9,8 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         "/terms",
         "/privacy",
+        "/disclaimer",
+        "/licenses",
         "/dashboard",
         "/add",
         "/transactions",

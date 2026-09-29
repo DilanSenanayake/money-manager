@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
+import { ConsentBanner } from "@/components/legal/consent-banner";
 import { SiteAnalytics } from "@/components/telemetry/site-analytics";
 import { getSiteUrl } from "@/lib/env";
 import { SEO } from "@/lib/seo";
@@ -80,6 +81,7 @@ export default function RootLayout({
         <Toaster />
         <ServiceWorkerRegister />
         <SiteAnalytics />
+        <ConsentBanner />
       </body>
     </html>
   );

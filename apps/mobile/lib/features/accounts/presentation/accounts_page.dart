@@ -5,6 +5,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/labels.dart';
+import '../../../core/utils/money_input.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -185,10 +186,22 @@ class _AccountEditorState extends ConsumerState<_AccountEditor> {
     try {
       final repo = ref.read(accountsRepositoryProvider);
       if (widget.id == null) {
+        final balanceText = _balance.text.trim();
+        final balance = balanceText.isEmpty
+            ? '0.00'
+            : canonicalMoney(balanceText, allowZero: true);
+        if (balance == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Enter a valid opening balance')),
+            );
+          }
+          return;
+        }
         await repo.createAccount(
           name: _name.text.trim(),
           type: _type,
-          balance: double.tryParse(_balance.text) ?? 0,
+          balance: balance,
           currency: _currency,
         );
       } else {

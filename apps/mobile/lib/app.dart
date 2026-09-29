@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/authentication/presentation/app_lock_layer.dart';
 
 class LedgerlyApp extends ConsumerWidget {
   const LedgerlyApp({super.key});
@@ -30,7 +31,7 @@ class LedgerlyApp extends ConsumerWidget {
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
               .copyWith(statusBarColor: Colors.transparent),
-          child: child ?? const SizedBox.shrink(),
+          child: AppLockLayer(child: child ?? const SizedBox.shrink()),
         );
       },
     );

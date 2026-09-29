@@ -37,8 +37,9 @@ export default function TermsPage() {
         <p>
           {LEGAL.productName} (the “Service”) is a personal budgeting and money
           tracking tool. It helps you record income and spending, set category
-          limits, and review your own numbers. It is provided by the person who
-          operates the Service (the “Operator”).
+          limits, and review your own numbers. It is provided by{" "}
+          {LEGAL.operatorName} (the “Operator”), an individual. It is available
+          as a website and an Android app.
         </p>
         <p>
           By creating an account, checking the agreement box at sign-up, or

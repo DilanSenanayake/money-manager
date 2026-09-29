@@ -63,7 +63,7 @@ function emptyForm(accounts: Account[]): TransactionInput {
   return {
     account_id: accounts[0]?.id ?? "",
     category_id: null,
-    amount: 0,
+    amount: "",
     type: "expense",
     date: localDateYYYYMMDD(),
     merchant: "",
@@ -78,7 +78,8 @@ function formFromTransaction(tx: Transaction): TransactionInput {
   return {
     account_id: tx.account_id,
     category_id: tx.category_id,
-    amount: Number(tx.amount),
+    amount:
+      typeof tx.amount === "number" ? tx.amount.toFixed(2) : String(tx.amount),
     type: tx.type === "transfer" ? "expense" : tx.type,
     date: tx.date,
     merchant: fromMerchantAndNotes(tx.merchant, tx.notes),
@@ -302,9 +303,9 @@ export function TransactionsManager({
                     type="number"
                     step="0.01"
                     min="0"
-                    value={form.amount || ""}
+                    value={form.amount}
                     onChange={(e) =>
-                      setForm({ ...form, amount: Number(e.target.value) })
+                      setForm({ ...form, amount: e.target.value })
                     }
                   />
                 </div>

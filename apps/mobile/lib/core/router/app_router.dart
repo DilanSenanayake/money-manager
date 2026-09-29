@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../features/accounts/presentation/accounts_page.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
 import '../../features/authentication/data/auth_repository.dart';
+import '../security/consent_store.dart';
+import '../../features/authentication/presentation/consent_page.dart';
 import '../../features/authentication/presentation/login_page.dart';
 import '../../features/authentication/presentation/signup_page.dart';
 import '../../features/authentication/presentation/splash_page.dart';
+import '../../features/settings/presentation/legal_document_page.dart';
 import '../../features/budgets/presentation/budgets_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/more/presentation/more_page.dart';
@@ -24,6 +27,7 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 class GoRouterRefresh extends ChangeNotifier {
   GoRouterRefresh(Ref ref) {
     ref.listen(authStateProvider, (_, __) => notifyListeners());
+    ref.listen(consentAcceptedProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -44,12 +48,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return authRedirect(
         loggedIn: ref.read(isAuthenticatedProvider),
         location: state.matchedLocation,
+        consentAccepted: ref.read(consentAcceptedProvider),
       );
     },
     routes: [
       GoRoute(
         path: RoutePaths.splash,
         builder: (_, __) => const SplashPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.consent,
+        builder: (_, __) => const ConsentPage(),
+      ),
+      GoRoute(
+        path: '/legal/:doc',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => LegalDocumentPage(
+          kind: state.pathParameters['doc'] ?? 'privacy',
+        ),
       ),
       GoRoute(
         path: RoutePaths.login,

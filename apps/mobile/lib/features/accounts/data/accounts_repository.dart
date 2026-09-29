@@ -31,7 +31,7 @@ class AccountsRepository {
   Future<void> createAccount({
     required String name,
     required String type,
-    required double balance,
+    required String balance,
     required String currency,
   }) async {
     try {

@@ -118,13 +118,13 @@ void main() {
   test('TransactionInput serializes API fields', () {
     const input = TransactionInput(
       accountId: 'a',
-      amount: 12.5,
+      amount: '12.50',
       type: 'expense',
       date: '2026-09-18',
       merchant: 'Cafe',
     );
     expect(input.toJson()['account_id'], 'a');
-    expect(input.toJson()['amount'], 12.5);
+    expect(input.toJson()['amount'], '12.50');
     expect(input.toJson()['is_recurring'], isFalse);
   });
 }

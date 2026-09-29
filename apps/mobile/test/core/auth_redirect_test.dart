@@ -14,6 +14,25 @@ void main() {
     );
   });
 
+  test('missing consent goes to the consent screen', () {
+    expect(
+      authRedirect(
+        loggedIn: false,
+        location: RoutePaths.home,
+        consentAccepted: false,
+      ),
+      RoutePaths.consent,
+    );
+    expect(
+      authRedirect(
+        loggedIn: false,
+        location: '/legal/privacy',
+        consentAccepted: false,
+      ),
+      isNull,
+    );
+  });
+
   test('guests are sent to login for protected routes', () {
     expect(
       authRedirect(loggedIn: false, location: RoutePaths.home),

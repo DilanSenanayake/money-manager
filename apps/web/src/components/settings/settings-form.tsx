@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   deleteExchangeRate,
+  downloadTransactionsExport,
   updateProfile,
   upsertExchangeRate,
 } from "@/app/actions/settings";
@@ -40,7 +41,7 @@ export function SettingsForm({
   const [to, setTo] = useState(
     profile.base_currency === "USD" ? "LKR" : "USD"
   );
-  const [rate, setRate] = useState(1);
+  const [rate, setRate] = useState("");
 
   return (
     <div className="page-stack">
@@ -154,7 +155,7 @@ export function SettingsForm({
                 type="number"
                 step="0.0001"
                 value={rate}
-                onChange={(e) => setRate(Number(e.target.value))}
+                onChange={(e) => setRate(e.target.value)}
               />
             </div>
             <div className="flex items-end">
@@ -211,10 +212,66 @@ export function SettingsForm({
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Export</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await downloadTransactionsExport("csv");
+                if ("error" in result) {
+                  toast.error(result.error);
+                  return;
+                }
+                saveTextFile(result.filename, result.content, "text/csv");
+              })
+            }
+          >
+            Download CSV
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await downloadTransactionsExport("json");
+                if ("error" in result) {
+                  toast.error(result.error);
+                  return;
+                }
+                saveTextFile(
+                  result.filename,
+                  result.content,
+                  "application/json",
+                );
+              })
+            }
+          >
+            Download JSON
+          </Button>
+        </CardContent>
+      </Card>
+
       <SignOutButton
         wide
         className="text-[var(--muted)] hover:text-[var(--foreground)]"
       />
     </div>
   );
+}
+
+function saveTextFile(filename: string, content: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }

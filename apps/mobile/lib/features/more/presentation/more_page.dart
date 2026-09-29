@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/open_url.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../authentication/data/auth_repository.dart';
 import '../../dashboard/data/dashboard_repository.dart';
@@ -82,10 +80,11 @@ class MorePage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
-            Row(
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 TextButton(
-                  onPressed: () => openExternalUrl(AppConfig.termsUrl),
+                  onPressed: () => context.push('/legal/terms'),
                   child: Text(
                     'Terms',
                     style: TextStyle(color: context.muted, fontSize: AppSize.navLabel),
@@ -93,9 +92,17 @@ class MorePage extends ConsumerWidget {
                 ),
                 Text('·', style: TextStyle(color: context.muted)),
                 TextButton(
-                  onPressed: () => openExternalUrl(AppConfig.privacyUrl),
+                  onPressed: () => context.push('/legal/privacy'),
                   child: Text(
                     'Privacy',
+                    style: TextStyle(color: context.muted, fontSize: AppSize.navLabel),
+                  ),
+                ),
+                Text('·', style: TextStyle(color: context.muted)),
+                TextButton(
+                  onPressed: () => context.push('/legal/disclaimer'),
+                  child: Text(
+                    'Disclaimer',
                     style: TextStyle(color: context.muted, fontSize: AppSize.navLabel),
                   ),
                 ),

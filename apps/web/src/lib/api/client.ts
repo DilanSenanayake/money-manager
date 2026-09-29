@@ -95,6 +95,34 @@ export async function apiRequest<T>(
   return json as T;
 }
 
+/** Authenticated text response (CSV or JSON export). */
+export async function apiText(path: string, accept: string): Promise<string> {
+  const token = await getAccessToken();
+  const base = getApiBaseUrl();
+  const url = new URL(path.startsWith("http") ? path : `${base}${path}`);
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: accept,
+    },
+    cache: "no-store",
+    signal: AbortSignal.timeout(60_000),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let json: unknown = null;
+    if (text) {
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = null;
+      }
+    }
+    throw new ApiError(errorMessage(json ?? text, res.status), res.status);
+  }
+  return text;
+}
+
 export async function apiMutate(
   path: string,
   options: ApiOptions = {}

@@ -24,6 +24,7 @@ import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { extractTextFromImage } from "@/lib/ocr";
 import { looksLikeBankSms } from "@/lib/smart-input";
 import { localDateYYYYMMDD } from "@/lib/dates";
+import { canonicalMoney } from "@/lib/money";
 import { toMerchantAndNotes } from "@/lib/transaction-description";
 import type { Account, Category } from "@/lib/types";
 import type {
@@ -273,8 +274,8 @@ export function QuickAddPanel({
   }
 
   async function runManualSave() {
-    const amount = Number(manualAmount);
-    if (!amount || amount <= 0) {
+    const amount = canonicalMoney(manualAmount);
+    if (!amount) {
       toast.error("Enter an amount");
       return;
     }

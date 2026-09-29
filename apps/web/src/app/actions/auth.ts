@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { LEGAL } from "@/lib/legal";
 import { authCredentialsSchema, currencySchema } from "@/lib/schemas";
 import type { ActionResult } from "@/lib/api/result";
 
@@ -33,6 +34,8 @@ export async function signUp(formData: FormData) {
       data: {
         display_name: displayName || email.split("@")[0],
         base_currency: baseCurrency,
+        consent_version: LEGAL.consentVersion,
+        consent_accepted_at: new Date().toISOString(),
       },
     },
   });

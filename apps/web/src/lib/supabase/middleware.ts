@@ -43,7 +43,10 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/opengraph-image") ||
     path.startsWith("/twitter-image") ||
     path === "/terms" ||
-    path === "/privacy";
+    path === "/privacy" ||
+    path === "/disclaimer" ||
+    path === "/account-deletion" ||
+    path === "/licenses";
 
   // Validate the JWT with Supabase Auth (do not trust cookie-only getSession()).
   let user = null;

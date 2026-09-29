@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConfig {
@@ -17,6 +18,7 @@ class AppConfig {
         '(http://localhost:5080 or http://10.0.2.2:5080 on the Android emulator).',
       );
     }
+    _requireHttpsInRelease(value, 'API_BASE_URL');
     return value;
   }
 
@@ -29,9 +31,20 @@ class AppConfig {
     return value;
   }
 
+  static const operatorName = 'Dilan Senanayake';
+  static const contactEmail = 'diladws@gmail.com';
+
   static String get termsUrl => '$siteUrl/terms';
 
   static String get privacyUrl => '$siteUrl/privacy';
+
+  static String get disclaimerUrl => '$siteUrl/disclaimer';
+
+  static String get accountDeletionUrl => '$siteUrl/account-deletion';
+
+  static String get licensesUrl => '$siteUrl/licenses';
+
+  static String get mailtoUrl => 'mailto:$contactEmail';
 
   static void validate() {
     supabaseUrl;
@@ -46,6 +59,15 @@ class AppConfig {
         'Missing $key. Copy apps/mobile/.env.example to apps/mobile/.env.',
       );
     }
+    if (key == 'SUPABASE_URL') {
+      _requireHttpsInRelease(value, key);
+    }
     return value;
+  }
+
+  static void _requireHttpsInRelease(String value, String key) {
+    if (kReleaseMode && !value.startsWith('https://')) {
+      throw StateError('$key must start with https:// in release builds.');
+    }
   }
 }

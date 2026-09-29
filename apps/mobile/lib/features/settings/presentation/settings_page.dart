@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/money_input.dart';
 import '../../../core/utils/open_url.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../authentication/data/auth_repository.dart';
+import '../../authentication/presentation/app_lock_layer.dart';
 import '../../dashboard/data/dashboard_repository.dart';
 import '../data/settings_repository.dart';
 
@@ -101,6 +104,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       );
     } finally {
       if (mounted) setState(() => _savingPassword = false);
+    }
+  }
+
+  Future<void> _export(String format) async {
+    try {
+      final text =
+          await ref.read(settingsRepositoryProvider).downloadExport(format);
+      await Share.share(
+        text,
+        subject: 'smart-money-manager-transactions.$format',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is Failure ? e.message : e.toString())),
+      );
     }
   }
 
@@ -321,8 +340,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               AppButton(
                 label: 'Save rate',
                 onPressed: () async {
-                  final rate = double.tryParse(_rate.text.trim());
-                  if (rate == null || rate <= 0) return;
+                  final rate = canonicalRate(_rate.text);
+                  if (rate == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Enter a valid rate')),
+                    );
+                    return;
+                  }
                   final messenger = ScaffoldMessenger.of(context);
                   try {
                     await ref.read(settingsRepositoryProvider).upsertExchangeRate(
@@ -405,6 +429,71 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               const SizedBox(height: 28),
               Text(
+                'Export',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Download every transaction as a file. Amounts are decimal text, not estimates.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => _export('csv'),
+                    child: const Text('Export CSV'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => _export('json'),
+                    child: const Text('Export JSON'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              const AppLockSettings(),
+              const SizedBox(height: 28),
+              Text(
+                'Legal',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              TextButton(
+                onPressed: () => context.push('/legal/privacy'),
+                child: const Text('Privacy Policy'),
+              ),
+              TextButton(
+                onPressed: () => context.push('/legal/terms'),
+                child: const Text('Terms of Use'),
+              ),
+              TextButton(
+                onPressed: () => context.push('/legal/disclaimer'),
+                child: const Text('Financial disclaimer'),
+              ),
+              TextButton(
+                onPressed: () => showLicensePage(
+                  context: context,
+                  applicationName: AppConstants.appName,
+                  applicationLegalese:
+                      '© 2026 ${AppConfig.operatorName}',
+                ),
+                child: const Text('Open-source licenses'),
+              ),
+              TextButton(
+                onPressed: () => openExternalUrl(AppConfig.accountDeletionUrl),
+                child: const Text('Delete account on the web'),
+              ),
+              TextButton(
+                onPressed: () => openExternalUrl(AppConfig.mailtoUrl),
+                child: Text('Contact ${AppConfig.contactEmail}'),
+              ),
+              const SizedBox(height: 12),
+              Text(
                 'Delete account',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -423,14 +512,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 child: const Text('Delete account'),
               ),
               const SizedBox(height: 24),
-              TextButton(
-                onPressed: () => openExternalUrl(AppConfig.termsUrl),
-                child: const Text('Terms of Use'),
-              ),
-              TextButton(
-                onPressed: () => openExternalUrl(AppConfig.privacyUrl),
-                child: const Text('Privacy Policy'),
-              ),
             ],
           );
         },

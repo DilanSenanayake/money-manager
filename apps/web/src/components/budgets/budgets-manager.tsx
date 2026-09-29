@@ -47,7 +47,7 @@ export function BudgetsManager({
     name: "",
     icon: "circle",
     type: "expense" as "income" | "expense",
-    monthly_budget: 0 as number | null,
+    monthly_budget: "" as string | null,
   });
 
   return (
@@ -119,11 +119,11 @@ export function BudgetsManager({
                   <Input
                     type="number"
                     min="0"
-                    value={form.monthly_budget ?? 0}
+                    value={form.monthly_budget ?? ""}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        monthly_budget: Number(e.target.value),
+                        monthly_budget: e.target.value,
                       })
                     }
                   />
@@ -190,9 +190,9 @@ export function BudgetsManager({
                     defaultValue={cat.monthly_budget ?? ""}
                     placeholder="Budget"
                     onBlur={(e) => {
-                      const value = e.target.value
-                        ? Number(e.target.value)
-                        : null;
+                      const value = e.target.value.trim() === ""
+                        ? null
+                        : e.target.value;
                       startTransition(async () => {
                         const result = await updateCategory(cat.id, {
                           name: cat.name,

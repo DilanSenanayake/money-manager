@@ -9,6 +9,7 @@ import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/category_visuals.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/money_input.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -489,8 +490,8 @@ class _TransactionEditorSheetState
   }
 
   Future<void> _save() async {
-    final amount = double.tryParse(_amount.text.trim());
-    if (amount == null || amount <= 0 || _accountId == null) {
+    final amount = canonicalMoney(_amount.text);
+    if (amount == null || _accountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid amount and account')),
       );

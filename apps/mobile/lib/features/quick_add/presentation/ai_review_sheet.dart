@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/utils/category_match.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/money_input.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -148,8 +149,8 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
   }
 
   Future<void> _save(List<Account> accounts, List<Category> categories) async {
-    final amount = double.tryParse(_amount.text.trim());
-    if (amount == null || amount <= 0 || _accountId == null) {
+    final amount = canonicalMoney(_amount.text);
+    if (amount == null || _accountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid amount and account')),
       );

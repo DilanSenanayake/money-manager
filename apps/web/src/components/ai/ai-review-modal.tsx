@@ -14,6 +14,7 @@ import type {
 } from "@/lib/schemas";
 import { matchCategoryId, sanitizeOcrForCategoryHints } from "@/lib/category-match";
 import { localDateYYYYMMDD } from "@/lib/dates";
+import { asMoneyInput } from "@/lib/money";
 import {
   fromMerchantAndNotes,
   toMerchantAndNotes,
@@ -120,7 +121,7 @@ function toReviewForm(
         text.merchant,
         text.notes
       ),
-      amount: Number(text.amount ?? 0),
+      amount: asMoneyInput(text.amount),
       type,
       date: text.date || today,
       merchant: fromMerchantAndNotes(text.merchant, text.notes),
@@ -152,7 +153,7 @@ function toReviewForm(
         sms.merchant,
         sms.notes
       ),
-      amount: Number(sms.amount ?? 0),
+      amount: asMoneyInput(sms.amount),
       type,
       date: sms.date || today,
       merchant: fromMerchantAndNotes(sms.merchant, sms.notes),
@@ -191,7 +192,7 @@ function toReviewForm(
       receiptNotes,
       ocrHint
     ),
-    amount: Number(receipt?.amount ?? 0),
+    amount: asMoneyInput(receipt?.amount),
     type,
     date: receipt?.date || today,
     merchant: fromMerchantAndNotes(
@@ -309,9 +310,9 @@ export function AiReviewModal({
                     step="0.01"
                     min="0"
                     className="h-12 text-2xl font-semibold"
-                    value={form.amount || ""}
+                    value={form.amount}
                     onChange={(e) =>
-                      setForm({ ...form, amount: Number(e.target.value) })
+                      setForm({ ...form, amount: e.target.value })
                     }
                   />
                 </div>

@@ -45,7 +45,7 @@ class TransactionsRepository {
   }
 
   Future<void> createTransaction(TransactionInput input) async {
-    if (input.amount <= 0) {
+    if (input.amount == '0.00') {
       throw const ValidationFailure('Amount must be greater than zero');
     }
     try {
@@ -61,7 +61,7 @@ class TransactionsRepository {
         'Edit transfers by deleting and recreating them',
       );
     }
-    if (input.amount <= 0) {
+    if (input.amount == '0.00') {
       throw const ValidationFailure('Amount must be greater than zero');
     }
     try {

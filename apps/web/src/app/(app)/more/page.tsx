@@ -85,6 +85,14 @@ export default function MorePage() {
         <Link href="/privacy" className="hover:text-[var(--foreground)]">
           Privacy
         </Link>
+        {" · "}
+        <Link href="/disclaimer" className="hover:text-[var(--foreground)]">
+          Disclaimer
+        </Link>
+        {" · "}
+        <Link href="/account-deletion" className="hover:text-[var(--foreground)]">
+          Delete account
+        </Link>
       </p>
     </div>
   );

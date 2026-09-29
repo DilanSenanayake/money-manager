@@ -32,7 +32,7 @@ class CategoriesRepository {
     required String name,
     required String icon,
     required String type,
-    double? monthlyBudget,
+    String? monthlyBudget,
   }) async {
     try {
       await _api.mutate(
@@ -54,7 +54,7 @@ class CategoriesRepository {
     required String name,
     required String icon,
     required String type,
-    double? monthlyBudget,
+    String? monthlyBudget,
   }) async {
     try {
       await _api.mutate(

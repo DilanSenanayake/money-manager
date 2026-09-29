@@ -108,6 +108,26 @@ class LedgerlyApi {
     );
   }
 
+  Future<String> getPlain(String path) async {
+    final token = await _tokenProvider();
+    if (token == null || token.isEmpty) {
+      await _dropSession();
+      throw const AuthFailure('Please sign in again.');
+    }
+    try {
+      final response = await _dio.get<String>(
+        path,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: const {'Accept': 'text/csv, application/json'},
+        ),
+      );
+      return response.data ?? '';
+    } catch (error) {
+      throw mapException(error);
+    }
+  }
+
   Future<void> mutate(
     String path, {
     String method = 'POST',

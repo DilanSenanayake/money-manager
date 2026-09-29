@@ -28,14 +28,16 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      description={`This policy describes how the operator of ${LEGAL.productName} handles information when you use the web app.`}
+      description={`This policy describes how ${LEGAL.operatorName} handles information when you use the ${LEGAL.productName} website or Android app.`}
       toc={toc}
     >
       <LegalSection id="who" title="1. Who we are">
         <p>
-          {LEGAL.productName} is provided by the Operator. The Operator decides
-          how information is processed and is the controller of that information
-          for privacy purposes.
+          {LEGAL.productName} is provided by {LEGAL.operatorName} (the
+          Operator), an individual and not a registered company. The Operator
+          decides how information is processed and is the controller of that
+          information for privacy purposes. This policy covers the website and
+          the Android app.
         </p>
         <p>
           Contact:{" "}
@@ -69,12 +71,14 @@ export default function PrivacyPage() {
         </p>
         <p className="font-semibold">Smart Add submissions you choose to send</p>
         <p>
-          If you use a receipt photo, text is typically read on your device
-          first. Extracted text may be sent to the application server and an AI
-          processor so fields can be suggested. If you paste a bank message,
-          type a short description, or use optional voice input, that text is
-          sent the same way after speech is turned into words on your device or
-          browser. We do not store raw microphone recordings on our servers.
+          If you use a receipt photo, text is read on your device first (Google
+          ML Kit on Android). The photo is not uploaded. Extracted text may be
+          sent to the application server and an AI processor so fields can be
+          suggested. If you paste a bank message, type a short description, or
+          use optional voice input, that text is sent the same way. On many
+          Android phones the speech recognizer sends audio to Google before the
+          words reach the app. We do not store raw microphone recordings on our
+          servers. The Android app downloads its typeface from Google Fonts.
           Drafts are not stored as saved transactions until you confirm. We do
           not ask the web app for permission to read all messages on your phone.
         </p>
