@@ -41,7 +41,7 @@ Use this before the first production cutover and after each release. Details: [P
 - [ ] PWA: hard-refresh once after deploy so `ledgerly-v3` service worker replaces the previous cache
 - [ ] Receipt scan works in production (camera permission + Tesseract; CSP `wasm-unsafe-eval`)
 - [ ] Rate limits observed (120/min global, 20/min AI) per authenticated user
-- [ ] Privacy policy, terms, disclaimer, and account-deletion URLs live on `https://www.smoneymanager.com` (still marked as lawyer drafts)
+- [ ] Privacy policy, terms, disclaimer, and account-deletion URLs live on `https://www.smoneymanager.com`
 - [ ] Android upload key created outside the repo and Play App Signing enrolled
 - [ ] Closed test: 12 testers opted in for 14 consecutive days before applying for production (personal Play account)
 - [ ] Release app bundle built with `flutter build appbundle --release` and installed from a Play track, not a debug APK

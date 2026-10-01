@@ -18,22 +18,6 @@ class LegalDocumentPage extends StatelessWidget {
       body: ListView(
         padding: AppSpacing.page,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.tertiaryContainer,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Text(
-              'Draft. This document must be reviewed by a qualified lawyer before it is treated as final.',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onTertiaryContainer,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
           Text(
             'Last updated 29 September 2026. Operator: ${AppConfig.operatorName}.',
             style: TextStyle(color: context.muted),

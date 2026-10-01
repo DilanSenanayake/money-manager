@@ -69,7 +69,7 @@ export function ConsentBanner() {
           <Link href="/privacy" className="font-medium text-[var(--foreground)] underline">
             Privacy Policy
           </Link>
-          . Both are drafts pending legal review.
+          .
         </p>
         <div className="flex shrink-0 gap-2">
           <button

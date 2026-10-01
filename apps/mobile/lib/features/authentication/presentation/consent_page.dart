@@ -56,7 +56,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'The hosted copies are drafts until a qualified lawyer reviews them. Operator: ${AppConfig.operatorName}.',
+              'Operator: ${AppConfig.operatorName}.',
               style: TextStyle(color: context.muted),
             ),
             const SizedBox(height: 16),

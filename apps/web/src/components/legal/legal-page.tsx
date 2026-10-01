@@ -64,11 +64,7 @@ export function LegalPage({
         </nav>
 
         <article className="min-w-0">
-          <p className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-semibold">
-            Draft. This document must be reviewed by a qualified lawyer before
-            it is treated as final.
-          </p>
-          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent-hover)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent-hover)]">
             Last updated: {LEGAL.lastUpdated}
           </p>
           <h1 className="mt-3 font-display text-3xl tracking-tight sm:text-4xl">
