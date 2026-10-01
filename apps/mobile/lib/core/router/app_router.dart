@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/accounts/presentation/accounts_page.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
+import '../../features/analytics/presentation/reports_page.dart';
 import '../../features/authentication/data/auth_repository.dart';
 import '../security/consent_store.dart';
 import '../../features/authentication/presentation/consent_page.dart';
@@ -126,6 +127,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (_, __) => const AnalyticsPage(),
                   ),
                   GoRoute(
+                    path: 'reports',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (_, __) => const ReportsPage(),
+                  ),
+                  GoRoute(
                     path: 'recurring',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (_, __) => const RecurringPage(),
@@ -156,6 +162,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.analytics,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, __) => const AnalyticsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.reports,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, __) => const ReportsPage(),
       ),
       GoRoute(
         path: RoutePaths.recurring,

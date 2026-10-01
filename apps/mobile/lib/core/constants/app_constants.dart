@@ -33,6 +33,7 @@ class RoutePaths {
   static const accounts = '/accounts';
   static const budgets = '/budgets';
   static const analytics = '/analytics';
+  static const reports = '/reports';
   static const recurring = '/recurring';
   static const settings = '/settings';
 }

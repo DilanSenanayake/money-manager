@@ -44,8 +44,15 @@ class MorePage extends ConsumerWidget {
                   _MoreTile(
                     icon: Icons.pie_chart_outline_rounded,
                     title: 'Analytics',
-                    subtitle: 'Trends and month-by-month spending',
+                    subtitle: 'Trends and category charts',
                     onTap: () => context.push(RoutePaths.analytics),
+                  ),
+                  Divider(height: 1, color: context.colors.outlineVariant),
+                  _MoreTile(
+                    icon: Icons.bar_chart_rounded,
+                    title: 'Reports',
+                    subtitle: 'Month-by-month spending history',
+                    onTap: () => context.push(RoutePaths.reports),
                   ),
                   Divider(height: 1, color: context.colors.outlineVariant),
                   _MoreTile(
