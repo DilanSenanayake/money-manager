@@ -67,3 +67,37 @@ export interface BudgetProgress {
   ratio: number;
   status: "ok" | "warn" | "over" | "none";
 }
+
+export interface CategorySpendPoint {
+  name: string;
+  value: number;
+}
+
+export interface MerchantSpendPoint {
+  name: string;
+  value: number;
+  count: number;
+}
+
+export interface MonthlyReport {
+  key: string;
+  label: string;
+  income: number;
+  expense: number;
+  net: number;
+  savingsRate: number | null;
+  expenseChange: number | null;
+  transactionCount: number;
+  categories: CategorySpendPoint[];
+  merchants: MerchantSpendPoint[];
+}
+
+export interface SpendingReportSummary {
+  monthCount: number;
+  averageExpense: number;
+  totalIncome: number;
+  totalExpense: number;
+  savingsRate: number | null;
+  highestSpendMonth: string | null;
+  highestSpend: number;
+}

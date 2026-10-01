@@ -3,6 +3,7 @@ import {
   Wallet,
   PiggyBank,
   PieChart,
+  BarChart3,
   Repeat,
   Settings,
   ChevronRight,
@@ -29,6 +30,12 @@ const links = [
     label: "Analytics",
     description: "Trends and category charts",
     icon: PieChart,
+  },
+  {
+    href: "/reports",
+    label: "Reports",
+    description: "Month-by-month spending history",
+    icon: BarChart3,
   },
   {
     href: "/recurring",

@@ -11,6 +11,7 @@ import {
   Wallet,
   PiggyBank,
   PieChart,
+  BarChart3,
   Repeat,
   Settings,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const secondary = [
   { href: "/accounts", label: "Accounts", icon: Wallet },
   { href: "/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/analytics", label: "Analytics", icon: PieChart },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/recurring", label: "Recurring", icon: Repeat },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

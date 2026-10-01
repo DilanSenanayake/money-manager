@@ -4,8 +4,11 @@ import { apiRequest } from "@/lib/api/client";
 import type {
   Account,
   BudgetProgress,
+  CategorySpendPoint,
   ExchangeRate,
+  MonthlyReport,
   Profile,
+  SpendingReportSummary,
   Transaction,
 } from "@/lib/types";
 
@@ -25,7 +28,9 @@ type DashboardResponse = {
 
 type AnalyticsResponse = {
   trend: { month: string; income: number; expense: number }[];
-  categorySpend: { name: string; value: number }[];
+  categorySpend: CategorySpendPoint[];
+  months: MonthlyReport[];
+  summary: SpendingReportSummary;
   baseCurrency: string;
 };
 

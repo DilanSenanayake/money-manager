@@ -99,7 +99,7 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
     public async Task<AnalyticsResponse> GetAnalyticsAsync(CancellationToken ct = default)
     {
         var now = DateTime.Now;
-        var months = Enumerable.Range(0, 6)
+        var chartMonths = Enumerable.Range(0, 6)
             .Select(i =>
             {
                 var d = now.AddMonths(-(5 - i));
@@ -113,13 +113,7 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
             })
             .ToList();
 
-        var rangeFrom = months[0].From;
-        var rangeTo = months[^1].To;
-
-        var txTask = supabase.GetListAsync<Transaction>(
-            "transactions",
-            $"user_id=eq.{user.UserId}&date=gte.{rangeFrom}&date=lte.{rangeTo}&order=date.desc&limit=5000",
-            ct);
+        var txTask = LoadAllTransactionsAsync(ct);
         var categoriesTask = supabase.GetListAsync<Category>(
             "categories",
             $"user_id=eq.{user.UserId}&type=eq.expense",
@@ -151,7 +145,7 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
             CurrencyConverter.TxAmountInBase(
                 t.Amount, t.AccountId, currencyByAccount, baseCurrency, rates);
 
-        var trend = months.Select(m =>
+        var trend = chartMonths.Select(m =>
         {
             var inMonth = tx.Where(t => t.Date.CompareTo(m.From) >= 0 && t.Date.CompareTo(m.To) <= 0);
             return new TrendPoint
@@ -162,7 +156,7 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
             };
         }).ToList();
 
-        var thisMonth = months[^1];
+        var thisMonth = chartMonths[^1];
         var categorySpend = categories
             .Select(cat =>
             {
@@ -179,12 +173,34 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
             .OrderByDescending(c => c.Value)
             .ToList();
 
+        var categoryNames = categories.ToDictionary(c => c.Id, c => c.Name);
+        var (months, summary) = MonthlyReportBuilder.Build(tx, categoryNames, ToBase, now);
+
         return new AnalyticsResponse
         {
             Trend = trend,
             CategorySpend = categorySpend,
+            Months = months,
+            Summary = summary,
             BaseCurrency = baseCurrency,
         };
+    }
+
+    private async Task<List<Transaction>> LoadAllTransactionsAsync(CancellationToken ct)
+    {
+        const int pageSize = 1000;
+        var all = new List<Transaction>();
+        for (var offset = 0; offset < 50_000; offset += pageSize)
+        {
+            var page = await supabase.GetListAsync<Transaction>(
+                "transactions",
+                $"select=id,amount,type,date,account_id,category_id,merchant&user_id=eq.{user.UserId}&order=date.asc,id.asc&limit={pageSize}&offset={offset}",
+                ct);
+            all.AddRange(page);
+            if (page.Count < pageSize) break;
+        }
+
+        return all;
     }
 
     public async Task<List<BudgetProgress>> GetBudgetsAsync(CancellationToken ct = default)

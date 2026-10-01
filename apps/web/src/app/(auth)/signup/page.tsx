@@ -99,6 +99,46 @@ export default function SignupPage() {
               You can change this later in Settings.
             </p>
             </div>
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-medium text-[var(--foreground)]">
+                Starting balances
+              </legend>
+              <p className="text-xs text-[var(--muted)]">
+                Optional. Cash and Checking open in this currency. A savings wallet is added when that balance is above zero.
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="cash_balance">Cash</Label>
+                  <Input
+                    id="cash_balance"
+                    name="cash_balance"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="checking_balance">Checking</Label>
+                  <Input
+                    id="checking_balance"
+                    name="checking_balance"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="savings_balance">Savings</Label>
+                  <Input
+                    id="savings_balance"
+                    name="savings_balance"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </fieldset>
             <label className="flex items-start gap-2.5 text-sm leading-snug text-[var(--muted)]">
               <input
                 type="checkbox"

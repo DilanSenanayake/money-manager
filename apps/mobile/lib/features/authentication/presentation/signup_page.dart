@@ -23,6 +23,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _cash = TextEditingController();
+  final _checking = TextEditingController();
+  final _savings = TextEditingController();
   String _currency = 'USD';
   bool _loading = false;
   bool _obscure = true;
@@ -35,6 +38,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     _name.dispose();
     _email.dispose();
     _password.dispose();
+    _cash.dispose();
+    _checking.dispose();
+    _savings.dispose();
     super.dispose();
   }
 
@@ -45,6 +51,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       setState(() => _error = 'Please agree to the Terms and Privacy Policy.');
       return;
     }
+    final cash = _openingBalance(_cash, 'Cash');
+    final checking = _openingBalance(_checking, 'Checking');
+    final savings = _openingBalance(_savings, 'Savings');
+    if (cash == null || checking == null || savings == null) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -56,6 +66,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             password: _password.text,
             displayName: _name.text,
             baseCurrency: _currency,
+            cashBalance: cash,
+            checkingBalance: checking,
+            savingsBalance: savings,
           );
       if (!mounted) return;
       if (message == null) {
@@ -78,6 +91,21 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  String? _openingBalance(TextEditingController controller, String label) {
+    final text = controller.text.trim();
+    if (text.isEmpty) return '0.00';
+    if (!RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(text)) {
+      setState(() => _error = 'Enter a valid starting balance for $label.');
+      return null;
+    }
+    final value = double.tryParse(text);
+    if (value == null || value > 999999999.99) {
+      setState(() => _error = '$label starting balance is too large.');
+      return null;
+    }
+    return text;
   }
 
   @override
@@ -153,9 +181,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         label: 'Password',
                         obscureText: _obscure,
                         prefixIcon: Icons.lock_outline_rounded,
-                        textInputAction: TextInputAction.done,
+                        textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.newPassword],
-                        onFieldSubmitted: (_) => _submit(),
                         suffix: IconButton(
                           onPressed: () =>
                               setState(() => _obscure = !_obscure),
@@ -188,6 +215,54 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                             .toList(),
                         onChanged: (v) =>
                             setState(() => _currency = v ?? 'USD'),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Starting balances',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Optional. Cash and Checking open in this currency. A savings wallet is added when that balance is above zero.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      AppTextField(
+                        controller: _cash,
+                        label: 'Cash',
+                        hint: '0.00',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        prefixIcon: Icons.payments_outlined,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      AppTextField(
+                        controller: _checking,
+                        label: 'Checking',
+                        hint: '0.00',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        prefixIcon: Icons.account_balance_outlined,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      AppTextField(
+                        controller: _savings,
+                        label: 'Savings',
+                        hint: '0.00',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        prefixIcon: Icons.savings_outlined,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
                       ),
                       const SizedBox(height: 16),
                       CheckboxListTile(

@@ -11,6 +11,7 @@ import '../../../core/utils/insights.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/components/components.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../../shared/models/models.dart';
 import '../../dashboard/data/dashboard_repository.dart';
 
 class AnalyticsPage extends ConsumerWidget {
@@ -231,10 +232,136 @@ class AnalyticsPage extends ConsumerWidget {
                     ],
                   ),
                 ),
+                if (data.months.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  Text(
+                    'Each month',
+                    style: context.texts.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    data.summary == null
+                        ? 'Income and spending from your full history.'
+                        : 'Average spend ${formatMoney(data.summary!.averageExpense, data.baseCurrency)} across ${data.summary!.monthCount} months.',
+                    style: context.texts.bodySmall?.copyWith(color: context.muted),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (final month in data.months)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: _MonthReportTile(
+                        month: month,
+                        currency: data.baseCurrency,
+                      ),
+                    ),
+                ],
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _MonthReportTile extends StatelessWidget {
+  const _MonthReportTile({
+    required this.month,
+    required this.currency,
+  });
+
+  final MonthlyReport month;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final change = month.expenseChange;
+    final changeLabel = change == null
+        ? null
+        : '${change > 0 ? '+' : ''}${change.toStringAsFixed(1)}% vs prior month';
+
+    return AppCard(
+      padding: EdgeInsets.zero,
+      child: ExpansionTile(
+        title: Text(
+          month.label,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          'Spent ${formatMoney(month.expense, currency)}'
+          '${changeLabel == null ? '' : ' · $changeLabel'}',
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Income ${formatMoney(month.income, currency)}',
+                  style: context.texts.bodySmall,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  'Left ${formatMoney(month.net, currency)}',
+                  style: context.texts.bodySmall,
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ],
+          ),
+          if (month.categories.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                'No expenses this month.',
+                style: context.texts.bodySmall?.copyWith(color: context.muted),
+              ),
+            )
+          else ...[
+            const SizedBox(height: 12),
+            for (final category in month.categories)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(category.name)),
+                    Text(
+                      formatMoney(category.value, currency),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          if (month.merchants.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Payees',
+              style: context.texts.labelMedium?.copyWith(
+                color: context.muted,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final merchant in month.merchants)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${merchant.name} · ${merchant.count}',
+                        style: context.texts.bodySmall,
+                      ),
+                    ),
+                    Text(formatMoney(merchant.value, currency)),
+                  ],
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }

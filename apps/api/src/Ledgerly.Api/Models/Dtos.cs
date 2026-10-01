@@ -410,8 +410,83 @@ public sealed class AnalyticsResponse
     [JsonPropertyName("categorySpend")]
     public List<CategorySpendPoint> CategorySpend { get; set; } = [];
 
+    [JsonPropertyName("months")]
+    public List<MonthlyReport> Months { get; set; } = [];
+
+    [JsonPropertyName("summary")]
+    public SpendingReportSummary Summary { get; set; } = new();
+
     [JsonPropertyName("baseCurrency")]
     public string BaseCurrency { get; set; } = "USD";
+}
+
+public sealed class MonthlyReport
+{
+    [JsonPropertyName("key")]
+    public string Key { get; set; } = "";
+
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = "";
+
+    [JsonPropertyName("income")]
+    public decimal Income { get; set; }
+
+    [JsonPropertyName("expense")]
+    public decimal Expense { get; set; }
+
+    [JsonPropertyName("net")]
+    public decimal Net { get; set; }
+
+    [JsonPropertyName("savingsRate")]
+    public decimal? SavingsRate { get; set; }
+
+    [JsonPropertyName("expenseChange")]
+    public decimal? ExpenseChange { get; set; }
+
+    [JsonPropertyName("transactionCount")]
+    public int TransactionCount { get; set; }
+
+    [JsonPropertyName("categories")]
+    public List<CategorySpendPoint> Categories { get; set; } = [];
+
+    [JsonPropertyName("merchants")]
+    public List<MerchantSpendPoint> Merchants { get; set; } = [];
+}
+
+public sealed class MerchantSpendPoint
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    [JsonPropertyName("value")]
+    public decimal Value { get; set; }
+
+    [JsonPropertyName("count")]
+    public int Count { get; set; }
+}
+
+public sealed class SpendingReportSummary
+{
+    [JsonPropertyName("monthCount")]
+    public int MonthCount { get; set; }
+
+    [JsonPropertyName("averageExpense")]
+    public decimal AverageExpense { get; set; }
+
+    [JsonPropertyName("totalIncome")]
+    public decimal TotalIncome { get; set; }
+
+    [JsonPropertyName("totalExpense")]
+    public decimal TotalExpense { get; set; }
+
+    [JsonPropertyName("savingsRate")]
+    public decimal? SavingsRate { get; set; }
+
+    [JsonPropertyName("highestSpendMonth")]
+    public string? HighestSpendMonth { get; set; }
+
+    [JsonPropertyName("highestSpend")]
+    public decimal HighestSpend { get; set; }
 }
 
 public sealed class TrendPoint

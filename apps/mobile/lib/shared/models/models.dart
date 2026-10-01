@@ -293,6 +293,127 @@ class CategorySpendPoint extends Equatable {
   List<Object?> get props => [name, value];
 }
 
+class MerchantSpendPoint extends Equatable {
+  const MerchantSpendPoint({
+    required this.name,
+    required this.value,
+    required this.count,
+  });
+
+  final String name;
+  final double value;
+  final int count;
+
+  factory MerchantSpendPoint.fromJson(Map<String, dynamic> json) {
+    return MerchantSpendPoint(
+      name: asString(json['name']),
+      value: asDouble(json['value']),
+      count: asInt(json['count']),
+    );
+  }
+
+  @override
+  List<Object?> get props => [name, value, count];
+}
+
+class MonthlyReport extends Equatable {
+  const MonthlyReport({
+    required this.key,
+    required this.label,
+    required this.income,
+    required this.expense,
+    required this.net,
+    this.savingsRate,
+    this.expenseChange,
+    required this.transactionCount,
+    required this.categories,
+    required this.merchants,
+  });
+
+  final String key;
+  final String label;
+  final double income;
+  final double expense;
+  final double net;
+  final double? savingsRate;
+  final double? expenseChange;
+  final int transactionCount;
+  final List<CategorySpendPoint> categories;
+  final List<MerchantSpendPoint> merchants;
+
+  factory MonthlyReport.fromJson(Map<String, dynamic> json) {
+    return MonthlyReport(
+      key: asString(json['key']),
+      label: asString(json['label']),
+      income: asDouble(json['income']),
+      expense: asDouble(json['expense']),
+      net: asDouble(json['net']),
+      savingsRate: json['savingsRate'] == null && json['savings_rate'] == null
+          ? null
+          : asDouble(json['savingsRate'] ?? json['savings_rate']),
+      expenseChange:
+          json['expenseChange'] == null && json['expense_change'] == null
+              ? null
+              : asDouble(json['expenseChange'] ?? json['expense_change']),
+      transactionCount: asInt(
+        json['transactionCount'] ?? json['transaction_count'],
+      ),
+      categories: asList(json['categories'])
+          .whereType<Map>()
+          .map((e) => CategorySpendPoint.fromJson(asMap(e)))
+          .toList(),
+      merchants: asList(json['merchants'])
+          .whereType<Map>()
+          .map((e) => MerchantSpendPoint.fromJson(asMap(e)))
+          .toList(),
+    );
+  }
+
+  @override
+  List<Object?> get props => [key, label, income, expense, net, transactionCount];
+}
+
+class SpendingReportSummary extends Equatable {
+  const SpendingReportSummary({
+    required this.monthCount,
+    required this.averageExpense,
+    required this.totalIncome,
+    required this.totalExpense,
+    this.savingsRate,
+    this.highestSpendMonth,
+    required this.highestSpend,
+  });
+
+  final int monthCount;
+  final double averageExpense;
+  final double totalIncome;
+  final double totalExpense;
+  final double? savingsRate;
+  final String? highestSpendMonth;
+  final double highestSpend;
+
+  factory SpendingReportSummary.fromJson(Map<String, dynamic> json) {
+    return SpendingReportSummary(
+      monthCount: asInt(json['monthCount'] ?? json['month_count']),
+      averageExpense: asDouble(
+        json['averageExpense'] ?? json['average_expense'],
+      ),
+      totalIncome: asDouble(json['totalIncome'] ?? json['total_income']),
+      totalExpense: asDouble(json['totalExpense'] ?? json['total_expense']),
+      savingsRate: json['savingsRate'] == null && json['savings_rate'] == null
+          ? null
+          : asDouble(json['savingsRate'] ?? json['savings_rate']),
+      highestSpendMonth: asNullableString(
+        json['highestSpendMonth'] ?? json['highest_spend_month'],
+      ),
+      highestSpend: asDouble(json['highestSpend'] ?? json['highest_spend']),
+    );
+  }
+
+  @override
+  List<Object?> get props => [monthCount, totalExpense, totalIncome];
+}
+
 class DashboardData extends Equatable {
   const DashboardData({
     this.profile,
@@ -363,13 +484,18 @@ class AnalyticsData extends Equatable {
     required this.trend,
     required this.categorySpend,
     required this.baseCurrency,
+    this.months = const [],
+    this.summary,
   });
 
   final List<TrendPoint> trend;
   final List<CategorySpendPoint> categorySpend;
   final String baseCurrency;
+  final List<MonthlyReport> months;
+  final SpendingReportSummary? summary;
 
   factory AnalyticsData.fromJson(Map<String, dynamic> json) {
+    final summaryJson = json['summary'];
     return AnalyticsData(
       trend: asList(json['trend'])
           .whereType<Map>()
@@ -383,11 +509,18 @@ class AnalyticsData extends Equatable {
         json['baseCurrency'] ?? json['base_currency'],
         'USD',
       ),
+      months: asList(json['months'])
+          .whereType<Map>()
+          .map((e) => MonthlyReport.fromJson(asMap(e)))
+          .toList(),
+      summary: summaryJson is Map
+          ? SpendingReportSummary.fromJson(asMap(summaryJson))
+          : null,
     );
   }
 
   @override
-  List<Object?> get props => [trend, categorySpend, baseCurrency];
+  List<Object?> get props => [trend, categorySpend, baseCurrency, months, summary];
 }
 
 class TransactionInput {

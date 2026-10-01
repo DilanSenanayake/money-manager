@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LEGAL } from "@/lib/legal";
+import { canonicalMoney } from "@/lib/money";
 import { authCredentialsSchema, currencySchema } from "@/lib/schemas";
 import type { ActionResult } from "@/lib/api/result";
 
@@ -22,6 +23,13 @@ export async function signUp(formData: FormData) {
     return { error: "Please agree to the Terms and Privacy Policy." };
   }
 
+  const cashBalance = openingBalance(formData, "cash_balance", "Cash");
+  if ("error" in cashBalance) return cashBalance;
+  const checkingBalance = openingBalance(formData, "checking_balance", "Checking");
+  if ("error" in checkingBalance) return checkingBalance;
+  const savingsBalance = openingBalance(formData, "savings_balance", "Savings");
+  if ("error" in savingsBalance) return savingsBalance;
+
   const authParsed = authCredentialsSchema.safeParse({ email, password });
   if (!authParsed.success) {
     return { error: authParsed.error.issues[0]?.message ?? "Invalid credentials" };
@@ -34,6 +42,9 @@ export async function signUp(formData: FormData) {
       data: {
         display_name: displayName || email.split("@")[0],
         base_currency: baseCurrency,
+        cash_balance: cashBalance.value,
+        checking_balance: checkingBalance.value,
+        savings_balance: savingsBalance.value,
         consent_version: LEGAL.consentVersion,
         consent_accepted_at: new Date().toISOString(),
       },
@@ -89,6 +100,23 @@ export async function getAuthUser() {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
+}
+
+function openingBalance(
+  formData: FormData,
+  field: string,
+  label: string
+): { value: string } | { error: string } {
+  const text = String(formData.get(field) ?? "").trim();
+  if (!text) return { value: "0.00" };
+  const canonical = canonicalMoney(text, { allowZero: true });
+  if (!canonical) {
+    return { error: `Enter a valid starting balance for ${label}.` };
+  }
+  if (Number(canonical) > 999_999_999.99) {
+    return { error: `${label} starting balance is too large.` };
+  }
+  return { value: canonical };
 }
 
 async function requireEmailUser() {

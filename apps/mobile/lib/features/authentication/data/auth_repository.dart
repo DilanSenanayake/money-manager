@@ -57,6 +57,9 @@ class AuthRepository {
     required String password,
     required String displayName,
     required String baseCurrency,
+    String cashBalance = '0.00',
+    String checkingBalance = '0.00',
+    String savingsBalance = '0.00',
   }) async {
     try {
       final consent = await ConsentStore().read();
@@ -68,6 +71,9 @@ class AuthRepository {
               ? email.split('@').first
               : displayName.trim(),
           'base_currency': baseCurrency,
+          'cash_balance': cashBalance,
+          'checking_balance': checkingBalance,
+          'savings_balance': savingsBalance,
           if (consent != null) 'consent_version': consent.version,
           if (consent != null) 'consent_accepted_at': consent.acceptedAt,
         },
