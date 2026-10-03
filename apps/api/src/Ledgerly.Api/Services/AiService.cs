@@ -52,9 +52,12 @@ public sealed class AiService(
         {
             var prompt =
                 $"""
-                You are given plain text extracted from a purchase receipt by OCR (may contain typos or junk lines). Extract structured purchase fields. Amount must be the TOTAL paid (not tax-only or unit prices). Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
+                You are given plain text extracted by OCR from a photo of a bill, receipt, bus ticket, invoice, fare stub, or similar purchase document (may contain typos or junk lines). Accept any of these document types and extract structured purchase fields.
+                Amount must be the TOTAL paid for the whole document (not tax-only or a single unit price).
+                For each line_items entry, price must be the amount charged for the bought quantity on that line (line total = quantity × unit price when both appear). Do not use unit price alone when a line total is available or can be computed.
+                Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
                 Pick category as ONE of these exact names when possible: {categoryNames}.
-                Prefer Dining for restaurants, cafes, coffee shops, fast food, and takeout. Prefer Groceries for supermarkets. Avoid Other when another listed category fits. Do not put raw OCR into notes — leave notes null unless there is a short useful detail.
+                Prefer Dining for restaurants, cafes, coffee shops, fast food, and takeout. Prefer Groceries for supermarkets. Prefer Transport for bus, train, taxi, ride-hail, and similar tickets. Avoid Other when another listed category fits. Do not put raw OCR into notes — leave notes null unless there is a short useful detail.
 
                 OCR text:
                 ---
