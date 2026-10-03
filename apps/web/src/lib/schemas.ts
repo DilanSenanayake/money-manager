@@ -133,13 +133,19 @@ export const exchangeRateSchema = z.object({
 export const receiptLineItemSchema = z.object({
   name: z.string(),
   quantity: z.number().nullable().optional(),
-  price: z.number().nullable().optional(),
+  price: z
+    .number()
+    .nullable()
+    .optional()
+    .describe(
+      "Line total for the bought quantity (quantity × unit price), not unit price alone"
+    ),
 });
 
 /** Shared by Gemini generateObject for receipt text (after Tesseract OCR) */
 export const receiptExtractionSchema = z.object({
-  merchant: z.string().describe("Store or merchant name"),
-  amount: z.number().describe("Total amount paid"),
+  merchant: z.string().describe("Store, merchant, carrier, or issuer name"),
+  amount: z.number().describe("Total amount paid for the whole document"),
   currency: currencySchema.describe("ISO currency code if detectable, else USD"),
   date: z
     .string()
@@ -151,9 +157,15 @@ export const receiptExtractionSchema = z.object({
     ),
   line_items: z
     .array(receiptLineItemSchema)
-    .describe("Individual line items when visible")
+    .describe(
+      "Individual line items when visible; each price is the amount for the bought quantity"
+    )
     .default([]),
-  notes: z.string().nullable().optional().describe("Extra notes from the receipt"),
+  notes: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Extra notes from the bill, receipt, ticket, or similar document"),
   category_id: z.string().uuid().nullable().optional(),
   account_id: z.string().uuid().nullable().optional(),
   payee_key: z.string().max(80).nullable().optional(),
