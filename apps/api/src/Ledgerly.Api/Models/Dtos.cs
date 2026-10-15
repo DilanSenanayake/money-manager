@@ -501,13 +501,37 @@ public sealed class TrendPoint
     public decimal Expense { get; set; }
 }
 
+public sealed class CategoryExpenseItem
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("date")]
+    public string Date { get; set; } = "";
+
+    [JsonPropertyName("merchant")]
+    public string? Merchant { get; set; }
+
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+}
+
 public sealed class CategorySpendPoint
 {
+    [JsonPropertyName("categoryId")]
+    public Guid? CategoryId { get; set; }
+
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
 
     [JsonPropertyName("value")]
     public decimal Value { get; set; }
+
+    [JsonPropertyName("count")]
+    public int Count { get; set; }
+
+    [JsonPropertyName("expenses")]
+    public List<CategoryExpenseItem> Expenses { get; set; } = [];
 }
 
 public sealed class DataEnvelope<T>

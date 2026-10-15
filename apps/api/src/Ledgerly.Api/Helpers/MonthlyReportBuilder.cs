@@ -5,7 +5,6 @@ namespace Ledgerly.Api.Helpers;
 
 public static class MonthlyReportBuilder
 {
-    public const int TopCategories = 8;
     public const int TopMerchants = 5;
 
     public static (List<MonthlyReport> Months, SpendingReportSummary Summary) Build(
@@ -59,7 +58,7 @@ public static class MonthlyReportBuilder
 
             decimal income = 0;
             decimal expense = 0;
-            var byCategory = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            var byCategory = new Dictionary<string, CategoryBucket>(StringComparer.Ordinal);
             var byMerchant = new Dictionary<string, (decimal Amount, int Count)>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var tx in rows)
@@ -72,8 +71,22 @@ public static class MonthlyReportBuilder
                 }
 
                 expense += amount;
-                var category = CategoryLabel(tx, categoryNames);
-                byCategory[category] = byCategory.GetValueOrDefault(category) + amount;
+                var categoryKey = CategoryBucketKey(tx);
+                if (!byCategory.TryGetValue(categoryKey, out var bucket))
+                {
+                    bucket = new CategoryBucket(
+                        tx.CategoryId,
+                        CategoryLabel(tx, categoryNames));
+                    byCategory[categoryKey] = bucket;
+                }
+                bucket.Total += amount;
+                bucket.Expenses.Add(new CategoryExpenseItem
+                {
+                    Id = tx.Id,
+                    Date = tx.Date,
+                    Merchant = string.IsNullOrWhiteSpace(tx.Merchant) ? null : tx.Merchant.Trim(),
+                    Amount = amount,
+                });
 
                 var merchant = string.IsNullOrWhiteSpace(tx.Merchant) ? null : tx.Merchant.Trim();
                 if (merchant is null) continue;
@@ -100,12 +113,26 @@ public static class MonthlyReportBuilder
                     : null,
                 ExpenseChange = change,
                 TransactionCount = rows.Count,
-                Categories = byCategory
-                    .Select(pair => new CategorySpendPoint { Name = pair.Key, Value = Money(pair.Value) })
+                Categories = byCategory.Values
+                    .Select(bucket =>
+                    {
+                        var expenses = bucket.Expenses
+                            .OrderByDescending(item => item.Date, StringComparer.Ordinal)
+                            .ThenBy(item => item.Merchant ?? "", StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(item => item.Id)
+                            .ToList();
+                        return new CategorySpendPoint
+                        {
+                            CategoryId = bucket.CategoryId,
+                            Name = bucket.Name,
+                            Value = Money(bucket.Total),
+                            Count = expenses.Count,
+                            Expenses = expenses,
+                        };
+                    })
                     .Where(point => point.Value > 0)
                     .OrderByDescending(point => point.Value)
                     .ThenBy(point => point.Name, StringComparer.OrdinalIgnoreCase)
-                    .Take(TopCategories)
                     .ToList(),
                 Merchants = byMerchant
                     .Select(pair => new MerchantSpendPoint
@@ -129,6 +156,17 @@ public static class MonthlyReportBuilder
         months.Reverse();
         return (months, summary);
     }
+
+    private sealed class CategoryBucket(Guid? categoryId, string name)
+    {
+        public Guid? CategoryId { get; } = categoryId;
+        public string Name { get; } = name;
+        public decimal Total { get; set; }
+        public List<CategoryExpenseItem> Expenses { get; } = [];
+    }
+
+    private static string CategoryBucketKey(Transaction tx) =>
+        tx.CategoryId is Guid id ? id.ToString("D") : "uncategorized";
 
     private static SpendingReportSummary Summarize(List<MonthlyReport> months)
     {

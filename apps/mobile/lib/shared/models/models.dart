@@ -273,24 +273,63 @@ class TrendPoint extends Equatable {
   List<Object?> get props => [month, income, expense];
 }
 
-class CategorySpendPoint extends Equatable {
-  const CategorySpendPoint({
-    required this.name,
-    required this.value,
+class CategoryExpenseItem extends Equatable {
+  const CategoryExpenseItem({
+    required this.id,
+    required this.date,
+    this.merchant,
+    required this.amount,
   });
 
-  final String name;
-  final double value;
+  final String id;
+  final String date;
+  final String? merchant;
+  final double amount;
 
-  factory CategorySpendPoint.fromJson(Map<String, dynamic> json) {
-    return CategorySpendPoint(
-      name: asString(json['name']),
-      value: asDouble(json['value']),
+  factory CategoryExpenseItem.fromJson(Map<String, dynamic> json) {
+    return CategoryExpenseItem(
+      id: asString(json['id']),
+      date: asString(json['date']),
+      merchant: asNullableString(json['merchant']),
+      amount: asDouble(json['amount']),
     );
   }
 
   @override
-  List<Object?> get props => [name, value];
+  List<Object?> get props => [id, date, merchant, amount];
+}
+
+class CategorySpendPoint extends Equatable {
+  const CategorySpendPoint({
+    this.categoryId,
+    required this.name,
+    required this.value,
+    this.count = 0,
+    this.expenses = const [],
+  });
+
+  final String? categoryId;
+  final String name;
+  final double value;
+  final int count;
+  final List<CategoryExpenseItem> expenses;
+
+  factory CategorySpendPoint.fromJson(Map<String, dynamic> json) {
+    final expenses = asList(json['expenses'])
+        .whereType<Map>()
+        .map((e) => CategoryExpenseItem.fromJson(asMap(e)))
+        .toList();
+    return CategorySpendPoint(
+      categoryId: asNullableString(json['categoryId'] ?? json['category_id']),
+      name: asString(json['name']),
+      value: asDouble(json['value']),
+      count: json['count'] == null ? expenses.length : asInt(json['count']),
+      expenses: expenses,
+    );
+  }
+
+  @override
+  List<Object?> get props => [categoryId, name, value, count, expenses];
 }
 
 class MerchantSpendPoint extends Equatable {
