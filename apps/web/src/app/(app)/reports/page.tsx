@@ -11,7 +11,7 @@ export default async function ReportsPage() {
     <div className="page-stack">
       <PageHeader
         title="Reports"
-        description="Every month of income and spending, so you can see where money went"
+        description="Every month of income and spending — open a category to see each expense"
         actions={
           <Button asChild variant="outline">
             <Link href="/analytics">Charts</Link>

@@ -160,14 +160,33 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
         var categorySpend = categories
             .Select(cat =>
             {
-                var spent = tx
+                var rows = tx
                     .Where(t =>
                         t.Type == TransactionTypes.Expense &&
                         t.CategoryId == cat.Id &&
                         t.Date.CompareTo(thisMonth.From) >= 0 &&
                         t.Date.CompareTo(thisMonth.To) <= 0)
-                    .Sum(ToBase);
-                return new CategorySpendPoint { Name = cat.Name, Value = spent };
+                    .OrderByDescending(t => t.Date, StringComparer.Ordinal)
+                    .ThenBy(t => t.Merchant ?? "", StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(t => t.Id)
+                    .ToList();
+                var expenses = rows
+                    .Select(t => new CategoryExpenseItem
+                    {
+                        Id = t.Id,
+                        Date = t.Date,
+                        Merchant = string.IsNullOrWhiteSpace(t.Merchant) ? null : t.Merchant.Trim(),
+                        Amount = Math.Round(ToBase(t), 2, MidpointRounding.AwayFromZero),
+                    })
+                    .ToList();
+                return new CategorySpendPoint
+                {
+                    CategoryId = cat.Id,
+                    Name = cat.Name,
+                    Value = Math.Round(expenses.Sum(e => e.Amount), 2, MidpointRounding.AwayFromZero),
+                    Count = expenses.Count,
+                    Expenses = expenses,
+                };
             })
             .Where(c => c.Value > 0)
             .OrderByDescending(c => c.Value)

@@ -47,6 +47,12 @@ public class MonthlyReportBuilderTests
         Assert.Equal(2880m, august.Net);
         Assert.Equal(96.0m, august.SavingsRate);
         Assert.Equal(120m, august.Categories[0].Value);
+        Assert.Equal(groceries, august.Categories[0].CategoryId);
+        Assert.Equal(2, august.Categories[0].Count);
+        Assert.Equal(2, august.Categories[0].Expenses.Count);
+        Assert.Equal("2026-08-05", august.Categories[0].Expenses[0].Date);
+        Assert.Equal("Market", august.Categories[0].Expenses[0].Merchant);
+        Assert.Equal(40m, august.Categories[0].Expenses[0].Amount);
         Assert.Equal(2, august.Merchants[0].Count);
         Assert.Null(august.ExpenseChange);
         Assert.Equal(920.8m, september.ExpenseChange);

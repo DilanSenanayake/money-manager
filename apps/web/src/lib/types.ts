@@ -68,9 +68,19 @@ export interface BudgetProgress {
   status: "ok" | "warn" | "over" | "none";
 }
 
+export interface CategoryExpenseItem {
+  id: string;
+  date: string;
+  merchant: string | null;
+  amount: number;
+}
+
 export interface CategorySpendPoint {
+  categoryId?: string | null;
   name: string;
   value: number;
+  count?: number;
+  expenses?: CategoryExpenseItem[];
 }
 
 export interface MerchantSpendPoint {

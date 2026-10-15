@@ -49,7 +49,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               icon: Icons.bar_chart_rounded,
               title: 'No spending history yet',
               message:
-                  'Add income and expenses and each month will show up here, including older activity.',
+                  'Add income and expenses and each month will show up here. Open a category to see every expense.',
               actionLabel: 'Add',
               onAction: () => context.go(RoutePaths.add),
             );
@@ -273,14 +273,40 @@ class _AmountLabel extends StatelessWidget {
   }
 }
 
-class _CategoryCard extends StatelessWidget {
+class _CategoryCard extends StatefulWidget {
   const _CategoryCard({required this.month, required this.currency});
 
   final MonthlyReport month;
   final String currency;
 
   @override
+  State<_CategoryCard> createState() => _CategoryCardState();
+}
+
+class _CategoryCardState extends State<_CategoryCard> {
+  String? _expandedKey;
+
+  @override
+  void didUpdateWidget(covariant _CategoryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.month.key != widget.month.key) {
+      _expandedKey = null;
+    }
+  }
+
+  String _categoryKey(CategorySpendPoint category) =>
+      category.categoryId ?? category.name;
+
+  String _expenseLabel(String? merchant) {
+    final trimmed = merchant?.trim();
+    if (trimmed == null || trimmed.isEmpty) return 'Expense';
+    return trimmed;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final month = widget.month;
+    final currency = widget.currency;
     final maxCategory = month.categories.isEmpty
         ? 0.0
         : month.categories.first.value;
@@ -296,7 +322,7 @@ class _CategoryCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            _changeHint(month.expenseChange),
+            '${_changeHint(month.expenseChange)}. Tap a category to see every expense.',
             style: context.texts.labelSmall?.copyWith(color: context.muted),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -307,23 +333,158 @@ class _CategoryCard extends StatelessWidget {
             )
           else
             for (final category in month.categories) ...[
-              Row(
+              _CategoryExpenseTile(
+                category: category,
+                currency: currency,
+                fraction:
+                    maxCategory <= 0 ? 0 : category.value / maxCategory,
+                expanded: _expandedKey == _categoryKey(category),
+                expenseLabel: _expenseLabel,
+                onToggle: () {
+                  final key = _categoryKey(category);
+                  setState(() {
+                    _expandedKey = _expandedKey == key ? null : key;
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryExpenseTile extends StatelessWidget {
+  const _CategoryExpenseTile({
+    required this.category,
+    required this.currency,
+    required this.fraction,
+    required this.expanded,
+    required this.onToggle,
+    required this.expenseLabel,
+  });
+
+  final CategorySpendPoint category;
+  final String currency;
+  final double fraction;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final String Function(String?) expenseLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = category.count > 0
+        ? category.count
+        : category.expenses.length;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: context.colors.outlineVariant),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+              child: Column(
                 children: [
-                  Expanded(child: Text(category.name)),
-                  Text(
-                    formatMoney(category.value, currency),
-                    style: const TextStyle(
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        expanded
+                            ? Icons.expand_more_rounded
+                            : Icons.chevron_right_rounded,
+                        size: 20,
+                        color: context.muted,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          category.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      if (count > 0) ...[
+                        Text(
+                          '$count ${count == 1 ? 'expense' : 'expenses'}',
+                          style: context.texts.labelSmall?.copyWith(
+                            color: context.muted,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        formatMoney(category.value, currency),
+                        style: const TextStyle(
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  _ShareBar(fraction: fraction),
                 ],
               ),
-              const SizedBox(height: 6),
-              _ShareBar(
-                fraction: maxCategory <= 0 ? 0 : category.value / maxCategory,
-              ),
-              const SizedBox(height: 12),
-            ],
+            ),
+          ),
+          if (expanded) ...[
+            const Divider(height: 1),
+            if (category.expenses.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'No individual expenses listed.',
+                    style: context.texts.bodySmall?.copyWith(
+                      color: context.muted,
+                    ),
+                  ),
+                ),
+              )
+            else
+              for (final expense in category.expenses)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              expenseLabel(expense.merchant),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              expense.date,
+                              style: context.texts.labelSmall?.copyWith(
+                                color: context.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        formatMoney(expense.amount, currency),
+                        style: TextStyle(
+                          color: context.colors.error,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+          ],
         ],
       ),
     );
