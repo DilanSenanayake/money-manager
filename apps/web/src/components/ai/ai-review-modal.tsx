@@ -261,9 +261,9 @@ export function AiReviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-        <div className="flex max-h-[inherit] min-h-0 flex-col">
-          <DialogHeader className="shrink-0 border-b border-[var(--border)] px-5 pb-3 pt-5 pr-12">
+      <DialogContent className="gap-0 overflow-hidden p-0 pb-0 sm:max-w-md sm:p-0 sm:pb-0">
+        <div className="flex max-h-[min(92dvh,100svh)] min-h-0 flex-col sm:max-h-[min(84vh,720px)]">
+          <DialogHeader className="shrink-0 border-b border-[var(--border)] px-5 py-4 pr-12 sm:px-6">
             <DialogTitle>Check & save</DialogTitle>
             <p className="text-sm text-[var(--muted)]">
               We filled this in for you — change anything you need, then save.
@@ -276,7 +276,7 @@ export function AiReviewModal({
             </div>
           ) : (
             <>
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
                 <div className="flex gap-2">
                   {(["expense", "income"] as const).map((t) => (
                     <button
@@ -375,7 +375,7 @@ export function AiReviewModal({
                 </div>
               </div>
 
-              <DialogFooter className="shrink-0 gap-2 border-t border-[var(--border)] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:gap-2 sm:px-6">
+              <DialogFooter className="shrink-0 gap-2 border-t border-[var(--border)] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:gap-2 sm:px-6 sm:pb-4">
                 <Button
                   variant="outline"
                   size="lg"

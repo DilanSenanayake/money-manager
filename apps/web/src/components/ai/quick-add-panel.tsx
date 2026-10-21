@@ -233,6 +233,9 @@ export function QuickAddPanel({
 
   async function runComposerContinue() {
     if (speech.listening) speech.stop();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     const text = composerText.trim();
     if (!text || busy) return;
 
