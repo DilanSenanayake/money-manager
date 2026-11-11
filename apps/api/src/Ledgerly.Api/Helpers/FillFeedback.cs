@@ -4,7 +4,8 @@ namespace Ledgerly.Api.Helpers;
 
 /// <summary>
 /// A saved review correction: one payee key with the category and account
-/// the user kept. Amount and date are not part of the combination.
+/// the user kept. The parsed description is left as-is. Amount and date
+/// are not part of the combination.
 /// </summary>
 public static class FillFeedback
 {

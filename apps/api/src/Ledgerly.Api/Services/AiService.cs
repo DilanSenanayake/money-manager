@@ -105,7 +105,6 @@ public sealed class AiService(
                 name => result.Category = name,
                 categoryId => result.CategoryId = categoryId,
                 accountId => result.AccountId = accountId,
-                name => result.Merchant = name,
                 key => result.PayeeKey = key,
                 ct);
 
@@ -158,7 +157,6 @@ public sealed class AiService(
                 _ => { },
                 categoryId => result.CategoryId = categoryId,
                 accountId => result.AccountId = accountId,
-                name => result.Merchant = name,
                 key => result.PayeeKey = key,
                 ct);
             return Result<SmsExtraction>.Ok(result);
@@ -214,7 +212,6 @@ public sealed class AiService(
                 name => result.Category = name,
                 categoryId => result.CategoryId = categoryId,
                 accountId => result.AccountId = accountId,
-                name => result.Merchant = name,
                 key => result.PayeeKey = key,
                 ct);
             return Result<QuickTextExtraction>.Ok(result);
@@ -303,7 +300,6 @@ public sealed class AiService(
         Action<string> setCategoryName,
         Action<string?> setCategoryId,
         Action<string?> setAccountId,
-        Action<string> setMerchant,
         Action<string?> setPayeeKey,
         CancellationToken ct)
     {
@@ -312,14 +308,13 @@ public sealed class AiService(
         {
             var rows = await supabase.GetListAsync<FillFeedbackRow>(
                 "fill_feedback",
-                $"select=payee_key,display_name,category_id,account_id&user_id=eq.{user.UserId}",
+                $"select=payee_key,category_id,account_id&user_id=eq.{user.UserId}",
                 ct);
             var hit = FillFeedback.Match(rows, sourceText, merchant);
             if (hit is null) return;
 
+            // Description stays as parsed. Feedback only fills category and account.
             setPayeeKey(hit.PayeeKey);
-            if (!string.IsNullOrWhiteSpace(hit.DisplayName))
-                setMerchant(hit.DisplayName);
             if (hit.AccountId is Guid accountId)
                 setAccountId(accountId.ToString());
             if (hit.CategoryId is not Guid categoryId) return;
