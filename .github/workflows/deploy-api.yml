@@ -1,0 +1,56 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/deploy-api.yml"
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test, publish, and deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Test
+        working-directory: apps/api
+        run: dotnet test --configuration Release
+
+      - name: Publish
+        run: dotnet publish apps/api/src/Ledgerly.Api/Ledgerly.Api.csproj -c Release -o publish
+
+      - name: Deploy to VM
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VM_HOST}" ] || [ -z "${VM_SSH_KEY}" ]; then
+            echo "Add GitHub Actions secrets VM_HOST and VM_SSH_KEY, then re-run this workflow."
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/vm_deploy
+          chmod 600 ~/.ssh/vm_deploy
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+          ssh_opts=(-i ~/.ssh/vm_deploy -o BatchMode=yes)
+          ssh "${ssh_opts[@]}" "ubuntu@${VM_HOST}" "rm -rf ~/ledgerly-api-new"
+          scp "${ssh_opts[@]}" -r publish "ubuntu@${VM_HOST}:~/ledgerly-api-new"
+          ssh "${ssh_opts[@]}" "ubuntu@${VM_HOST}" "set -e
+            chmod 750 ~/ledgerly-api-new
+            sudo systemctl stop ledgerly-api
+            rm -rf ~/ledgerly-api
+            mv ~/ledgerly-api-new ~/ledgerly-api
+            sudo systemctl start ledgerly-api
+            sleep 2
+            curl -fsS http://127.0.0.1:8080/health
+            echo"
