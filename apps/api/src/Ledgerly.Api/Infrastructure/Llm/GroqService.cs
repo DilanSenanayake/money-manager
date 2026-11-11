@@ -129,7 +129,7 @@ public sealed class GroqService(
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(ex, "Groq JSON parse failed. Payload: {Payload}", cleaned);
+            logger.LogWarning(ex, "Groq JSON parse failed. PayloadLength {PayloadLength}", cleaned.Length);
             throw new InvalidOperationException($"Could not parse AI JSON: {ex.Message}");
         }
     }

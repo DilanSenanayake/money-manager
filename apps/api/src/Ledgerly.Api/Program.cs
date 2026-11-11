@@ -1,10 +1,13 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Ledgerly.Api.Infrastructure;
 using Ledgerly.Api.Infrastructure.Auth;
 using Ledgerly.Api.Infrastructure.Llm;
+using Ledgerly.Api.Infrastructure.Logging;
 using Ledgerly.Api.Infrastructure.Supabase;
 using Ledgerly.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,6 +18,35 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.Configure(options =>
+{
+    options.ActivityTrackingOptions =
+        ActivityTrackingOptions.TraceId
+        | ActivityTrackingOptions.SpanId
+        | ActivityTrackingOptions.ParentId;
+});
+if (builder.Environment.IsProduction())
+{
+    builder.Logging.AddJsonConsole(options =>
+    {
+        options.IncludeScopes = true;
+        options.UseUtcTimestamp = true;
+        options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z'";
+        options.JsonWriterOptions = new JsonWriterOptions { Indented = false };
+    });
+}
+else
+{
+    builder.Logging.AddSimpleConsole(options =>
+    {
+        options.IncludeScopes = true;
+        options.SingleLine = true;
+        options.UseUtcTimestamp = true;
+        options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+    });
+}
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -88,8 +120,19 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.OnRejected = async (context, ct) =>
     {
-        context.HttpContext.Response.ContentType = "application/json";
-        await context.HttpContext.Response.WriteAsJsonAsync(
+        var http = context.HttpContext;
+        var logger = http.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Ledgerly.Api.RateLimit");
+        logger.LogWarning(
+            "Rate limit exceeded {Method} {Path} {RequestId} {UserId}",
+            http.Request.Method,
+            http.Request.Path.Value,
+            http.TraceIdentifier,
+            RequestLoggingMiddleware.UserId(http));
+
+        http.Response.ContentType = "application/json";
+        await http.Response.WriteAsJsonAsync(
             new { error = "Too many requests. Please wait a moment and try again." },
             ct);
     };
@@ -175,19 +218,9 @@ var authIssuer = string.IsNullOrWhiteSpace(supabaseUrl)
 // and JWKS is empty for HS256-only Auth setups.
 var useJwks = !string.IsNullOrWhiteSpace(supabaseUrl);
 var legacySecret = GetLegacyJwtSecret(supabase.JwtSecret);
-
-if (!useJwks && legacySecret is null)
-{
-    Console.WriteLine(
-        "WARNING: Supabase:Url is empty and no legacy JwtSecret is set. Auth will reject tokens.");
-}
-else
-{
-    var modes = new List<string>();
-    if (useJwks) modes.Add($"JWKS ({authIssuer}/.well-known/jwks.json)");
-    if (legacySecret is not null) modes.Add("legacy HS256 JwtSecret");
-    Console.WriteLine($"Auth: validating JWTs via {string.Join(" + ", modes)}");
-}
+var authModes = new List<string>();
+if (useJwks) authModes.Add("JWKS");
+if (legacySecret is not null) authModes.Add("legacy HS256");
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -228,6 +261,19 @@ builder.Services
 
         options.Events = new JwtBearerEvents
         {
+            OnAuthenticationFailed = context =>
+            {
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("Ledgerly.Api.Auth");
+                logger.LogWarning(
+                    context.Exception,
+                    "Authentication failed {Method} {Path} {RequestId}",
+                    context.Request.Method,
+                    context.Request.Path.Value,
+                    context.HttpContext.TraceIdentifier);
+                return Task.CompletedTask;
+            },
             OnTokenValidated = context =>
             {
                 var role = context.Principal?.FindFirst("role")?.Value
@@ -275,29 +321,30 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown";
+app.Logger.LogInformation(
+    "Ledgerly API starting Environment {Environment} Version {Version}",
+    app.Environment.EnvironmentName,
+    version);
+if (authModes.Count == 0)
+{
+    app.Logger.LogWarning(
+        "Supabase URL and legacy JWT secret are unset. Auth will reject tokens.");
+}
+else
+{
+    app.Logger.LogInformation("JWT validation enabled via {AuthModes}", string.Join(" + ", authModes));
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseRequestLogging();
 app.UseExceptionHandler();
 app.UseForwardedHeaders();
-app.Use(async (context, next) =>
-{
-    var requestId = context.Request.Headers["X-Request-Id"].FirstOrDefault();
-    if (string.IsNullOrWhiteSpace(requestId) || requestId.Length > 64)
-        requestId = context.TraceIdentifier;
-    context.TraceIdentifier = requestId;
-    context.Response.Headers["X-Request-Id"] = requestId;
-
-    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
-        .CreateLogger("Ledgerly.Api.Request");
-    using (logger.BeginScope(new Dictionary<string, object> { ["RequestId"] = requestId }))
-    {
-        await next();
-    }
-});
 app.Use(async (context, next) =>
 {
     context.Response.OnStarting(() =>
@@ -319,6 +366,7 @@ app.Use(async (context, next) =>
 });
 app.UseCors("Ledgerly");
 app.UseAuthentication();
+app.UseUserLogScope();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();

@@ -1,3 +1,4 @@
+using Ledgerly.Api.Infrastructure.Logging;
 using Ledgerly.Api.Models;
 using Microsoft.AspNetCore.Diagnostics;
 
@@ -16,10 +17,13 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         if (exception is UnauthorizedAccessException)
             return false;
 
-        logger.LogError(exception, "Unhandled exception on {Method} {Path} {RequestId}",
+        logger.LogError(
+            exception,
+            "Unhandled exception {Method} {Path} {RequestId} {UserId}",
             httpContext.Request.Method,
-            httpContext.Request.Path,
-            httpContext.TraceIdentifier);
+            httpContext.Request.Path.Value,
+            httpContext.TraceIdentifier,
+            RequestLoggingMiddleware.UserId(httpContext));
 
         if (httpContext.Response.HasStarted)
             return false;
