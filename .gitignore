@@ -24,6 +24,8 @@
 .DS_Store
 *.pem
 *.key
+*.pub
+*.ppk
 
 # Android upload keystore (Play App Signing). Never commit these.
 *.jks

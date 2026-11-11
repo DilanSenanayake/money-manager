@@ -138,7 +138,7 @@ public sealed class AiService(
                 Credit = money received (income). Debit = money spent (expense).
                 Amount must be a positive number (no currency symbols).
                 Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
-                Merchant = payee/merchant/counterparty name (or "Unknown" if missing).
+                Merchant is a short description: read the whole message, then suggest a clearer short wording for who was paid or what it was for. Do not copy a raw fragment. Use "Unknown" only if nothing usable is there.
                 type must be exactly "Credit" or "Debit".
 
                 Message:
