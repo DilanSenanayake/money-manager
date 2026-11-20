@@ -77,6 +77,14 @@ class BudgetBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (progress.status == 'incomplete') {
+      final waiting = progress.missingRateCurrencies.join(', ');
+      return Text(
+        '${progress.category.name}: add an exchange rate${waiting.isEmpty ? '' : ' for $waiting'} before this budget can be measured.',
+        style: context.texts.bodySmall?.copyWith(color: AppColors.warn),
+      );
+    }
+
     final color = switch (progress.status) {
       'over' => AppColors.danger,
       'warn' => AppColors.warn,

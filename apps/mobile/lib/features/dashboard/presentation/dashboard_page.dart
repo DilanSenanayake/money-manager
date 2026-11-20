@@ -37,17 +37,36 @@ class DashboardPage extends ConsumerWidget {
                 ? data.profile!.displayName!.split(' ').first
                 : null;
             final empty = data.recent.isEmpty &&
-                data.income == 0 &&
-                data.expense == 0;
-            final leftover = data.income - data.expense;
+                (data.income ?? 0) == 0 &&
+                (data.expense ?? 0) == 0;
+            final income = data.income;
+            final expense = data.expense;
+            final leftover = income == null || expense == null
+                ? null
+                : income - expense;
             final insights = empty
                 ? const <MoneyInsight>[]
                 : buildMoneyInsights(dashboard: data, analytics: analytics);
-            final missingFx = hasMissingExchangeRate(
-              data.accounts,
-              data.baseCurrency,
-              data.rates,
-            );
+            final missingRates = data.missingRateCurrencies.isNotEmpty
+                ? data.missingRateCurrencies
+                : (hasMissingExchangeRate(
+                    data.accounts,
+                    data.baseCurrency,
+                    data.rates,
+                  )
+                    ? data.accounts
+                        .map((account) => account.currency)
+                        .where((currency) => currency != data.baseCurrency)
+                        .toSet()
+                        .toList()
+                    : const <String>[]);
+            final appliedRates = data.netWorth == null
+                ? const <ExchangeRate>[]
+                : ratesCovering(
+                    data.accounts.map((account) => account.currency),
+                    data.baseCurrency,
+                    data.rates,
+                  );
 
             return RefreshIndicator(
               onRefresh: () async {
@@ -77,6 +96,16 @@ class DashboardPage extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  if (missingRates.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    StatusBanner(
+                      message:
+                          'Add an exchange rate for ${missingRates.join(', ')}. Combined totals stay hidden until you do.',
+                      icon: Icons.currency_exchange_rounded,
+                      tone: StatusTone.warn,
+                      onTap: () => context.push(RoutePaths.settings),
+                    ),
+                  ],
                   if (empty) ...[
                     const SizedBox(height: AppSpacing.xl),
                     EmptyState(
@@ -92,8 +121,9 @@ class DashboardPage extends ConsumerWidget {
                     FadeUp(
                       delay: const Duration(milliseconds: 40),
                       child: Semantics(
-                        label:
-                            'Net worth ${formatMoney(data.netWorth, data.baseCurrency)}',
+                        label: data.netWorth == null
+                            ? 'Net worth hidden until an exchange rate is added'
+                            : 'Net worth ${formatMoney(data.netWorth!, data.baseCurrency)}',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -106,46 +136,53 @@ class DashboardPage extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: AppSpacing.xs),
-                            MoneyDisplay(
-                              data.netWorth,
-                              currency: data.baseCurrency,
-                              hero: true,
-                              animate: true,
-                            ),
-                            if (data.income != 0 || data.expense != 0) ...[
+                            if (data.netWorth == null)
+                              Text(
+                                'Rate needed',
+                                style: context.texts.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              )
+                            else
+                              MoneyDisplay(
+                                data.netWorth!,
+                                currency: data.baseCurrency,
+                                hero: true,
+                                animate: true,
+                              ),
+                            if (leftover != null &&
+                                ((income ?? 0) != 0 || (expense ?? 0) != 0)) ...[
                               const SizedBox(height: AppSpacing.xs),
-                              AnimatedAmount(
-                                amount: leftover.abs(),
-                                builder: (context, value) {
-                                  final positive = leftover >= 0;
-                                  return Text(
-                                    positive
-                                        ? '${formatMoney(value, data.baseCurrency)} left this month'
-                                        : '${formatMoney(value, data.baseCurrency)} more spent than earned this month',
-                                    style: context.texts.bodyMedium?.copyWith(
-                                      color: positive
-                                          ? AppColors.success
-                                          : AppColors.danger,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  );
-                                },
+                              _MonthLeftover(
+                                leftover: leftover,
+                                currency: data.baseCurrency,
+                              ),
+                            ],
+                            for (final rate in appliedRates) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                appliedRateLabel(rate),
+                                style: context.texts.bodySmall?.copyWith(
+                                  color: context.muted,
+                                ),
                               ),
                             ],
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    FadeUp(
-                      delay: const Duration(milliseconds: 80),
-                      child: CashflowPair(
-                        income: data.income,
-                        expense: data.expense,
-                        currency: data.baseCurrency,
-                        animate: true,
+                    if (income != null && expense != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      FadeUp(
+                        delay: const Duration(milliseconds: 80),
+                        child: CashflowPair(
+                          income: income,
+                          expense: expense,
+                          currency: data.baseCurrency,
+                          animate: true,
+                        ),
                       ),
-                    ),
+                    ],
                     if (insights.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.md),
                       for (var i = 0; i < insights.length; i++) ...[
@@ -161,16 +198,6 @@ class DashboardPage extends ConsumerWidget {
                         ),
                       ],
                     ],
-                    if (missingFx) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      StatusBanner(
-                        message:
-                            'Some wallets use another currency. Add an exchange rate so totals stay accurate.',
-                        icon: Icons.currency_exchange_rounded,
-                        tone: StatusTone.warn,
-                        onTap: () => context.push(RoutePaths.settings),
-                      ),
-                    ],
                     const SizedBox(height: AppSpacing.xl),
                     _BudgetsCard(data: data),
                     const SizedBox(height: AppSpacing.lg),
@@ -184,6 +211,32 @@ class DashboardPage extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _MonthLeftover extends StatelessWidget {
+  const _MonthLeftover({required this.leftover, required this.currency});
+
+  final double leftover;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final positive = leftover >= 0;
+    return AnimatedAmount(
+      amount: leftover.abs(),
+      builder: (context, value) {
+        return Text(
+          positive
+              ? '${formatMoney(value, currency)} left this month'
+              : '${formatMoney(value, currency)} more spent than earned this month',
+          style: context.texts.bodyMedium?.copyWith(
+            color: positive ? AppColors.success : AppColors.danger,
+            fontWeight: FontWeight.w600,
+          ),
+        );
+      },
     );
   }
 }

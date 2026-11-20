@@ -39,6 +39,21 @@ class AnalyticsPage extends ConsumerWidget {
           onRetry: () => ref.invalidate(analyticsProvider),
         ),
         data: (data) {
+          if (data.missingRateCurrencies.isNotEmpty) {
+            return ListView(
+              padding: AppSpacing.page,
+              children: [
+                StatusBanner(
+                  message:
+                      'Add an exchange rate for ${data.missingRateCurrencies.join(', ')}. Charts stay hidden so a missing rate is not treated as 1:1.',
+                  icon: Icons.currency_exchange_rounded,
+                  tone: StatusTone.warn,
+                  onTap: () => context.push(RoutePaths.settings),
+                ),
+              ],
+            );
+          }
+
           if (data.trend.isEmpty && data.categorySpend.isEmpty) {
             return EmptyState(
               icon: Icons.insights_outlined,

@@ -1,6 +1,16 @@
+import 'package:intl/intl.dart';
+
 import '../../shared/models/models.dart';
 
-double convertToBase(
+String appliedRateLabel(ExchangeRate rate) {
+  final parsed = DateTime.tryParse(rate.updatedAt);
+  final when = parsed == null
+      ? ''
+      : ', entered ${DateFormat('d MMM y').format(parsed.toLocal())}';
+  return 'Using your rate 1 ${rate.fromCurrency} = ${rate.rate} ${rate.toCurrency}$when.';
+}
+
+double? convertToBase(
   num amount,
   String fromCurrency,
   String baseCurrency,
@@ -22,14 +32,40 @@ double convertToBase(
     return amount.toDouble() / inverse.first.rate;
   }
 
-  return amount.toDouble();
+  return null;
+}
+
+List<ExchangeRate> ratesCovering(
+  Iterable<String> currencies,
+  String baseCurrency,
+  List<ExchangeRate> rates,
+) {
+  final used = <ExchangeRate>[];
+  for (final currency in currencies.toSet()) {
+    if (currency.isEmpty || currency == baseCurrency) continue;
+    final direct = rates.where(
+      (r) => r.fromCurrency == currency && r.toCurrency == baseCurrency,
+    );
+    if (direct.isNotEmpty) {
+      used.add(direct.first);
+      continue;
+    }
+    final inverse = rates.where(
+      (r) =>
+          r.fromCurrency == baseCurrency &&
+          r.toCurrency == currency &&
+          r.rate != 0,
+    );
+    if (inverse.isNotEmpty) used.add(inverse.first);
+  }
+  return used;
 }
 
 Map<String, String> accountCurrencyMap(List<Account> accounts) {
   return {for (final a in accounts) a.id: a.currency};
 }
 
-double txAmountInBase(
+double? txAmountInBase(
   num amount,
   String accountId,
   Map<String, String> currencyByAccount,
@@ -40,23 +76,23 @@ double txAmountInBase(
   return convertToBase(amount, from, baseCurrency, rates);
 }
 
-double computeNetWorth(
+double? computeNetWorth(
   List<Account> accounts,
   String baseCurrency,
   List<ExchangeRate> rates,
 ) {
-  return accounts.fold<double>(0, (sum, account) {
+  var sum = 0.0;
+  for (final account in accounts) {
     final converted = convertToBase(
       account.balance,
       account.currency,
       baseCurrency,
       rates,
     );
-    if (account.type == 'credit') {
-      return sum - converted;
-    }
-    return sum + converted;
-  });
+    if (converted == null) return null;
+    sum += account.type == 'credit' ? -converted : converted;
+  }
+  return sum;
 }
 
 bool hasMissingExchangeRate(

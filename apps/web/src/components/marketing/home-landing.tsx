@@ -6,7 +6,6 @@ import {
   ArrowLeftRight,
   Camera,
   ClipboardPaste,
-  Globe,
   LayoutDashboard,
   Lock,
   MessageSquareText,
@@ -237,15 +236,15 @@ export function HomeLanding() {
         <div className="stagger max-w-xl">
           <p className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-hover)]">
             <Sparkles className="h-3.5 w-3.5" />
-            With AI, it takes seconds
+            Spend smarter. Save better. Live better.
           </p>
           <h1 className="font-display text-[2rem] leading-[1.12] tracking-tight text-[var(--foreground)] sm:text-4xl md:text-[3.15rem] md:leading-[1.08]">
-            Add an expense in seconds.
+            Your money, made easier.
           </h1>
           <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-[var(--muted)] sm:text-base md:text-lg">
-            Type a line, paste a bank message, or snap a receipt. AI fills the
-            amount, category, and account for you. A quick look, and it is
-            saved.
+            An AI-assisted ledger for expenses, accounts, budgets, and spending.
+            Type a line, paste a bank message, snap a receipt, or enter the
+            amount. You approve every transaction.
           </p>
           <div className="mt-7 flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <Button asChild size="lg" className="w-full shadow-[var(--shadow-md)] sm:w-auto">
@@ -278,8 +277,8 @@ export function HomeLanding() {
               AI does the typing. You only confirm the save.
             </li>
             <li className="flex items-start gap-2">
-              <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent-hover)]" />
-              Works in your currency. Choose it when you sign up.
+              <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--accent-hover)]" />
+              Cash, bank, and card in one place.
             </li>
           </ul>
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
@@ -322,24 +321,24 @@ export function HomeLanding() {
 
       <section id="why" className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 sm:pb-6">
         <p className="mb-3 max-w-2xl text-sm text-[var(--muted)]">
-          The slow part of tracking money is the form. AI skips it.
+          Record an expense in seconds. Quick Add fills the draft. You confirm it.
         </p>
         <div className="grid gap-3 md:grid-cols-3">
           {[
             {
               icon: Sparkles,
-              title: "In before you forget",
-              body: "A line, a bank text, or a photo is enough. AI pulls out the amount, category, and account.",
+              title: "Record it in seconds",
+              body: "A line, a bank message, a receipt, or the amount. All four paths end on the same confirm sheet.",
             },
             {
               icon: ShieldCheck,
-              title: "A glance, then it is yours",
-              body: "The details appear for a quick look. Nothing is saved until you confirm.",
+              title: "You approve every save",
+              body: "AI prepares the draft and stops there. Nothing is stored until you confirm.",
             },
             {
               icon: Wallet,
               title: "Then the month is obvious",
-              body: "Income, spend, a budget that warns as it fills, and bills that come back, in your currency.",
+              body: "Cash, bank, and card stay together, with budgets and bills in the currencies you keep.",
             },
           ].map(({ icon: Icon, title, body }) => (
             <div key={title} className="surface p-5">

@@ -7,6 +7,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/currency.dart';
 import '../../../core/utils/money_input.dart';
 import '../../../core/utils/open_url.dart';
 import '../../../shared/widgets/app_widgets.dart';
@@ -290,7 +291,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Manual rates used for net worth and analytics. Missing rates fall back to 1:1.',
+                'Combined totals use these rates. A missing rate stays blank instead of being treated as 1:1.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -386,7 +387,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      '1 ${r.fromCurrency} = ${r.rate} ${r.toCurrency}',
+                                      appliedRateLabel(r),
                                     ),
                                   ),
                                   IconButton(

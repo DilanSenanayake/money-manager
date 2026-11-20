@@ -456,7 +456,7 @@ cd apps/web && npm test
 - [ ] Supabase Auth email templates + redirect URLs for production domain
 - [ ] CAPTCHA / bot protection on signup if abuse appears
 - [ ] Rotate any keys that lived in local `.env` files shared outside your machine
-- [ ] Confirm FX rates are set when using multi-currency (missing rate currently falls back to 1:1)
+- [ ] Confirm FX rates are set when using multi-currency (a missing rate hides the combined total instead of assuming 1:1)
 
 ---
 

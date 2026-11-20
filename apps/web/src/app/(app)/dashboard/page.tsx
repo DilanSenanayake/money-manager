@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { PlusTileIcon } from "@/components/layout/action-tiles";
 import { formatMoney } from "@/lib/utils";
+import { ratesCovering } from "@/lib/currency";
+import { RateGap, RateStamp } from "@/components/money/rate-notice";
 import { transactionTitle } from "@/lib/transaction-description";
 import { getDashboardData } from "@/app/actions/dashboard";
 import { BudgetAlerts, BudgetBars } from "@/components/budgets/budget-bars";
@@ -19,6 +21,19 @@ export default async function DashboardPage() {
   const data = await getDashboardData();
   const isEmpty = data.recent.length === 0;
   const firstName = data.profile?.display_name?.split(" ")[0];
+  const missingRates = data.missingRateCurrencies ?? [];
+  const appliedRates =
+    data.netWorth == null
+      ? []
+      : ratesCovering(
+          data.accounts.map((account) => account.currency),
+          data.baseCurrency,
+          data.rates
+        );
+  const money = (amount: number | null) =>
+    amount == null ? "Rate needed" : formatMoney(amount, data.baseCurrency);
+  const hint = (amount: number | null) =>
+    amount == null ? "Hidden until you add a rate" : `In ${data.baseCurrency}`;
 
   return (
     <div className="page-stack">
@@ -53,23 +68,28 @@ export default async function DashboardPage() {
 
       <BudgetAlerts budgets={data.budgets} />
 
+      <RateGap currencies={missingRates} />
+
       <div className="grid gap-3 md:grid-cols-3">
         <StatCard
           label="Net worth"
-          value={formatMoney(data.netWorth, data.baseCurrency)}
-          hint={`In ${data.baseCurrency}`}
+          value={money(data.netWorth)}
+          hint={hint(data.netWorth)}
         />
         <StatCard
           label="Income this month"
-          value={formatMoney(data.income, data.baseCurrency)}
-          tone="positive"
+          value={money(data.income)}
+          hint={hint(data.income)}
+          tone={data.income == null ? "default" : "positive"}
         />
         <StatCard
           label="Spent this month"
-          value={formatMoney(data.expense, data.baseCurrency)}
-          tone="negative"
+          value={money(data.expense)}
+          hint={hint(data.expense)}
+          tone={data.expense == null ? "default" : "negative"}
         />
       </div>
+      <RateStamp rates={appliedRates} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

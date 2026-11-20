@@ -25,6 +25,17 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+function enteredOn(value: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 export function SettingsForm({
   profile,
   rates,
@@ -118,6 +129,10 @@ export function SettingsForm({
           <CardTitle>Exchange rates</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <p className="text-sm text-slate-500">
+            Combined totals use the rates you enter. A missing rate is left
+            blank instead of treated as 1:1.
+          </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label>From</Label>
@@ -187,6 +202,9 @@ export function SettingsForm({
               >
                 <span className="min-w-0 break-words">
                   1 {r.from_currency} = {Number(r.rate)} {r.to_currency}
+                  {enteredOn(r.updated_at)
+                    ? ` · entered ${enteredOn(r.updated_at)}`
+                    : ""}
                 </span>
                 <Button
                   variant="ghost"
@@ -205,7 +223,8 @@ export function SettingsForm({
             ))}
             {rates.length === 0 && (
               <p className="text-sm text-slate-500">
-                No custom rates yet. Same-currency accounts convert 1:1.
+                No custom rates yet. A wallet in another currency stays out of
+                combined totals until you add its rate.
               </p>
             )}
           </div>

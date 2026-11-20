@@ -4,50 +4,81 @@ namespace Ledgerly.Api.Helpers;
 
 public static class CurrencyConverter
 {
-    public static decimal ConvertToBase(
+    public static bool TryConvertToBase(
         decimal amount,
         string fromCurrency,
         string baseCurrency,
-        IReadOnlyList<ExchangeRate> rates)
+        IReadOnlyList<ExchangeRate> rates,
+        out decimal converted)
     {
-        if (fromCurrency == baseCurrency) return amount;
+        if (fromCurrency == baseCurrency)
+        {
+            converted = amount;
+            return true;
+        }
 
         var direct = rates.FirstOrDefault(r =>
             r.FromCurrency == fromCurrency && r.ToCurrency == baseCurrency);
-        if (direct is not null) return amount * direct.Rate;
+        if (direct is not null)
+        {
+            converted = amount * direct.Rate;
+            return true;
+        }
 
         var inverse = rates.FirstOrDefault(r =>
             r.FromCurrency == baseCurrency && r.ToCurrency == fromCurrency);
         if (inverse is not null && inverse.Rate != 0)
-            return amount / inverse.Rate;
+        {
+            converted = amount / inverse.Rate;
+            return true;
+        }
 
-        return amount;
+        converted = 0;
+        return false;
+    }
+
+    public static List<string> MissingCurrencies(
+        IEnumerable<string> currencies,
+        string baseCurrency,
+        IReadOnlyList<ExchangeRate> rates)
+    {
+        return currencies
+            .Where(currency => !string.IsNullOrWhiteSpace(currency))
+            .Distinct(StringComparer.Ordinal)
+            .Where(currency => !TryConvertToBase(0, currency, baseCurrency, rates, out _))
+            .OrderBy(currency => currency, StringComparer.Ordinal)
+            .ToList();
     }
 
     public static Dictionary<Guid, string> AccountCurrencyMap(IEnumerable<Account> accounts) =>
         accounts.ToDictionary(a => a.Id, a => a.Currency);
 
-    public static decimal TxAmountInBase(
+    public static bool TryTxAmountInBase(
         decimal amount,
         Guid accountId,
         IReadOnlyDictionary<Guid, string> currencyByAccount,
         string baseCurrency,
-        IReadOnlyList<ExchangeRate> rates)
+        IReadOnlyList<ExchangeRate> rates,
+        out decimal converted)
     {
         var from = currencyByAccount.GetValueOrDefault(accountId, baseCurrency);
-        return ConvertToBase(amount, from, baseCurrency, rates);
+        return TryConvertToBase(amount, from, baseCurrency, rates, out converted);
     }
 
-    public static decimal ComputeNetWorth(
+    public static decimal? ComputeNetWorth(
         IEnumerable<Account> accounts,
         string baseCurrency,
         IReadOnlyList<ExchangeRate> rates)
     {
-        return accounts.Aggregate(0m, (sum, account) =>
+        decimal sum = 0;
+        foreach (var account in accounts)
         {
-            var converted = ConvertToBase(account.Balance, account.Currency, baseCurrency, rates);
-            return account.Type == AccountTypes.Credit ? sum - converted : sum + converted;
-        });
+            if (!TryConvertToBase(account.Balance, account.Currency, baseCurrency, rates, out var converted))
+                return null;
+            sum += account.Type == AccountTypes.Credit ? -converted : converted;
+        }
+
+        return sum;
     }
 }
 

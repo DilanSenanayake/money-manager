@@ -23,6 +23,23 @@ export function BudgetBars({
   return (
     <div className="space-y-4">
       {budgets.map((b) => {
+        if (b.status === "incomplete") {
+          const waiting = (b.missingRateCurrencies ?? []).join(", ");
+          return (
+            <div key={b.category.id} className="space-y-1">
+              <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                <CategoryIcon icon={b.category.icon} name={b.category.name} framed />
+                <span className="truncate">{b.category.name}</span>
+              </span>
+              <p className="text-xs text-[var(--warn)]">
+                Add an exchange rate
+                {waiting ? ` for ${waiting}` : ""} before this budget can be
+                measured.
+              </p>
+            </div>
+          );
+        }
+
         const pct = Math.min(100, Math.round(b.ratio * 100));
         const indicator =
           b.status === "over"

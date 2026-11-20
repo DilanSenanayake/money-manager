@@ -16,9 +16,10 @@ type DashboardResponse = {
   profile: Profile | null;
   accounts: Account[];
   rates: ExchangeRate[];
-  netWorth: number;
-  income: number;
-  expense: number;
+  netWorth: number | null;
+  income: number | null;
+  expense: number | null;
+  missingRateCurrencies?: string[];
   budgets: BudgetProgress[];
   recent: Transaction[];
   baseCurrency: string;
@@ -32,6 +33,7 @@ type AnalyticsResponse = {
   months: MonthlyReport[];
   summary: SpendingReportSummary;
   baseCurrency: string;
+  missingRateCurrencies?: string[];
 };
 
 export async function getDashboardData() {

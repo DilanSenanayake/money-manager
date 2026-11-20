@@ -30,9 +30,11 @@ export default function DisclaimerPage() {
       <LegalSection id="accuracy" title="2. Figures can be wrong">
         <p>
           Totals, budgets, charts, exchange rates, and Smart Add suggestions can
-          be incomplete or inaccurate. Exchange rates are the ones you type. The
-          app does not connect to your bank and does not move money. You are
-          responsible for checking every entry before you rely on it.
+          be incomplete or inaccurate. Exchange rates are the ones you type. A
+          combined total stays hidden until you enter a rate for every other
+          currency in it. The app does not connect to your bank and does not
+          move money. You are responsible for checking every entry before you
+          rely on it.
         </p>
         <p>
           If you need a decision about your money, speak to a qualified person

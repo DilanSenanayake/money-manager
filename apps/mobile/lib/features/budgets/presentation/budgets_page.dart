@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/utils/money_input.dart';
 import '../../../core/theme/app_theme.dart';
@@ -108,6 +110,16 @@ class BudgetsPage extends ConsumerWidget {
             child: ListView(
               padding: AppSpacing.page,
               children: [
+                if (data.missingRateCurrencies.isNotEmpty) ...[
+                  StatusBanner(
+                    message:
+                        'Add an exchange rate for ${data.missingRateCurrencies.join(', ')} before those budgets can be measured.',
+                    icon: Icons.currency_exchange_rounded,
+                    tone: StatusTone.warn,
+                    onTap: () => context.push(RoutePaths.settings),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 Text(
                   'This month',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(

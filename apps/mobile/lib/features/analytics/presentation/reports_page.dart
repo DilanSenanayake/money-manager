@@ -42,6 +42,21 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           onRetry: () => ref.invalidate(analyticsProvider),
         ),
         data: (data) {
+          if (data.missingRateCurrencies.isNotEmpty) {
+            return ListView(
+              padding: AppSpacing.page,
+              children: [
+                StatusBanner(
+                  message:
+                      'Add an exchange rate for ${data.missingRateCurrencies.join(', ')}. Reports stay hidden so a missing rate is not treated as 1:1.',
+                  icon: Icons.currency_exchange_rounded,
+                  tone: StatusTone.warn,
+                  onTap: () => context.push(RoutePaths.settings),
+                ),
+              ],
+            );
+          }
+
           final months = data.months;
           final summary = data.summary;
           if (months.isEmpty || summary == null || summary.monthCount == 0) {

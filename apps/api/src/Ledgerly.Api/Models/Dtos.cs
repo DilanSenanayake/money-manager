@@ -364,6 +364,9 @@ public sealed class BudgetProgress
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = "none";
+
+    [JsonPropertyName("missingRateCurrencies")]
+    public List<string> MissingRateCurrencies { get; set; } = [];
 }
 
 public sealed class DashboardResponse
@@ -378,13 +381,16 @@ public sealed class DashboardResponse
     public List<ExchangeRate> Rates { get; set; } = [];
 
     [JsonPropertyName("netWorth")]
-    public decimal NetWorth { get; set; }
+    public decimal? NetWorth { get; set; }
 
     [JsonPropertyName("income")]
-    public decimal Income { get; set; }
+    public decimal? Income { get; set; }
 
     [JsonPropertyName("expense")]
-    public decimal Expense { get; set; }
+    public decimal? Expense { get; set; }
+
+    [JsonPropertyName("missingRateCurrencies")]
+    public List<string> MissingRateCurrencies { get; set; } = [];
 
     [JsonPropertyName("budgets")]
     public List<BudgetProgress> Budgets { get; set; } = [];
@@ -418,6 +424,9 @@ public sealed class AnalyticsResponse
 
     [JsonPropertyName("baseCurrency")]
     public string BaseCurrency { get; set; } = "USD";
+
+    [JsonPropertyName("missingRateCurrencies")]
+    public List<string> MissingRateCurrencies { get; set; } = [];
 }
 
 public sealed class MonthlyReport

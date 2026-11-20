@@ -38,8 +38,8 @@ describe("convertToBase", () => {
     ).toBeCloseTo(50);
   });
 
-  it("falls back to amount when rate is missing", () => {
-    expect(convertToBase(100, "JPY", "USD", [])).toBe(100);
+  it("returns null when the rate is missing", () => {
+    expect(convertToBase(100000, "LKR", "USD", [])).toBeNull();
   });
 });
 
@@ -55,6 +55,19 @@ describe("computeNetWorth", () => {
         []
       )
     ).toBe(800);
+  });
+
+  it("hides the total when any account lacks a rate", () => {
+    expect(
+      computeNetWorth(
+        [
+          { balance: 500, currency: "USD", type: "checking" },
+          { balance: 100000, currency: "LKR", type: "cash" },
+        ],
+        "USD",
+        []
+      )
+    ).toBeNull();
   });
 });
 

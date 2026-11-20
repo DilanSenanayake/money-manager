@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAnalyticsData } from "@/app/actions/dashboard";
 import { MonthlyReports } from "@/components/reports/monthly-reports";
+import { RateGap } from "@/components/money/rate-notice";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +19,8 @@ export default async function ReportsPage() {
           </Button>
         }
       />
+      <RateGap currencies={data.missingRateCurrencies ?? []} />
+      {(data.missingRateCurrencies ?? []).length === 0 && (
       <MonthlyReports
         months={data.months ?? []}
         summary={
@@ -33,6 +36,7 @@ export default async function ReportsPage() {
         }
         currency={data.baseCurrency}
       />
+      )}
     </div>
   );
 }

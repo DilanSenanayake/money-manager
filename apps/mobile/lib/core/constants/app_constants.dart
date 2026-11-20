@@ -1,6 +1,6 @@
 class AppConstants {
   static const appName = 'Smart Money Manager';
-  static const tagline = 'Add an expense in seconds, with AI.';
+  static const tagline = 'Your money, made easier.';
   static const minPasswordLength = 8;
   static const maxReceiptBytes = 8 * 1024 * 1024;
   static const currencies = [

@@ -48,12 +48,22 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
         var currencyByAccount = CurrencyConverter.AccountCurrencyMap(accounts);
         var netWorth = CurrencyConverter.ComputeNetWorth(accounts, baseCurrency, rates);
 
-        decimal ToBase(Transaction t) =>
-            CurrencyConverter.TxAmountInBase(
-                t.Amount, t.AccountId, currencyByAccount, baseCurrency, rates);
+        string CurrencyOf(Transaction t) =>
+            currencyByAccount.GetValueOrDefault(t.AccountId, baseCurrency);
 
-        var income = monthTx.Where(t => t.Type == TransactionTypes.Income).Sum(ToBase);
-        var expense = monthTx.Where(t => t.Type == TransactionTypes.Expense).Sum(ToBase);
+        decimal? SumType(string type)
+        {
+            decimal sum = 0;
+            foreach (var transaction in monthTx.Where(t => t.Type == type))
+            {
+                if (!CurrencyConverter.TryConvertToBase(
+                        transaction.Amount, CurrencyOf(transaction), baseCurrency, rates, out var converted))
+                    return null;
+                sum += converted;
+            }
+
+            return sum;
+        }
 
         var budgets = categories
             .Where(c =>
@@ -61,12 +71,38 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
                 c.MonthlyBudget is > 0)
             .Select(category =>
             {
-                var spent = monthTx
-                    .Where(t =>
-                        t.Type == TransactionTypes.Expense &&
-                        t.CategoryId == category.Id)
-                    .Sum(ToBase);
                 var limit = category.MonthlyBudget ?? 0;
+                decimal spent = 0;
+                var missing = new List<string>();
+                foreach (var transaction in monthTx.Where(t =>
+                             t.Type == TransactionTypes.Expense &&
+                             t.CategoryId == category.Id))
+                {
+                    var currency = CurrencyOf(transaction);
+                    if (!CurrencyConverter.TryConvertToBase(
+                            transaction.Amount, currency, baseCurrency, rates, out var converted))
+                    {
+                        if (!missing.Contains(currency)) missing.Add(currency);
+                    }
+                    else
+                    {
+                        spent += converted;
+                    }
+                }
+
+                if (missing.Count > 0)
+                {
+                    return new BudgetProgress
+                    {
+                        Category = category,
+                        Spent = 0,
+                        Limit = limit,
+                        Ratio = 0,
+                        Status = "incomplete",
+                        MissingRateCurrencies = missing,
+                    };
+                }
+
                 var ratio = limit > 0 ? spent / limit : 0;
                 return new BudgetProgress
                 {
@@ -77,8 +113,14 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
                     Status = BudgetHelpers.BudgetStatus(spent, limit),
                 };
             })
-            .OrderByDescending(b => b.Ratio)
+            .OrderByDescending(b => b.Status == "incomplete")
+            .ThenByDescending(b => b.Ratio)
             .ToList();
+
+        var missingRateCurrencies = CurrencyConverter.MissingCurrencies(
+            accounts.Select(a => a.Currency).Concat(monthTx.Select(CurrencyOf)),
+            baseCurrency,
+            rates);
 
         return new DashboardResponse
         {
@@ -86,8 +128,9 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
             Accounts = accounts,
             Rates = rates,
             NetWorth = netWorth,
-            Income = income,
-            Expense = expense,
+            Income = SumType(TransactionTypes.Income),
+            Expense = SumType(TransactionTypes.Expense),
+            MissingRateCurrencies = missingRateCurrencies,
             Budgets = budgets,
             Recent = recent,
             BaseCurrency = baseCurrency,
@@ -141,9 +184,26 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
 
         var baseCurrency = profile?.BaseCurrency ?? "USD";
         var currencyByAccount = CurrencyConverter.AccountCurrencyMap(accounts);
-        decimal ToBase(Transaction t) =>
-            CurrencyConverter.TxAmountInBase(
-                t.Amount, t.AccountId, currencyByAccount, baseCurrency, rates);
+        var missingRateCurrencies = CurrencyConverter.MissingCurrencies(
+            tx.Select(t => currencyByAccount.GetValueOrDefault(t.AccountId, baseCurrency)),
+            baseCurrency,
+            rates);
+        if (missingRateCurrencies.Count > 0)
+        {
+            return new AnalyticsResponse
+            {
+                BaseCurrency = baseCurrency,
+                MissingRateCurrencies = missingRateCurrencies,
+            };
+        }
+
+        decimal ToBase(Transaction t)
+        {
+            var from = currencyByAccount.GetValueOrDefault(t.AccountId, baseCurrency);
+            return CurrencyConverter.TryConvertToBase(t.Amount, from, baseCurrency, rates, out var converted)
+                ? converted
+                : 0;
+        }
 
         var trend = chartMonths.Select(m =>
         {

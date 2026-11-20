@@ -35,27 +35,31 @@ public class CurrencyConverterTests
     [Fact]
     public void ConvertToBase_same_currency_is_identity()
     {
-        Assert.Equal(42m, CurrencyConverter.ConvertToBase(42m, "USD", "USD", []));
+        Assert.True(CurrencyConverter.TryConvertToBase(42m, "USD", "USD", [], out var converted));
+        Assert.Equal(42m, converted);
     }
 
     [Fact]
     public void ConvertToBase_uses_direct_rate()
     {
         var rates = Rates(("EUR", "USD", 1.1m));
-        Assert.Equal(110m, CurrencyConverter.ConvertToBase(100m, "EUR", "USD", rates));
+        Assert.True(CurrencyConverter.TryConvertToBase(100m, "EUR", "USD", rates, out var converted));
+        Assert.Equal(110m, converted);
     }
 
     [Fact]
     public void ConvertToBase_uses_inverse_rate()
     {
         var rates = Rates(("USD", "EUR", 2m));
-        Assert.Equal(50m, CurrencyConverter.ConvertToBase(100m, "EUR", "USD", rates));
+        Assert.True(CurrencyConverter.TryConvertToBase(100m, "EUR", "USD", rates, out var converted));
+        Assert.Equal(50m, converted);
     }
 
     [Fact]
-    public void ConvertToBase_missing_rate_returns_amount()
+    public void ConvertToBase_missing_rate_does_not_assume_parity()
     {
-        Assert.Equal(100m, CurrencyConverter.ConvertToBase(100m, "JPY", "USD", []));
+        Assert.False(CurrencyConverter.TryConvertToBase(100_000m, "LKR", "USD", [], out _));
+        Assert.Equal(["LKR"], CurrencyConverter.MissingCurrencies(["LKR", "USD"], "USD", []));
     }
 
     [Fact]
@@ -81,6 +85,18 @@ public class CurrencyConverterTests
         var rates = Rates(("EUR", "USD", 2m));
 
         Assert.Equal(100m, CurrencyConverter.ComputeNetWorth(accounts, "USD", rates));
+    }
+
+    [Fact]
+    public void ComputeNetWorth_is_hidden_when_any_rate_is_missing()
+    {
+        var accounts = new List<Account>
+        {
+            new() { Balance = 500m, Currency = "USD", Type = AccountTypes.Checking },
+            new() { Balance = 100_000m, Currency = "LKR", Type = AccountTypes.Cash },
+        };
+
+        Assert.Null(CurrencyConverter.ComputeNetWorth(accounts, "USD", []));
     }
 }
 

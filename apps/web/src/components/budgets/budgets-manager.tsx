@@ -6,6 +6,7 @@ import { createCategory, updateCategory } from "@/app/actions/categories";
 import type { BudgetProgress, Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BudgetBars } from "@/components/budgets/budget-bars";
+import { RateGap } from "@/components/money/rate-notice";
 import {
   CATEGORY_ICON_OPTIONS,
   CategoryIcon,
@@ -154,6 +155,14 @@ export function BudgetsManager({
           </DialogContent>
         </Dialog>
         }
+      />
+
+      <RateGap
+        currencies={[
+          ...new Set(
+            budgets.flatMap((budget) => budget.missingRateCurrencies ?? [])
+          ),
+        ]}
       />
 
       <Card>

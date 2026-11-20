@@ -45,5 +45,5 @@ Use this before the first production cutover and after each release. Details: [P
 - [ ] Android upload key created outside the repo and Play App Signing enrolled
 - [ ] Closed test: 12 testers opted in for 14 consecutive days before applying for production (personal Play account)
 - [ ] Release app bundle built with `flutter build appbundle --release` and installed from a Play track, not a debug APK
-- [ ] Exchange rates entered for any non-base-currency accounts (missing rate currently converts 1:1)
+- [ ] Exchange rates entered for any non-base-currency accounts (a missing rate hides the combined total)
 - [ ] Restore from backup tested once

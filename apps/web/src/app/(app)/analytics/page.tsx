@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAnalyticsData } from "@/app/actions/dashboard";
 import { AnalyticsChartsLazy } from "@/components/analytics/analytics-charts-lazy";
+import { RateGap } from "@/components/money/rate-notice";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 
@@ -18,11 +19,14 @@ export default async function AnalyticsPage() {
           </Button>
         }
       />
+      <RateGap currencies={data.missingRateCurrencies ?? []} />
+      {(data.missingRateCurrencies ?? []).length === 0 && (
       <AnalyticsChartsLazy
         trend={data.trend}
         categorySpend={data.categorySpend}
         currency={data.baseCurrency}
       />
+      )}
     </div>
   );
 }

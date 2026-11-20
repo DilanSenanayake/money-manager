@@ -65,7 +65,8 @@ export interface BudgetProgress {
   spent: number;
   limit: number;
   ratio: number;
-  status: "ok" | "warn" | "over" | "none";
+  status: "ok" | "warn" | "over" | "none" | "incomplete";
+  missingRateCurrencies?: string[];
 }
 
 export interface CategoryExpenseItem {

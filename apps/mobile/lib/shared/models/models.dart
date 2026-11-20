@@ -228,6 +228,7 @@ class BudgetProgress extends Equatable {
     required this.limit,
     required this.ratio,
     required this.status,
+    this.missingRateCurrencies = const [],
   });
 
   final Category category;
@@ -235,6 +236,7 @@ class BudgetProgress extends Equatable {
   final double limit;
   final double ratio;
   final String status;
+  final List<String> missingRateCurrencies;
 
   factory BudgetProgress.fromJson(Map<String, dynamic> json) {
     return BudgetProgress(
@@ -243,11 +245,15 @@ class BudgetProgress extends Equatable {
       limit: asDouble(json['limit']),
       ratio: asDouble(json['ratio']),
       status: asString(json['status'], 'none'),
+      missingRateCurrencies: asList(
+        json['missingRateCurrencies'] ?? json['missing_rate_currencies'],
+      ).map((item) => item.toString()).toList(),
     );
   }
 
   @override
-  List<Object?> get props => [category, spent, limit, ratio, status];
+  List<Object?> get props =>
+      [category, spent, limit, ratio, status, missingRateCurrencies];
 }
 
 class TrendPoint extends Equatable {
@@ -453,6 +459,16 @@ class SpendingReportSummary extends Equatable {
   List<Object?> get props => [monthCount, totalExpense, totalIncome];
 }
 
+double? _optionalDouble(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    if (!json.containsKey(key)) continue;
+    final value = json[key];
+    if (value == null) return null;
+    return asDouble(value);
+  }
+  return null;
+}
+
 class DashboardData extends Equatable {
   const DashboardData({
     this.profile,
@@ -461,6 +477,7 @@ class DashboardData extends Equatable {
     required this.netWorth,
     required this.income,
     required this.expense,
+    this.missingRateCurrencies = const [],
     required this.budgets,
     required this.recent,
     required this.baseCurrency,
@@ -471,9 +488,10 @@ class DashboardData extends Equatable {
   final Profile? profile;
   final List<Account> accounts;
   final List<ExchangeRate> rates;
-  final double netWorth;
-  final double income;
-  final double expense;
+  final double? netWorth;
+  final double? income;
+  final double? expense;
+  final List<String> missingRateCurrencies;
   final List<BudgetProgress> budgets;
   final List<Transaction> recent;
   final String baseCurrency;
@@ -493,9 +511,12 @@ class DashboardData extends Equatable {
           .whereType<Map>()
           .map((e) => ExchangeRate.fromJson(asMap(e)))
           .toList(),
-      netWorth: asDouble(json['netWorth'] ?? json['net_worth']),
-      income: asDouble(json['income']),
-      expense: asDouble(json['expense']),
+      netWorth: _optionalDouble(json, const ['netWorth', 'net_worth']),
+      income: _optionalDouble(json, const ['income']),
+      expense: _optionalDouble(json, const ['expense']),
+      missingRateCurrencies: asList(
+        json['missingRateCurrencies'] ?? json['missing_rate_currencies'],
+      ).map((item) => item.toString()).toList(),
       budgets: asList(json['budgets'])
           .whereType<Map>()
           .map((e) => BudgetProgress.fromJson(asMap(e)))
@@ -514,8 +535,15 @@ class DashboardData extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [profile, accounts, netWorth, income, expense, baseCurrency];
+  List<Object?> get props => [
+        profile,
+        accounts,
+        netWorth,
+        income,
+        expense,
+        missingRateCurrencies,
+        baseCurrency,
+      ];
 }
 
 class AnalyticsData extends Equatable {
@@ -525,6 +553,7 @@ class AnalyticsData extends Equatable {
     required this.baseCurrency,
     this.months = const [],
     this.summary,
+    this.missingRateCurrencies = const [],
   });
 
   final List<TrendPoint> trend;
@@ -532,6 +561,7 @@ class AnalyticsData extends Equatable {
   final String baseCurrency;
   final List<MonthlyReport> months;
   final SpendingReportSummary? summary;
+  final List<String> missingRateCurrencies;
 
   factory AnalyticsData.fromJson(Map<String, dynamic> json) {
     final summaryJson = json['summary'];
@@ -555,11 +585,21 @@ class AnalyticsData extends Equatable {
       summary: summaryJson is Map
           ? SpendingReportSummary.fromJson(asMap(summaryJson))
           : null,
+      missingRateCurrencies: asList(
+        json['missingRateCurrencies'] ?? json['missing_rate_currencies'],
+      ).map((item) => item.toString()).toList(),
     );
   }
 
   @override
-  List<Object?> get props => [trend, categorySpend, baseCurrency, months, summary];
+  List<Object?> get props => [
+        trend,
+        categorySpend,
+        baseCurrency,
+        months,
+        summary,
+        missingRateCurrencies,
+      ];
 }
 
 class TransactionInput {

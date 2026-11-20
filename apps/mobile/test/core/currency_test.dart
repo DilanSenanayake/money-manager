@@ -34,6 +34,10 @@ void main() {
       ];
       expect(convertToBase(2, 'USD', 'LKR', rates), closeTo(600, 0.001));
     });
+
+    test('missing rate does not assume parity', () {
+      expect(convertToBase(100000, 'LKR', 'USD', const []), isNull);
+    });
   });
 
   group('computeNetWorth', () {
