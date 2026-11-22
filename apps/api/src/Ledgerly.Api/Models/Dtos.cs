@@ -264,7 +264,7 @@ public sealed class ReceiptExtraction
     public decimal Amount { get; set; }
 
     [JsonPropertyName("currency")]
-    public string Currency { get; set; } = "USD";
+    public string Currency { get; set; } = "";
 
     /// <summary>Receipt total before conversion. Null when no conversion was needed.</summary>
     [JsonPropertyName("source_amount")]

@@ -171,17 +171,35 @@ export function detectReceiptCurrency(ocrText?: string | null) {
   );
 }
 
-function containsExplicit(ocrText: string | null | undefined, code: string) {
-  return collect(ocrText).some(
-    (hit) => !hit.inParentheses && hit.explicit && same(hit.code, code)
+function filteredHits(ocrText?: string | null) {
+  const hits = collect(ocrText);
+  const explicitInr = hits.some((h) => h.code === "INR" && h.explicit);
+  const explicitLkr = hits.some((h) => h.code === "LKR" && h.explicit);
+  return hits.filter((h) => {
+    if (explicitInr && h.code === "LKR" && !h.explicit) return false;
+    if (explicitLkr && h.code === "INR" && !h.explicit) return false;
+    return true;
+  });
+}
+
+function explicitOnTotal(hits: Hit[], code: string) {
+  return (
+    code.length > 0 &&
+    hits.some(
+      (h) => h.onTotal && !h.inParentheses && h.explicit && same(h.code, code)
+    )
   );
 }
 
-/**
- * Printed currency of the total. A home-currency token does not replace a
- * foreign code that is actually printed. When the model copied the wallet
- * currency, a different currency on the receipt is used instead.
- */
+function singleExplicit(hits: Hit[]) {
+  const codes: string[] = [];
+  for (const hit of hits) {
+    if (hit.inParentheses || !hit.explicit) continue;
+    if (!codes.includes(hit.code)) codes.push(hit.code);
+  }
+  return codes.length === 1 ? codes[0] : null;
+}
+
 export function resolveReceiptCurrency(
   modelCurrency: string | null | undefined,
   ocrText: string | null | undefined,
@@ -189,12 +207,20 @@ export function resolveReceiptCurrency(
 ) {
   const model = known(modelCurrency);
   const target = known(targetCurrency);
-  const detected = detectReceiptCurrency(ocrText);
+  const hits = filteredHits(ocrText);
 
-  if (detected && !same(detected, target)) return detected;
-  if (model && !same(model, target) && containsExplicit(ocrText, model)) {
-    return model;
+  if (explicitOnTotal(hits, target)) {
+    const foreignOnTotal = singleExplicit(
+      hits.filter((h) => h.onTotal && !same(h.code, target))
+    );
+    return foreignOnTotal ?? target;
   }
+
+  const foreign = singleExplicit(hits.filter((h) => !same(h.code, target)));
+  if (foreign) return foreign;
+  if (model && !same(model, target)) return model;
+
+  const detected = detectReceiptCurrency(ocrText);
   if (detected) return detected;
   if (model) return model;
   return target || "USD";

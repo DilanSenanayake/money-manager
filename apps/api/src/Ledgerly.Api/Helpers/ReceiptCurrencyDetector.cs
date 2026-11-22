@@ -17,16 +17,28 @@ public static partial class ReceiptCurrencyDetector
     {
         var model = Known(modelCurrency);
         var target = Known(targetCurrency);
-        var detected = Detect(ocrText);
+        var hits = Filtered(ocrText);
 
-        if (detected is not null && !Same(detected, target))
-            return detected;
+        // An explicit wallet total (LKR, USD, … printed on the total line) is the
+        // amount to save. "Rs" or "$" alone is not explicit and must not hide a
+        // foreign currency the model read.
+        if (ExplicitOnTotal(hits, target))
+        {
+            var foreignOnTotal = SingleForeign(
+                hits.Where(h => h.OnTotal && !Same(h.Code, target)));
+            if (foreignOnTotal is null)
+                return target;
+            return foreignOnTotal;
+        }
 
-        // The model named a foreign currency that is also printed. A home-currency
-        // token (or an ambiguous mix the detector could not settle) must not win.
-        if (model.Length > 0 && !Same(model, target) && ContainsExplicit(ocrText, model))
+        var foreign = SingleForeign(hits.Where(h => !Same(h.Code, target)));
+        if (foreign is not null)
+            return foreign;
+
+        if (model.Length > 0 && !Same(model, target))
             return model;
 
+        var detected = Choose(hits)?.Code;
         if (detected is not null)
             return detected;
 
@@ -38,28 +50,38 @@ public static partial class ReceiptCurrencyDetector
 
     public static string? Detect(string? ocrText)
     {
-        var hits = Collect(ocrText);
-        if (hits.Count == 0) return null;
+        var hits = Filtered(ocrText);
+        return hits.Count == 0 ? null : Choose(hits)?.Code;
+    }
 
+    private static List<Hit> Filtered(string? ocrText)
+    {
+        var hits = Collect(ocrText);
         var explicitInr = hits.Exists(h => h.Code == "INR" && h.IsExplicit);
         var explicitLkr = hits.Exists(h => h.Code == "LKR" && h.IsExplicit);
         if (explicitInr)
             hits.RemoveAll(h => h.Code == "LKR" && !h.IsExplicit);
         if (explicitLkr)
             hits.RemoveAll(h => h.Code == "INR" && !h.IsExplicit);
-
-        return Choose(hits)?.Code;
+        return hits;
     }
 
-    private static bool ContainsExplicit(string? ocrText, string code)
+    private static bool ExplicitOnTotal(List<Hit> hits, string code) =>
+        code.Length > 0 && hits.Exists(h =>
+            h.OnTotal && !h.InParentheses && h.IsExplicit && Same(h.Code, code));
+
+    /// <summary>One explicit currency in the set, ignoring parentheses and weak tokens.</summary>
+    private static string? SingleForeign(IEnumerable<Hit> hits)
     {
-        foreach (var hit in Collect(ocrText))
+        var codes = new List<string>();
+        foreach (var hit in hits)
         {
             if (hit.InParentheses || !hit.IsExplicit) continue;
-            if (Same(hit.Code, code)) return true;
+            if (!codes.Contains(hit.Code))
+                codes.Add(hit.Code);
         }
 
-        return false;
+        return codes.Count == 1 ? codes[0] : null;
     }
 
     private static List<Hit> Collect(string? ocrText)

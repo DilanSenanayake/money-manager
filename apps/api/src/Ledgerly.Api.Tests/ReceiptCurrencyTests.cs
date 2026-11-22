@@ -212,6 +212,24 @@ public class ReceiptCurrencyConversionTests
     }
 
     [Fact]
+    public async Task Rs_token_does_not_hide_a_foreign_model_currency()
+    {
+        var receipt = Receipt(18m, "EUR");
+        receipt.Currency = ReceiptCurrencyDetector.Resolve(
+            "EUR",
+            "Cafe Roma\nRs. 18.00\nThank you",
+            "LKR");
+        var rates = new CountingRates { Rate = 320m };
+
+        await ReceiptCurrencyConversion.ApplyLiveRateAsync(receipt, "LKR", rates);
+
+        Assert.Equal("EUR", receipt.SourceCurrency);
+        Assert.Equal(1, rates.Calls);
+        Assert.Equal(5760m, receipt.Amount);
+        Assert.Equal("LKR", receipt.Currency);
+    }
+
+    [Fact]
     public async Task Wallet_currency_from_the_model_converts_when_the_total_says_euro()
     {
         var receipt = Receipt(18m, "LKR");

@@ -58,7 +58,7 @@ public sealed class AiService(
                 $"""
                 You are given plain text extracted by OCR from a photo of a bill, receipt, bus ticket, invoice, fare stub, or similar purchase document (may contain typos or junk lines). Accept any of these document types and extract structured purchase fields.
                 Amount must be the TOTAL paid for the whole document (not tax-only or a single unit price). Do not convert the amount yourself.
-                Currency must be the ISO code printed beside that total: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Read symbols and words on the document ($, €, £, ¥, ₹, Rs, euro, pound, dollar, rupee, yen, franc, LKR, USD). If the document shows no currency, use USD. Do not substitute a home or account currency, and do not relabel the printed total as another currency.
+                Currency must be the ISO code printed beside that total: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Read symbols and words on the document ($, €, £, ¥, ₹, Rs, euro, pound, dollar, rupee, yen, franc). If no currency is printed, use an empty string. Never guess USD, and never relabel the printed total as another currency.
                 For each line_items entry, price must be the amount charged for the bought quantity on that line (line total = quantity × unit price when both appear). Do not use unit price alone when a line total is available or can be computed. Keep line prices in the same currency as the total.
                 Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
                 Pick category as ONE of these exact names when possible: {categoryNames}.
@@ -72,7 +72,7 @@ public sealed class AiService(
 
             var schema =
                 """
-                {"merchant":"string","amount":number,"currency":"USD|EUR|GBP|LKR|INR|JPY|AUD|CAD|CHF|SGD","date":"YYYY-MM-DD","category":"string","line_items":[{"name":"string","quantity":number|null,"price":number|null}],"notes":"string|null"}
+                {"merchant":"string","amount":number,"currency":"USD|EUR|GBP|LKR|INR|JPY|AUD|CAD|CHF|SGD|","date":"YYYY-MM-DD","category":"string","line_items":[{"name":"string","quantity":number|null,"price":number|null}],"notes":"string|null"}
                 """;
 
             var result = await llm.GenerateObjectAsync<ReceiptExtraction>(prompt, schema, ct);

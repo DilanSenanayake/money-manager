@@ -183,11 +183,31 @@ String? detectReceiptCurrency(String? ocrText) {
       _one(filtered);
 }
 
-bool _containsExplicit(String? ocrText, String code) {
-  final wanted = code.toUpperCase();
-  return _collect(ocrText).any(
-    (hit) => !hit.inParentheses && hit.explicit && hit.code == wanted,
+List<_Hit> _filtered(String? ocrText) {
+  final hits = _collect(ocrText);
+  final explicitInr = hits.any((h) => h.code == 'INR' && h.explicit);
+  final explicitLkr = hits.any((h) => h.code == 'LKR' && h.explicit);
+  return hits.where((h) {
+    if (explicitInr && h.code == 'LKR' && !h.explicit) return false;
+    if (explicitLkr && h.code == 'INR' && !h.explicit) return false;
+    return true;
+  }).toList();
+}
+
+bool _explicitOnTotal(List<_Hit> hits, String code) {
+  if (code.isEmpty) return false;
+  return hits.any(
+    (h) => h.onTotal && !h.inParentheses && h.explicit && h.code == code,
   );
+}
+
+String? _singleExplicit(Iterable<_Hit> hits) {
+  final codes = <String>[];
+  for (final hit in hits) {
+    if (hit.inParentheses || !hit.explicit) continue;
+    if (!codes.contains(hit.code)) codes.add(hit.code);
+  }
+  return codes.length == 1 ? codes.first : null;
 }
 
 /// Printed currency of the total, compared with the selected account currency.
@@ -198,12 +218,20 @@ String resolveReceiptCurrency({
 }) {
   final model = _knownCode(modelCurrency);
   final target = _knownCode(targetCurrency);
-  final detected = detectReceiptCurrency(ocrText);
+  final hits = _filtered(ocrText);
 
-  if (detected != null && detected != target) return detected;
-  if (model.isNotEmpty && model != target && _containsExplicit(ocrText, model)) {
-    return model;
+  if (_explicitOnTotal(hits, target)) {
+    final foreignOnTotal = _singleExplicit(
+      hits.where((h) => h.onTotal && h.code != target),
+    );
+    return foreignOnTotal ?? target;
   }
+
+  final foreign = _singleExplicit(hits.where((h) => h.code != target));
+  if (foreign != null) return foreign;
+  if (model.isNotEmpty && model != target) return model;
+
+  final detected = detectReceiptCurrency(ocrText);
   if (detected != null) return detected;
   if (model.isNotEmpty) return model;
   return target.isNotEmpty ? target : 'USD';
