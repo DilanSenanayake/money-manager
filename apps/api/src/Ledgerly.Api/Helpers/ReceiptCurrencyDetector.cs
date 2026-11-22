@@ -5,22 +5,68 @@ namespace Ledgerly.Api.Helpers;
 
 /// <summary>
 /// Reads the currency printed on a receipt. The model often copies the wallet
-/// currency instead, which skips conversion.
+/// currency and leaves the raw total, which makes Check &amp; Save look converted.
 /// </summary>
 public static partial class ReceiptCurrencyDetector
 {
-    public static void UseDetectedCurrency(ReceiptExtraction receipt, string? ocrText)
+    /// <summary>
+    /// Currency the total is printed in, before it is converted into <paramref name="targetCurrency"/>.
+    /// A wallet-currency hit does not replace a foreign code that is actually printed.
+    /// </summary>
+    public static string Resolve(string? modelCurrency, string? ocrText, string targetCurrency)
     {
+        var model = Known(modelCurrency);
+        var target = Known(targetCurrency);
         var detected = Detect(ocrText);
+
+        if (detected is not null && !Same(detected, target))
+            return detected;
+
+        // The model named a foreign currency that is also printed. A home-currency
+        // token (or an ambiguous mix the detector could not settle) must not win.
+        if (model.Length > 0 && !Same(model, target) && ContainsExplicit(ocrText, model))
+            return model;
+
         if (detected is not null)
-            receipt.Currency = detected;
+            return detected;
+
+        if (model.Length > 0)
+            return model;
+
+        return target.Length > 0 ? target : "USD";
     }
 
     public static string? Detect(string? ocrText)
     {
-        if (string.IsNullOrWhiteSpace(ocrText)) return null;
+        var hits = Collect(ocrText);
+        if (hits.Count == 0) return null;
 
+        var explicitInr = hits.Exists(h => h.Code == "INR" && h.IsExplicit);
+        var explicitLkr = hits.Exists(h => h.Code == "LKR" && h.IsExplicit);
+        if (explicitInr)
+            hits.RemoveAll(h => h.Code == "LKR" && !h.IsExplicit);
+        if (explicitLkr)
+            hits.RemoveAll(h => h.Code == "INR" && !h.IsExplicit);
+
+        return Choose(hits)?.Code;
+    }
+
+    private static bool ContainsExplicit(string? ocrText, string code)
+    {
+        foreach (var hit in Collect(ocrText))
+        {
+            if (hit.InParentheses || !hit.IsExplicit) continue;
+            if (Same(hit.Code, code)) return true;
+        }
+
+        return false;
+    }
+
+    private static List<Hit> Collect(string? ocrText)
+    {
         var hits = new List<Hit>();
+        if (string.IsNullOrWhiteSpace(ocrText)) return hits;
+
         foreach (var rawLine in ocrText.Replace('\u00A0', ' ').Split('\n'))
         {
             var line = rawLine.Trim();
@@ -38,31 +84,23 @@ public static partial class ReceiptCurrencyDetector
             }
         }
 
-        if (hits.Count == 0) return null;
-
-        var explicitInr = hits.Exists(h => h.Code == "INR" && h.IsExplicit);
-        var explicitLkr = hits.Exists(h => h.Code == "LKR" && h.IsExplicit);
-        if (explicitInr)
-            hits.RemoveAll(h => h.Code == "LKR" && !h.IsExplicit);
-        if (explicitLkr)
-            hits.RemoveAll(h => h.Code == "INR" && !h.IsExplicit);
-
-        return Choose(hits);
+        return hits;
     }
 
-    private static string? Choose(List<Hit> hits)
+    private static Detection? Choose(List<Hit> hits)
     {
-        var onTotal = Distinct(hits.Where(h => h.OnTotal && !h.InParentheses));
-        if (onTotal.Count == 1) return onTotal[0];
+        return One(hits.Where(h => h.OnTotal && !h.InParentheses))
+            ?? One(hits.Where(h => !h.InParentheses))
+            ?? One(hits.Where(h => h.OnTotal))
+            ?? One(hits);
+    }
 
-        var plain = Distinct(hits.Where(h => !h.InParentheses));
-        if (plain.Count == 1) return plain[0];
-
-        var anyTotal = Distinct(hits.Where(h => h.OnTotal));
-        if (anyTotal.Count == 1) return anyTotal[0];
-
-        var all = Distinct(hits);
-        return all.Count == 1 ? all[0] : null;
+    private static Detection? One(IEnumerable<Hit> hits)
+    {
+        var list = hits.ToList();
+        var codes = Distinct(list);
+        if (codes.Count != 1) return null;
+        return new Detection(codes[0], list.Exists(h => h.IsExplicit));
     }
 
     private static List<string> Distinct(IEnumerable<Hit> hits)
@@ -87,32 +125,49 @@ public static partial class ReceiptCurrencyDetector
 
     private static bool Explicit(string token)
     {
-        var value = token.Trim().TrimEnd('.').ToUpperInvariant();
+        var value = NormalizeToken(token);
         return value is not ("RS" or "RUPEE" or "RUPEES" or "$");
     }
 
     private static string? CodeFor(string token)
     {
-        var value = token.Trim().TrimEnd('.').ToUpperInvariant();
+        var value = NormalizeToken(token);
         return value switch
         {
-            "US$" or "USD" => "USD",
-            "A$" or "AUD" => "AUD",
-            "C$" or "CAD" => "CAD",
-            "S$" or "SGD" => "SGD",
-            "€" or "EUR" => "EUR",
-            "£" or "GBP" => "GBP",
-            "¥" or "￥" or "JPY" => "JPY",
-            "CHF" => "CHF",
-            "LKR" or "SLR" or "රු" => "LKR",
-            "₹" or "INR" => "INR",
+            "US$" or "USD" or "US DOLLAR" or "US DOLLARS" or "DOLLAR" or "DOLLARS" => "USD",
+            "A$" or "AUD" or "AUSTRALIAN DOLLAR" or "AUSTRALIAN DOLLARS" => "AUD",
+            "C$" or "CAD" or "CANADIAN DOLLAR" or "CANADIAN DOLLARS" => "CAD",
+            "S$" or "SGD" or "SINGAPORE DOLLAR" or "SINGAPORE DOLLARS" => "SGD",
+            "€" or "EUR" or "EURO" or "EUROS" => "EUR",
+            "£" or "GBP" or "POUND" or "POUNDS" or "STERLING" or "BRITISH POUND" or "BRITISH POUNDS" or "POUND STERLING" => "GBP",
+            "¥" or "￥" or "JPY" or "YEN" or "JAPANESE YEN" => "JPY",
+            "CHF" or "FRANC" or "FRANCS" or "SWISS FRANC" or "SWISS FRANCS" => "CHF",
+            "LKR" or "SLR" or "රු" or "SRI LANKA RUPEE" or "SRI LANKA RUPEES" or "SRI LANKAN RUPEE" or "SRI LANKAN RUPEES" => "LKR",
+            "₹" or "INR" or "INDIAN RUPEE" or "INDIAN RUPEES" => "INR",
             "RS" or "RUPEE" or "RUPEES" => "LKR",
             "$" => "USD",
             _ => null,
         };
     }
 
+    private static string NormalizeToken(string token)
+    {
+        var value = token.Trim().TrimEnd('.').ToUpperInvariant();
+        return Whitespace().Replace(value, " ");
+    }
+
+    private static string Known(string? currency)
+    {
+        var code = (currency ?? "").Trim().ToUpperInvariant();
+        return Currencies.All.Contains(code) ? code : "";
+    }
+
+    private static bool Same(string? a, string? b) =>
+        string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
     private readonly record struct Hit(string Code, bool OnTotal, bool InParentheses, bool IsExplicit);
+
+    private readonly record struct Detection(string Code, bool Explicit);
 
     [GeneratedRegex(
         @"\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|net\s+amount|amount\s+paid|total|to\s+pay|nett)\b",
@@ -120,7 +175,10 @@ public static partial class ReceiptCurrencyDetector
     private static partial Regex TotalLine();
 
     [GeneratedRegex(
-        @"US\$|\bUSD\b|A\$|\bAUD\b|C\$|\bCAD\b|S\$|\bSGD\b|€|\bEUR\b|£|\bGBP\b|¥|￥|\bJPY\b|\bCHF\b|\bLKR\b|\bSLR\b|රු\.?|₹|\bINR\b|\bRs\.?\b|\bRupees?\b|(?<![A-Za-z])\$(?=\s*\d)",
+        @"\b(?:sri\s+lankan?\s+rupees?|indian\s+rupees?|us\s+dollars?|australian\s+dollars?|canadian\s+dollars?|singapore\s+dollars?|swiss\s+francs?|british\s+pounds?|pound\s+sterling|japanese\s+yen)\b|US\$|\bUSD\b|\bDOLLARS?\b|A\$|\bAUD\b|C\$|\bCAD\b|S\$|\bSGD\b|€|\bEUR(?:O(?:S)?|S)?\b|£|\bGBP\b|\bPOUNDS?\b|\bSTERLING\b|¥|￥|\bJPY\b|\bYEN\b|\bCHF\b|\bFRANCS?\b|\bLKR\b|\bSLR\b|රු\.?|₹|\bINR\b|\bRs\.?\b|\bRupees?\b|(?<![A-Za-z])\$(?=\s*\d)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex Token();
+
+    [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
+    private static partial Regex Whitespace();
 }

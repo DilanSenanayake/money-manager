@@ -19,6 +19,10 @@ import { matchCategoryId, sanitizeOcrForCategoryHints } from "@/lib/category-mat
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { asMoneyInput } from "@/lib/money";
 import {
+  receiptMoneyFrom,
+  type ReceiptMoney,
+} from "@/lib/receipt-currency";
+import {
   fromMerchantAndNotes,
   toMerchantAndNotes,
 } from "@/lib/transaction-description";
@@ -92,35 +96,6 @@ function payeeKeyOf(extraction: Extraction): string | null {
   if (!extraction || !("payee_key" in extraction)) return null;
   const key = extraction.payee_key;
   return typeof key === "string" && key.trim() ? key.trim() : null;
-}
-
-type ReceiptMoney = {
-  sourceAmount: number;
-  sourceCurrency: string;
-  amountCurrency: string;
-  rate: number | null;
-  warning: string | null;
-};
-
-function receiptMoneyFrom(receipt: ReceiptExtraction): ReceiptMoney {
-  const sourceCurrency = receipt.source_currency || receipt.currency;
-  const sourceAmount =
-    receipt.source_amount != null && Number.isFinite(receipt.source_amount)
-      ? receipt.source_amount
-      : receipt.amount;
-  const rate =
-    receipt.exchange_rate != null &&
-    Number.isFinite(receipt.exchange_rate) &&
-    receipt.exchange_rate > 0
-      ? receipt.exchange_rate
-      : null;
-  return {
-    sourceAmount,
-    sourceCurrency,
-    amountCurrency: receipt.currency,
-    rate,
-    warning: receipt.conversion_warning?.trim() || null,
-  };
 }
 
 function formatRate(rate: number) {
@@ -265,17 +240,28 @@ export function AiReviewModal({
   const baselineRef = useRef<FillBaseline | null>(null);
   const convertSeq = useRef(0);
   const autoConvertKey = useRef<string | null>(null);
+  const preparedKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       baselineRef.current = null;
       convertSeq.current += 1;
       autoConvertKey.current = null;
+      preparedKey.current = null;
       setForm(null);
       setReceiptMoney(null);
       setConverting(false);
       return;
     }
+    const accountKey = accounts.map((a) => `${a.id}:${a.currency}`).join(",");
+    const categoryKey = categories.map((c) => c.id).join(",");
+    const key = `${source ?? ""}|${ocrText ?? ""}|${
+      extraction ? JSON.stringify(extraction) : ""
+    }|${initialForm ? JSON.stringify(initialForm) : ""}|${accountKey}|${categoryKey}`;
+    if (preparedKey.current === key) return;
+    preparedKey.current = key;
+    autoConvertKey.current = null;
+
     const next = initialForm
       ? {
           ...initialForm,
@@ -297,12 +283,26 @@ export function AiReviewModal({
         payee_key: payeeKeyOf(extraction),
       };
     }
-    setForm(next);
-    setReceiptMoney(
+    const accountCurrency =
+      accounts.find((a) => a.id === next?.account_id)?.currency ??
+      accounts[0]?.currency ??
+      "USD";
+    const money =
       source === "receipt" && extraction && "currency" in extraction
-        ? receiptMoneyFrom(extraction as ReceiptExtraction)
-        : null
+        ? receiptMoneyFrom(
+            extraction as ReceiptExtraction,
+            ocrText,
+            accountCurrency
+          )
+        : null;
+    const needsConvert = Boolean(
+      money && !sameCurrency(money.amountCurrency, accountCurrency)
     );
+    setForm(
+      next && needsConvert ? { ...next, amount: "" } : next
+    );
+    setReceiptMoney(money);
+    setConverting(needsConvert);
   }, [open, extraction, accounts, categories, source, initialForm, ocrText]);
 
   const relevantCategories = form
@@ -313,8 +313,9 @@ export function AiReviewModal({
     accounts.find((a) => a.id === form?.account_id)?.currency ??
     accounts[0]?.currency ??
     "USD";
-  const amountLabelCurrency =
-    receiptMoney?.amountCurrency ?? selectedAccountCurrency;
+  const amountLabelCurrency = converting
+    ? selectedAccountCurrency
+    : (receiptMoney?.amountCurrency ?? selectedAccountCurrency);
   const amountMatchesAccount =
     !receiptMoney ||
     sameCurrency(receiptMoney.amountCurrency, selectedAccountCurrency);
@@ -369,7 +370,11 @@ export function AiReviewModal({
         toast.error(result.error);
         setForm((current) =>
           current && current.account_id === accountId
-            ? { ...current, account_id: previousId }
+            ? {
+                ...current,
+                account_id: previousId,
+                amount: current.amount || asMoneyInput(money.sourceAmount),
+              }
             : current
         );
         return;
@@ -394,7 +399,11 @@ export function AiReviewModal({
         toast.error("Couldn't convert that amount. Please try again.");
         setForm((current) =>
           current && current.account_id === accountId
-            ? { ...current, account_id: previousId }
+            ? {
+                ...current,
+                account_id: previousId,
+                amount: current.amount || asMoneyInput(money.sourceAmount),
+              }
             : current
         );
       }

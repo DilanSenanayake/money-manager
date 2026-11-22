@@ -1,0 +1,210 @@
+const _known = {
+  'USD',
+  'EUR',
+  'GBP',
+  'LKR',
+  'INR',
+  'JPY',
+  'AUD',
+  'CAD',
+  'CHF',
+  'SGD',
+};
+
+final _totalLine = RegExp(
+  r'\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|net\s+amount|amount\s+paid|total|to\s+pay|nett)\b',
+  caseSensitive: false,
+);
+
+final _token = RegExp(
+  r'\b(?:sri\s+lankan?\s+rupees?|indian\s+rupees?|us\s+dollars?|australian\s+dollars?|canadian\s+dollars?|singapore\s+dollars?|swiss\s+francs?|british\s+pounds?|pound\s+sterling|japanese\s+yen)\b|US\$|\bUSD\b|\bDOLLARS?\b|A\$|\bAUD\b|C\$|\bCAD\b|S\$|\bSGD\b|€|\bEUR(?:O(?:S)?|S)?\b|£|\bGBP\b|\bPOUNDS?\b|\bSTERLING\b|¥|￥|\bJPY\b|\bYEN\b|\bCHF\b|\bFRANCS?\b|\bLKR\b|\bSLR\b|රු\.?|₹|\bINR\b|\bRs\.?\b|\bRupees?\b|(?<![A-Za-z])\$(?=\s*\d)',
+  caseSensitive: false,
+);
+
+class _Hit {
+  const _Hit({
+    required this.code,
+    required this.onTotal,
+    required this.inParentheses,
+    required this.explicit,
+  });
+
+  final String code;
+  final bool onTotal;
+  final bool inParentheses;
+  final bool explicit;
+}
+
+String _knownCode(String? currency) {
+  final code = (currency ?? '').trim().toUpperCase();
+  return _known.contains(code) ? code : '';
+}
+
+String _normalize(String token) {
+  var value = token.trim();
+  if (value.endsWith('.')) value = value.substring(0, value.length - 1);
+  return value.replaceAll(RegExp(r'\s+'), ' ').toUpperCase();
+}
+
+bool _explicit(String token) {
+  final value = _normalize(token);
+  return value != 'RS' && value != 'RUPEE' && value != 'RUPEES' && value != r'$';
+}
+
+String? _codeFor(String token) {
+  switch (_normalize(token)) {
+    case 'US\$':
+    case 'USD':
+    case 'US DOLLAR':
+    case 'US DOLLARS':
+    case 'DOLLAR':
+    case 'DOLLARS':
+    case r'$':
+      return 'USD';
+    case 'A\$':
+    case 'AUD':
+    case 'AUSTRALIAN DOLLAR':
+    case 'AUSTRALIAN DOLLARS':
+      return 'AUD';
+    case 'C\$':
+    case 'CAD':
+    case 'CANADIAN DOLLAR':
+    case 'CANADIAN DOLLARS':
+      return 'CAD';
+    case 'S\$':
+    case 'SGD':
+    case 'SINGAPORE DOLLAR':
+    case 'SINGAPORE DOLLARS':
+      return 'SGD';
+    case '€':
+    case 'EUR':
+    case 'EURO':
+    case 'EUROS':
+      return 'EUR';
+    case '£':
+    case 'GBP':
+    case 'POUND':
+    case 'POUNDS':
+    case 'STERLING':
+    case 'BRITISH POUND':
+    case 'BRITISH POUNDS':
+    case 'POUND STERLING':
+      return 'GBP';
+    case '¥':
+    case '￥':
+    case 'JPY':
+    case 'YEN':
+    case 'JAPANESE YEN':
+      return 'JPY';
+    case 'CHF':
+    case 'FRANC':
+    case 'FRANCS':
+    case 'SWISS FRANC':
+    case 'SWISS FRANCS':
+      return 'CHF';
+    case 'LKR':
+    case 'SLR':
+    case 'රු':
+    case 'SRI LANKA RUPEE':
+    case 'SRI LANKA RUPEES':
+    case 'SRI LANKAN RUPEE':
+    case 'SRI LANKAN RUPEES':
+    case 'RS':
+    case 'RUPEE':
+    case 'RUPEES':
+      return 'LKR';
+    case '₹':
+    case 'INR':
+    case 'INDIAN RUPEE':
+    case 'INDIAN RUPEES':
+      return 'INR';
+    default:
+      return null;
+  }
+}
+
+bool _inParentheses(String line, int index) {
+  final open = line.lastIndexOf('(', index);
+  if (open < 0) return false;
+  final close = line.indexOf(')', index);
+  return close > index;
+}
+
+List<_Hit> _collect(String? ocrText) {
+  if (ocrText == null || ocrText.trim().isEmpty) return const [];
+  final hits = <_Hit>[];
+  for (final rawLine in ocrText.replaceAll('\u00A0', ' ').split('\n')) {
+    final line = rawLine.trim();
+    if (line.isEmpty) continue;
+    final onTotal = _totalLine.hasMatch(line);
+    for (final match in _token.allMatches(line)) {
+      final code = _codeFor(match.group(0)!);
+      if (code == null) continue;
+      hits.add(
+        _Hit(
+          code: code,
+          onTotal: onTotal,
+          inParentheses: _inParentheses(line, match.start),
+          explicit: _explicit(match.group(0)!),
+        ),
+      );
+    }
+  }
+  return hits;
+}
+
+List<String> _distinct(Iterable<_Hit> hits) {
+  final codes = <String>[];
+  for (final hit in hits) {
+    if (!codes.contains(hit.code)) codes.add(hit.code);
+  }
+  return codes;
+}
+
+String? _one(Iterable<_Hit> hits) {
+  final codes = _distinct(hits);
+  return codes.length == 1 ? codes.first : null;
+}
+
+/// Currency printed on the receipt, or null when it is ambiguous.
+String? detectReceiptCurrency(String? ocrText) {
+  final hits = _collect(ocrText);
+  if (hits.isEmpty) return null;
+  final explicitInr = hits.any((h) => h.code == 'INR' && h.explicit);
+  final explicitLkr = hits.any((h) => h.code == 'LKR' && h.explicit);
+  final filtered = hits.where((h) {
+    if (explicitInr && h.code == 'LKR' && !h.explicit) return false;
+    if (explicitLkr && h.code == 'INR' && !h.explicit) return false;
+    return true;
+  }).toList();
+  return _one(filtered.where((h) => h.onTotal && !h.inParentheses)) ??
+      _one(filtered.where((h) => !h.inParentheses)) ??
+      _one(filtered.where((h) => h.onTotal)) ??
+      _one(filtered);
+}
+
+bool _containsExplicit(String? ocrText, String code) {
+  final wanted = code.toUpperCase();
+  return _collect(ocrText).any(
+    (hit) => !hit.inParentheses && hit.explicit && hit.code == wanted,
+  );
+}
+
+/// Printed currency of the total, compared with the selected account currency.
+String resolveReceiptCurrency({
+  required String? modelCurrency,
+  required String? ocrText,
+  required String targetCurrency,
+}) {
+  final model = _knownCode(modelCurrency);
+  final target = _knownCode(targetCurrency);
+  final detected = detectReceiptCurrency(ocrText);
+
+  if (detected != null && detected != target) return detected;
+  if (model.isNotEmpty && model != target && _containsExplicit(ocrText, model)) {
+    return model;
+  }
+  if (detected != null) return detected;
+  if (model.isNotEmpty) return model;
+  return target.isNotEmpty ? target : 'USD';
+}

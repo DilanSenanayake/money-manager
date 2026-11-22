@@ -58,7 +58,7 @@ public sealed class AiService(
                 $"""
                 You are given plain text extracted by OCR from a photo of a bill, receipt, bus ticket, invoice, fare stub, or similar purchase document (may contain typos or junk lines). Accept any of these document types and extract structured purchase fields.
                 Amount must be the TOTAL paid for the whole document (not tax-only or a single unit price). Do not convert the amount yourself.
-                Currency must be the ISO code printed for that total: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Read symbols and words on the document ($, €, £, ¥, ₹, Rs, LKR, USD). If the document shows no currency, use USD. Do not substitute a home or account currency.
+                Currency must be the ISO code printed beside that total: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Read symbols and words on the document ($, €, £, ¥, ₹, Rs, euro, pound, dollar, rupee, yen, franc, LKR, USD). If the document shows no currency, use USD. Do not substitute a home or account currency, and do not relabel the printed total as another currency.
                 For each line_items entry, price must be the amount charged for the bought quantity on that line (line total = quantity × unit price when both appear). Do not use unit price alone when a line total is available or can be computed. Keep line prices in the same currency as the total.
                 Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
                 Pick category as ONE of these exact names when possible: {categoryNames}.
@@ -113,10 +113,7 @@ public sealed class AiService(
                 key => result.PayeeKey = key,
                 ct);
 
-            // The model often labels the total with the wallet currency. The
-            // printed symbol is what decides whether a live rate is needed.
-            ReceiptCurrencyDetector.UseDetectedCurrency(result, text);
-            await ApplyReceiptCurrencyAsync(result, ct);
+            await ApplyReceiptCurrencyAsync(result, text, ct);
 
             return Result<ReceiptExtraction>.Ok(result);
         }
@@ -350,7 +347,10 @@ public sealed class AiService(
         }
     }
 
-    private async Task ApplyReceiptCurrencyAsync(ReceiptExtraction result, CancellationToken ct)
+    private async Task ApplyReceiptCurrencyAsync(
+        ReceiptExtraction result,
+        string ocrText,
+        CancellationToken ct)
     {
         result.SourceAmount = null;
         result.SourceCurrency = null;
@@ -392,6 +392,9 @@ public sealed class AiService(
             result.AccountId = accountId;
         }
 
+        // Decide the printed currency only after the wallet currency is known,
+        // so a home-currency token cannot hide a foreign total.
+        result.Currency = ReceiptCurrencyDetector.Resolve(result.Currency, ocrText, target);
         await ReceiptCurrencyConversion.ApplyLiveRateAsync(result, target, liveRates, ct);
     }
 
@@ -483,7 +486,9 @@ public sealed class AiService(
         result.Category = OwnershipGuards.Clamp(result.Category, 100);
         result.Notes = OwnershipGuards.ClampNullable(result.Notes, 1000);
         var currency = (result.Currency ?? "").Trim().ToUpperInvariant();
-        result.Currency = Currencies.All.Contains(currency) ? currency : "USD";
+        // Unknown codes are cleared so a later step can read the printed currency.
+        // Defaulting them to USD made a foreign total look like the wallet currency.
+        result.Currency = Currencies.All.Contains(currency) ? currency : "";
         if (!OwnershipGuards.IsValidIsoDate(result.Date))
             result.Date = DateHelpers.LocalDateYyyyMmDd();
         foreach (var item in result.LineItems)

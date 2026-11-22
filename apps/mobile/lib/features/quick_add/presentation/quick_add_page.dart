@@ -346,6 +346,7 @@ class _QuickAddPageState extends ConsumerState<QuickAddPage> {
         ref: ref,
         source: 'receipt',
         extraction: extraction,
+        ocrText: text,
       );
       if (saved) await _afterSave();
     } catch (e) {

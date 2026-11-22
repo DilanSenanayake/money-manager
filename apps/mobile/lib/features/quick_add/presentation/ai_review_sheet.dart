@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/utils/category_match.dart';
 import '../../../core/utils/currency.dart';
+import '../../../core/utils/receipt_currency.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money_input.dart';
 import '../../../shared/components/components.dart';
@@ -20,6 +21,7 @@ Future<bool> showAiReviewSheet({
   required WidgetRef ref,
   required String source,
   required Object extraction,
+  String? ocrText,
 }) async {
   // Root navigator so the sheet sits above the shell bottom nav
   // (`extendBody: true` otherwise paints the bar over nested routes).
@@ -28,7 +30,11 @@ Future<bool> showAiReviewSheet({
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => AiReviewSheet(source: source, extraction: extraction),
+    builder: (_) => AiReviewSheet(
+      source: source,
+      extraction: extraction,
+      ocrText: ocrText,
+    ),
   );
   return result == true;
 }
@@ -38,10 +44,12 @@ class AiReviewSheet extends ConsumerStatefulWidget {
     super.key,
     required this.source,
     required this.extraction,
+    this.ocrText,
   });
 
   final String source;
   final Object extraction;
+  final String? ocrText;
 
   @override
   ConsumerState<AiReviewSheet> createState() => _AiReviewSheetState();
@@ -69,6 +77,8 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
   late final String _proposedMerchant;
   String? _payeeKey;
   bool _categoryBaselineSet = false;
+  bool _receiptPrepared = false;
+  double? _displayAmount;
 
   ({String? categoryId, String? accountId, String? payeeKey}) get _feedback {
     final extraction = widget.extraction;
@@ -100,7 +110,9 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
   void initState() {
     super.initState();
     final parsed = _parsed();
-    _amount = TextEditingController(text: parsed.amount.toString());
+    _amount = TextEditingController(
+      text: widget.extraction is ReceiptExtraction ? '' : parsed.amount.toString(),
+    );
     _merchant = TextEditingController(text: parsed.merchant);
     _notes = TextEditingController(text: parsed.notes ?? '');
     _type = parsed.type;
@@ -173,6 +185,47 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
       if (account.id == id) return account;
     }
     return null;
+  }
+
+  void _prepareReceiptAmount(List<Account> accounts) {
+    if (_receiptPrepared || widget.extraction is! ReceiptExtraction) return;
+    final account = _accountById(accounts, _accountId);
+    if (account == null) return;
+    _receiptPrepared = true;
+    final extraction = widget.extraction as ReceiptExtraction;
+    final target = account.currency.toUpperCase();
+    final rate = extraction.exchangeRate;
+    final serverConverted = extraction.sourceCurrency != null &&
+        rate != null &&
+        rate > 0 &&
+        extraction.currency.toUpperCase() == target;
+    if (serverConverted) {
+      _displayAmount = extraction.amount;
+      _sourceAmount = extraction.sourceAmount ?? extraction.amount;
+      _sourceCurrency = extraction.sourceCurrency!.toUpperCase();
+      _amountCurrency = target;
+      _rate = rate;
+      _warning = null;
+      return;
+    }
+
+    final printed = resolveReceiptCurrency(
+      modelCurrency: extraction.currency,
+      ocrText: widget.ocrText,
+      targetCurrency: target,
+    );
+    _sourceAmount = extraction.sourceAmount ?? extraction.amount;
+    _sourceCurrency = printed;
+    _amountCurrency = printed;
+    _rate = null;
+    final warning = extraction.conversionWarning?.trim();
+    _warning = warning == null || warning.isEmpty ? null : warning;
+    if (printed == target) {
+      _displayAmount = _sourceAmount;
+    } else {
+      _displayAmount = null;
+      _converting = true;
+    }
   }
 
   bool _amountMatches(List<Account> accounts) {
@@ -250,6 +303,9 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
       setState(() {
         _accountId = previous;
         _converting = false;
+        if (_amount.text.trim().isEmpty && sourceAmount != null) {
+          _amount.text = _moneyText(sourceAmount, sourceCurrency);
+        }
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e is Failure ? e.message : e.toString())),
@@ -341,14 +397,26 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
     } else {
       _accountId ??= accounts.isNotEmpty ? accounts.first.id : null;
     }
+    _prepareReceiptAmount(accounts);
     if (!_autoConvertStarted &&
-        widget.extraction is ReceiptExtraction &&
-        accounts.isNotEmpty &&
-        !_amountMatches(accounts)) {
+        _receiptPrepared &&
+        widget.extraction is ReceiptExtraction) {
       _autoConvertStarted = true;
       final id = _accountId;
+      final matches = _amountMatches(accounts);
+      final display = _displayAmount;
+      final displayCurrency = _amountCurrency;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        if (matches) {
+          if (display != null && displayCurrency != null) {
+            setState(() {
+              _amount.text = _moneyText(display, displayCurrency);
+              _converting = false;
+            });
+          }
+          return;
+        }
         final latest = ref.read(accountsProvider).valueOrNull ?? accounts;
         _changeAccount(id, latest);
       });
@@ -368,8 +436,9 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
       _categoryId ??= _proposedCategoryId;
     }
     final selectedAccount = _accountById(accounts, _accountId);
-    final amountCurrency =
-        _amountCurrency ?? selectedAccount?.currency ?? 'USD';
+    final amountCurrency = _converting
+        ? (selectedAccount?.currency ?? _amountCurrency ?? 'USD')
+        : (_amountCurrency ?? selectedAccount?.currency ?? 'USD');
     final showRate = widget.extraction is ReceiptExtraction &&
         _rate != null &&
         _sourceCurrency != null &&

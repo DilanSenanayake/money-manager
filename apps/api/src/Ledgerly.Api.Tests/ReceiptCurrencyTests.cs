@@ -133,6 +133,9 @@ public class ReceiptCurrencyConversionTests
     [Theory]
     [InlineData("Cafe\nTOTAL EUR 18.00", "EUR")]
     [InlineData("TOTAL € 12.50", "EUR")]
+    [InlineData("TOTAL EURO 18.00", "EUR")]
+    [InlineData("TOTAL EUROS 10.00", "EUR")]
+    [InlineData("Amount due\n18.00 pounds", "GBP")]
     [InlineData("Amount due\nGBP 9.99", "GBP")]
     [InlineData("Rs. 1,500.00\nThank you", "LKR")]
     [InlineData("TOTAL INR 200.00", "INR")]
@@ -141,6 +144,14 @@ public class ReceiptCurrencyConversionTests
     public void Detects_the_currency_printed_on_the_receipt(string text, string expected)
     {
         Assert.Equal(expected, ReceiptCurrencyDetector.Detect(text));
+    }
+
+    [Fact]
+    public void Parenthetical_usd_does_not_replace_a_printed_lkr_total()
+    {
+        Assert.Equal(
+            "LKR",
+            ReceiptCurrencyDetector.Resolve("USD", "TOTAL LKR 500.00 (USD 1.50)", "LKR"));
     }
 
     [Fact]
@@ -153,9 +164,10 @@ public class ReceiptCurrencyConversionTests
     public async Task Printed_eur_total_converts_even_when_the_model_says_usd()
     {
         var receipt = Receipt(18m, "USD");
-        ReceiptCurrencyDetector.UseDetectedCurrency(
-            receipt,
-            "Cafe Roma\nTOTAL EUR 18.00\nThank you");
+        receipt.Currency = ReceiptCurrencyDetector.Resolve(
+            "USD",
+            "Cafe Roma\nTOTAL EUR 18.00\nThank you",
+            "LKR");
         var rates = new CountingRates { Rate = 320m };
 
         await ReceiptCurrencyConversion.ApplyLiveRateAsync(receipt, "LKR", rates);
@@ -171,13 +183,49 @@ public class ReceiptCurrencyConversionTests
     public async Task Same_printed_currency_does_not_call_the_rate_provider()
     {
         var receipt = Receipt(18m, "USD");
-        ReceiptCurrencyDetector.UseDetectedCurrency(receipt, "TOTAL LKR 18.00");
+        receipt.Currency = ReceiptCurrencyDetector.Resolve("USD", "TOTAL LKR 18.00", "LKR");
         var rates = new CountingRates();
 
         await ReceiptCurrencyConversion.ApplyLiveRateAsync(receipt, "LKR", rates);
 
         Assert.Equal(0, rates.Calls);
         Assert.Equal(18m, receipt.Amount);
+        Assert.Equal("LKR", receipt.Currency);
+    }
+
+    [Fact]
+    public async Task Printed_euro_is_kept_when_the_wallet_currency_is_also_on_the_page()
+    {
+        var receipt = Receipt(18m, "EUR");
+        receipt.Currency = ReceiptCurrencyDetector.Resolve(
+            "EUR",
+            "Cafe Roma\nTOTAL EUR 18.00\nRs. 5760",
+            "LKR");
+        var rates = new CountingRates { Rate = 320m };
+
+        await ReceiptCurrencyConversion.ApplyLiveRateAsync(receipt, "LKR", rates);
+
+        Assert.Equal(1, rates.Calls);
+        Assert.Equal(5760m, receipt.Amount);
+        Assert.Equal("LKR", receipt.Currency);
+        Assert.Equal("EUR", receipt.SourceCurrency);
+    }
+
+    [Fact]
+    public async Task Wallet_currency_from_the_model_converts_when_the_total_says_euro()
+    {
+        var receipt = Receipt(18m, "LKR");
+        receipt.Currency = ReceiptCurrencyDetector.Resolve(
+            "LKR",
+            "Cafe Roma\nTOTAL EURO 18.00",
+            "LKR");
+        var rates = new CountingRates { Rate = 320m };
+
+        await ReceiptCurrencyConversion.ApplyLiveRateAsync(receipt, "LKR", rates);
+
+        Assert.Equal(1, rates.Calls);
+        Assert.Equal(5760m, receipt.Amount);
+        Assert.Equal("EUR", receipt.SourceCurrency);
         Assert.Equal("LKR", receipt.Currency);
     }
 
