@@ -1,4 +1,5 @@
 using Ledgerly.Api.Helpers;
+using Ledgerly.Api.Infrastructure.Fx;
 using Ledgerly.Api.Infrastructure.Llm;
 using Ledgerly.Api.Infrastructure.Supabase;
 using Ledgerly.Api.Models;
@@ -10,6 +11,7 @@ public interface IAiService
     Task<Result<ReceiptExtraction>> ParseReceiptAsync(string ocrText, CancellationToken ct = default);
     Task<Result<SmsExtraction>> ParseSmsAsync(string text, CancellationToken ct = default);
     Task<Result<QuickTextExtraction>> ParseQuickTextAsync(string text, CancellationToken ct = default);
+    Task<Result<ConvertedAmount>> ConvertAmountAsync(ConvertAmountRequest request, CancellationToken ct = default);
     Task<Result<Guid?>> SaveReviewedAsync(AiReviewSaveRequest request, CancellationToken ct = default);
 }
 
@@ -18,6 +20,8 @@ public sealed class AiService(
     ISupabaseRestClient supabase,
     ICurrentUser user,
     ICategoriesService categories,
+    IAccountsService accountsService,
+    ILiveRateProvider liveRates,
     ILogger<AiService> logger) : IAiService
 {
     private const string NotConfigured =
@@ -53,8 +57,9 @@ public sealed class AiService(
             var prompt =
                 $"""
                 You are given plain text extracted by OCR from a photo of a bill, receipt, bus ticket, invoice, fare stub, or similar purchase document (may contain typos or junk lines). Accept any of these document types and extract structured purchase fields.
-                Amount must be the TOTAL paid for the whole document (not tax-only or a single unit price).
-                For each line_items entry, price must be the amount charged for the bought quantity on that line (line total = quantity × unit price when both appear). Do not use unit price alone when a line total is available or can be computed.
+                Amount must be the TOTAL paid for the whole document (not tax-only or a single unit price). Do not convert the amount yourself.
+                Currency must be the ISO code printed for that total: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Read symbols and words on the document ($, €, £, ¥, ₹, Rs, LKR, USD). If the document shows no currency, use USD. Do not substitute a home or account currency.
+                For each line_items entry, price must be the amount charged for the bought quantity on that line (line total = quantity × unit price when both appear). Do not use unit price alone when a line total is available or can be computed. Keep line prices in the same currency as the total.
                 Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
                 Pick category as ONE of these exact names when possible: {categoryNames}.
                 Prefer Dining for restaurants, cafes, coffee shops, fast food, and takeout. Prefer Groceries for supermarkets. Prefer Transport for bus, train, taxi, ride-hail, and similar tickets. Avoid Other when another listed category fits. Do not put raw OCR into notes — leave notes null unless there is a short useful detail.
@@ -107,6 +112,8 @@ public sealed class AiService(
                 accountId => result.AccountId = accountId,
                 key => result.PayeeKey = key,
                 ct);
+
+            await ApplyReceiptCurrencyAsync(result, ct);
 
             return Result<ReceiptExtraction>.Ok(result);
         }
@@ -224,6 +231,53 @@ public sealed class AiService(
         }
     }
 
+    public async Task<Result<ConvertedAmount>> ConvertAmountAsync(
+        ConvertAmountRequest request,
+        CancellationToken ct = default)
+    {
+        var from = (request.FromCurrency ?? "").Trim().ToUpperInvariant();
+        var to = (request.ToCurrency ?? "").Trim().ToUpperInvariant();
+        if (!Currencies.All.Contains(from) || !Currencies.All.Contains(to))
+            return Result<ConvertedAmount>.Fail("Invalid currency");
+        if (request.Amount < 0)
+            return Result<ConvertedAmount>.Fail("Amount must be positive");
+        if (request.Amount > 1_000_000_000_000m)
+            return Result<ConvertedAmount>.Fail("Amount is too large");
+
+        if (!ReceiptCurrencyConversion.NeedsLiveRate(from, to))
+        {
+            return Result<ConvertedAmount>.Ok(new ConvertedAmount
+            {
+                Amount = ReceiptCurrencyConversion.RoundMoney(request.Amount, to),
+                Currency = to,
+                FromCurrency = from,
+                Rate = 1m,
+            });
+        }
+
+        var rate = await liveRates.GetRateAsync(from, to, ct);
+        if (rate is null or <= 0)
+        {
+            return Result<ConvertedAmount>.Fail(
+                $"Couldn't load today's {from} to {to} rate. Try again in a moment.");
+        }
+
+        try
+        {
+            return Result<ConvertedAmount>.Ok(new ConvertedAmount
+            {
+                Amount = ReceiptCurrencyConversion.RoundMoney(request.Amount * rate.Value, to),
+                Currency = to,
+                FromCurrency = from,
+                Rate = rate.Value,
+            });
+        }
+        catch (OverflowException)
+        {
+            return Result<ConvertedAmount>.Fail("That amount is too large to convert.");
+        }
+    }
+
     public async Task<Result<Guid?>> SaveReviewedAsync(
         AiReviewSaveRequest request,
         CancellationToken ct = default)
@@ -291,6 +345,51 @@ public sealed class AiService(
             logger.LogError(ex, "AI save-reviewed failed for user {UserId}", user.UserId);
             return Result<Guid?>.Fail(OwnershipGuards.GenericError);
         }
+    }
+
+    private async Task ApplyReceiptCurrencyAsync(ReceiptExtraction result, CancellationToken ct)
+    {
+        result.SourceAmount = null;
+        result.SourceCurrency = null;
+        result.ExchangeRate = null;
+        result.ConversionWarning = null;
+
+        List<Account> wallets;
+        try
+        {
+            wallets = await accountsService.GetAllAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Receipt currency skipped; wallets unavailable for user {UserId}", user.UserId);
+            return;
+        }
+
+        if (!ReceiptCurrencyConversion.TryResolveAccount(
+                result.AccountId, wallets, out var target, out var accountId))
+        {
+            string? baseCurrency = null;
+            try
+            {
+                var profile = await supabase.GetSingleAsync<Profile>(
+                    "profiles",
+                    $"select=base_currency&id=eq.{user.UserId}",
+                    ct);
+                baseCurrency = profile?.BaseCurrency;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Receipt currency skipped; profile unavailable for user {UserId}", user.UserId);
+            }
+
+            target = ReceiptCurrencyConversion.FallbackCurrency(baseCurrency);
+        }
+        else if (!string.IsNullOrWhiteSpace(accountId))
+        {
+            result.AccountId = accountId;
+        }
+
+        await ReceiptCurrencyConversion.ApplyLiveRateAsync(result, target, liveRates, ct);
     }
 
     private async Task ApplySavedFeedbackAsync(
@@ -380,9 +479,8 @@ public sealed class AiService(
         result.Merchant = OwnershipGuards.Clamp(result.Merchant, 200);
         result.Category = OwnershipGuards.Clamp(result.Category, 100);
         result.Notes = OwnershipGuards.ClampNullable(result.Notes, 1000);
-        result.Currency = Currencies.All.Contains(result.Currency ?? "")
-            ? result.Currency!
-            : "USD";
+        var currency = (result.Currency ?? "").Trim().ToUpperInvariant();
+        result.Currency = Currencies.All.Contains(currency) ? currency : "USD";
         if (!OwnershipGuards.IsValidIsoDate(result.Date))
             result.Date = DateHelpers.LocalDateYyyyMmDd();
         foreach (var item in result.LineItems)

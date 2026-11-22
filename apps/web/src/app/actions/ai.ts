@@ -66,6 +66,39 @@ export async function parseReceiptText(
   });
 }
 
+export async function convertCurrencyAmount(input: {
+  amount: number;
+  from_currency: string;
+  to_currency: string;
+}): Promise<
+  | { data: { amount: number; currency: string; from_currency: string; rate: number } }
+  | { error: string }
+> {
+  const from = input.from_currency.trim().toUpperCase();
+  const to = input.to_currency.trim().toUpperCase();
+  if (!from || !to) return { error: "Invalid currency" };
+  if (from === to) {
+    return {
+      data: {
+        amount: input.amount,
+        currency: to,
+        from_currency: from,
+        rate: 1,
+      },
+    };
+  }
+  return parseAi<{
+    amount: number;
+    currency: string;
+    from_currency: string;
+    rate: number;
+  }>("/v1/ai/convert-amount", {
+    amount: input.amount,
+    from_currency: from,
+    to_currency: to,
+  });
+}
+
 export async function parseBankSms(
   text: string
 ): Promise<{ data: SmsExtraction } | { error: string }> {

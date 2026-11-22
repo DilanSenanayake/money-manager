@@ -733,6 +733,10 @@ class ReceiptExtraction {
     this.categoryId,
     this.accountId,
     this.payeeKey,
+    this.sourceAmount,
+    this.sourceCurrency,
+    this.exchangeRate,
+    this.conversionWarning,
   });
 
   final String merchant;
@@ -745,6 +749,10 @@ class ReceiptExtraction {
   final String? categoryId;
   final String? accountId;
   final String? payeeKey;
+  final double? sourceAmount;
+  final String? sourceCurrency;
+  final double? exchangeRate;
+  final String? conversionWarning;
 
   factory ReceiptExtraction.fromJson(Map<String, dynamic> json) {
     return ReceiptExtraction(
@@ -761,6 +769,14 @@ class ReceiptExtraction {
       categoryId: asNullableString(json['category_id']),
       accountId: asNullableString(json['account_id']),
       payeeKey: asNullableString(json['payee_key']),
+      sourceAmount: json['source_amount'] == null
+          ? null
+          : asDouble(json['source_amount']),
+      sourceCurrency: asNullableString(json['source_currency']),
+      exchangeRate: json['exchange_rate'] == null
+          ? null
+          : asDouble(json['exchange_rate']),
+      conversionWarning: asNullableString(json['conversion_warning']),
     );
   }
 }

@@ -78,7 +78,7 @@ final _docs = <String, _Doc>{
       (
         title: 'Who processes it',
         body:
-            'Supabase stores the account and the money records. The application server runs the app logic. Groq receives Smart Add text so it can suggest an amount, merchant, and category. Nothing is saved until you confirm. Google Fonts downloads the typeface. Google ML Kit reads receipt text on the device. The website may use Vercel Web Analytics and, if configured, Google Analytics. The Android app does not include an ads or crash-reporting SDK. We do not sell personal information.',
+            'Supabase stores the account and the money records. The application server runs the app logic. Groq receives Smart Add text so it can suggest an amount, merchant, and category. Nothing is saved until you confirm. When a receipt total is in a different currency from the wallet, the server asks ExchangeRate-API for a public rate and sends only the two currency codes. Google Fonts downloads the typeface. Google ML Kit reads receipt text on the device. The website may use Vercel Web Analytics and, if configured, Google Analytics. The Android app does not include an ads or crash-reporting SDK. We do not sell personal information.',
       ),
       (
         title: 'Storage and security',

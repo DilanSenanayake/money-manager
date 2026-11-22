@@ -28,3 +28,11 @@ public sealed class LedgerlyCorsOptions
 
     public string[] Origins { get; set; } = ["http://localhost:3000"];
 }
+
+public sealed class FxOptions
+{
+    public const string SectionName = "Fx";
+
+    /// <summary>Open ExchangeRate-API root. No key. Used only when a receipt currency differs.</summary>
+    public string BaseUrl { get; set; } = "https://open.er-api.com/v6";
+}

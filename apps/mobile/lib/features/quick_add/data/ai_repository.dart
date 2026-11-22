@@ -6,6 +6,29 @@ import '../../../core/network/api_client.dart';
 import '../../../core/utils/json.dart';
 import '../../../shared/models/models.dart';
 
+class ConvertedAmount {
+  const ConvertedAmount({
+    required this.amount,
+    required this.currency,
+    required this.fromCurrency,
+    required this.rate,
+  });
+
+  final double amount;
+  final String currency;
+  final String fromCurrency;
+  final double rate;
+
+  factory ConvertedAmount.fromJson(Map<String, dynamic> json) {
+    return ConvertedAmount(
+      amount: asDouble(json['amount']),
+      currency: asString(json['currency']),
+      fromCurrency: asString(json['from_currency']),
+      rate: asDouble(json['rate']),
+    );
+  }
+}
+
 final aiRepositoryProvider = Provider<AiRepository>((ref) {
   return AiRepository(ref.watch(ledgerlyApiProvider));
 });
@@ -71,6 +94,39 @@ class AiRepository {
         '/v1/ai/parse-text',
         body: {'text': value},
         parse: (json) => parseDataEnvelope(json, QuickTextExtraction.fromJson),
+      );
+    } catch (e) {
+      throw mapException(e);
+    }
+  }
+
+  Future<ConvertedAmount> convertAmount({
+    required double amount,
+    required String fromCurrency,
+    required String toCurrency,
+  }) async {
+    final from = fromCurrency.trim().toUpperCase();
+    final to = toCurrency.trim().toUpperCase();
+    if (from.isEmpty || to.isEmpty) {
+      throw const ValidationFailure('Invalid currency');
+    }
+    if (from == to) {
+      return ConvertedAmount(
+        amount: amount,
+        currency: to,
+        fromCurrency: from,
+        rate: 1,
+      );
+    }
+    try {
+      return await _api.post<ConvertedAmount>(
+        '/v1/ai/convert-amount',
+        body: {
+          'amount': amount,
+          'from_currency': from,
+          'to_currency': to,
+        },
+        parse: (json) => parseDataEnvelope(json, ConvertedAmount.fromJson),
       );
     } catch (e) {
       throw mapException(e);

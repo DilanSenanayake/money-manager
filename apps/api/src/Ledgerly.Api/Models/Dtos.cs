@@ -228,6 +228,33 @@ public sealed class AiReviewSaveRequest
     public string? PayeeKey { get; set; }
 }
 
+public sealed class ConvertAmountRequest
+{
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonPropertyName("from_currency")]
+    public string FromCurrency { get; set; } = "";
+
+    [JsonPropertyName("to_currency")]
+    public string ToCurrency { get; set; } = "";
+}
+
+public sealed class ConvertedAmount
+{
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonPropertyName("currency")]
+    public string Currency { get; set; } = "";
+
+    [JsonPropertyName("from_currency")]
+    public string FromCurrency { get; set; } = "";
+
+    [JsonPropertyName("rate")]
+    public decimal Rate { get; set; }
+}
+
 public sealed class ReceiptExtraction
 {
     [JsonPropertyName("merchant")]
@@ -238,6 +265,20 @@ public sealed class ReceiptExtraction
 
     [JsonPropertyName("currency")]
     public string Currency { get; set; } = "USD";
+
+    /// <summary>Receipt total before conversion. Null when no conversion was needed.</summary>
+    [JsonPropertyName("source_amount")]
+    public decimal? SourceAmount { get; set; }
+
+    [JsonPropertyName("source_currency")]
+    public string? SourceCurrency { get; set; }
+
+    /// <summary>Units of <see cref="Currency"/> per 1 unit of <see cref="SourceCurrency"/>.</summary>
+    [JsonPropertyName("exchange_rate")]
+    public decimal? ExchangeRate { get; set; }
+
+    [JsonPropertyName("conversion_warning")]
+    public string? ConversionWarning { get; set; }
 
     [JsonPropertyName("date")]
     public string Date { get; set; } = "";

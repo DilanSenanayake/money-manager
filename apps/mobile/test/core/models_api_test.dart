@@ -86,6 +86,8 @@ void main() {
       );
       expect(receipt.merchant, 'Cafe');
       expect(receipt.lineItems.single.name, 'Latte');
+      expect(receipt.sourceAmount, isNull);
+      expect(receipt.exchangeRate, isNull);
     });
   });
 

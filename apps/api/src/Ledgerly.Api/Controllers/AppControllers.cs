@@ -103,6 +103,17 @@ public sealed class AiController(IAiService ai) : ControllerBase
             : BadRequest(new ErrorResponse(result.Error!));
     }
 
+    [HttpPost("convert-amount")]
+    public async Task<ActionResult> ConvertAmount(
+        [FromBody] ConvertAmountRequest request,
+        CancellationToken ct)
+    {
+        var result = await ai.ConvertAmountAsync(request, ct);
+        return result.Success
+            ? Ok(new DataEnvelope<ConvertedAmount>(result.Value!))
+            : BadRequest(new ErrorResponse(result.Error!));
+    }
+
     [HttpPost("save-reviewed")]
     public async Task<ActionResult> SaveReviewed(
         [FromBody] AiReviewSaveRequest request,

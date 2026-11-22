@@ -9,14 +9,14 @@
  * - Refunds: no refund of the current paid period (digital service), except where required by law.
  * - Account deletion: within 30 days of a verified request, except where law requires longer retention.
  * - Contact inbox: NEXT_PUBLIC_LEGAL_CONTACT_EMAIL, falling back to the address below.
- * - Processors listed in privacy match the current stack: Supabase, Vercel, Groq, optional Google Analytics.
+ * - Processors listed in privacy match the current stack: Supabase, Vercel, Groq, ExchangeRate-API, optional Google Analytics.
  * - The website and Android app do not auto-read SMS or link bank accounts. Users paste, type, or optionally speak a short description and confirm saves.
  * - Android also uses on-device ML Kit, Google Fonts, and the device speech recognizer.
  */
 export const LEGAL = {
   productName: "Smart Money Manager",
   operatorName: "Dilan Senanayake",
-  lastUpdated: "29 September 2026",
+  lastUpdated: "22 November 2026",
   consentVersion: "2026-09-29",
   minAge: 16,
   deletionDays: 30,
@@ -51,6 +51,12 @@ export const PROCESSORS = [
     role: "AI text processing",
     purpose:
       "Suggest amounts, merchants, and categories from text you choose to submit. You still confirm before anything is saved.",
+  },
+  {
+    name: "ExchangeRate-API",
+    role: "Exchange rates",
+    purpose:
+      "Provide a public conversion rate when a receipt total is in a different currency from the wallet. The request contains only the two currency codes.",
   },
   {
     name: "Google (optional)",

@@ -146,7 +146,13 @@ export const receiptLineItemSchema = z.object({
 export const receiptExtractionSchema = z.object({
   merchant: z.string().describe("Store, merchant, carrier, or issuer name"),
   amount: z.number().describe("Total amount paid for the whole document"),
-  currency: currencySchema.describe("ISO currency code if detectable, else USD"),
+  currency: currencySchema.describe(
+    "ISO code printed for the total. If the document shows no currency, use USD"
+  ),
+  source_amount: z.number().nullable().optional(),
+  source_currency: currencySchema.nullable().optional(),
+  exchange_rate: z.number().nullable().optional(),
+  conversion_warning: z.string().nullable().optional(),
   date: z
     .string()
     .describe("Transaction date in YYYY-MM-DD format; use today if unknown"),

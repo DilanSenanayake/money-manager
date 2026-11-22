@@ -74,7 +74,10 @@ export default function PrivacyPage() {
           If you use a receipt photo, text is read on your device first (Google
           ML Kit on Android). The photo is not uploaded. Extracted text may be
           sent to the application server and an AI processor so fields can be
-          suggested. If you paste a bank message, type a short description, or
+          suggested. When that total is in a different currency from the wallet,
+          the server asks ExchangeRate-API for a public rate. Only the two
+          currency codes are sent, and no rate is requested when they already
+          match. If you paste a bank message, type a short description, or
           use optional voice input, that text is sent the same way. On many
           Android phones the speech recognizer sends audio to Google before the
           words reach the app. We do not store raw microphone recordings on our

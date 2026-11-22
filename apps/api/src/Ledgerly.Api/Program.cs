@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Ledgerly.Api.Infrastructure;
 using Ledgerly.Api.Infrastructure.Auth;
+using Ledgerly.Api.Infrastructure.Fx;
 using Ledgerly.Api.Infrastructure.Llm;
 using Ledgerly.Api.Infrastructure.Logging;
 using Ledgerly.Api.Infrastructure.Supabase;
@@ -59,6 +60,8 @@ builder.Services.Configure<GroqOptions>(
     builder.Configuration.GetSection(GroqOptions.SectionName));
 builder.Services.Configure<LedgerlyCorsOptions>(
     builder.Configuration.GetSection(LedgerlyCorsOptions.SectionName));
+builder.Services.Configure<FxOptions>(
+    builder.Configuration.GetSection(FxOptions.SectionName));
 
 var supabase = builder.Configuration.GetSection(SupabaseOptions.SectionName).Get<SupabaseOptions>()
                ?? new SupabaseOptions();
@@ -98,10 +101,17 @@ builder.Services.AddHttpClient("groq", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+builder.Services.AddHttpClient("fx", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(8);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Ledgerly/1.0");
+});
+builder.Services.AddMemoryCache();
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ISupabaseRestClient, SupabaseRestClient>();
 builder.Services.AddSingleton<ILlmService, GroqService>();
+builder.Services.AddSingleton<ILiveRateProvider, OpenExchangeRateProvider>();
 
 builder.Services.AddScoped<IAccountsService, AccountsService>();
 builder.Services.AddScoped<ICategoriesService, CategoriesService>();

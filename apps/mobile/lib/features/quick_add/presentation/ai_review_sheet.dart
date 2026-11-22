@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
 import '../../../core/utils/category_match.dart';
+import '../../../core/utils/currency.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money_input.dart';
 import '../../../shared/components/components.dart';
@@ -55,6 +56,13 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
   String? _accountId;
   String? _categoryId;
   bool _loading = false;
+  bool _converting = false;
+  int _convertSeq = 0;
+  double? _sourceAmount;
+  String? _sourceCurrency;
+  String? _amountCurrency;
+  double? _rate;
+  String? _warning;
   String? _proposedAccountId;
   String? _proposedCategoryId;
   late final String _proposedMerchant;
@@ -98,6 +106,17 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
     _date = parsed.date.isEmpty ? localDateYYYYMMDD() : parsed.date;
     _proposedMerchant = parsed.merchant;
     _payeeKey = _feedback.payeeKey;
+    final extraction = widget.extraction;
+    if (extraction is ReceiptExtraction) {
+      _sourceAmount = extraction.sourceAmount ?? extraction.amount;
+      _sourceCurrency =
+          (extraction.sourceCurrency ?? extraction.currency).toUpperCase();
+      _amountCurrency = extraction.currency.toUpperCase();
+      final rate = extraction.exchangeRate;
+      _rate = rate != null && rate > 0 ? rate : null;
+      final warning = extraction.conversionWarning?.trim();
+      _warning = warning == null || warning.isEmpty ? null : warning;
+    }
   }
 
   @override
@@ -148,8 +167,115 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
     );
   }
 
+  Account? _accountById(List<Account> accounts, String? id) {
+    for (final account in accounts) {
+      if (account.id == id) return account;
+    }
+    return null;
+  }
+
+  bool _amountMatches(List<Account> accounts) {
+    if (widget.extraction is! ReceiptExtraction || _amountCurrency == null) {
+      return true;
+    }
+    final account = _accountById(accounts, _accountId);
+    if (account == null) return true;
+    return account.currency.toUpperCase() == _amountCurrency;
+  }
+
+  String _moneyText(double amount, String currency) {
+    if (currency == 'JPY') return amount.round().toString();
+    return amount.toStringAsFixed(2);
+  }
+
+  String _rateText(double rate) {
+    var text = rate.toStringAsFixed(6);
+    text = text.replaceFirst(RegExp(r'0+$'), '');
+    text = text.replaceFirst(RegExp(r'\.$'), '');
+    return text;
+  }
+
+  Future<void> _changeAccount(String? id, List<Account> accounts) async {
+    final next = _accountById(accounts, id);
+    if (next == null) return;
+    final seq = ++_convertSeq;
+    final nextCurrency = next.currency.toUpperCase();
+    final sourceCurrency = _sourceCurrency;
+    final sourceAmount = _sourceAmount;
+    if (widget.extraction is! ReceiptExtraction ||
+        sourceCurrency == null ||
+        sourceAmount == null ||
+        nextCurrency == _amountCurrency) {
+      setState(() {
+        _accountId = id;
+        _converting = false;
+      });
+      return;
+    }
+
+    if (nextCurrency == sourceCurrency) {
+      setState(() {
+        _accountId = id;
+        _amount.text = _moneyText(sourceAmount, nextCurrency);
+        _amountCurrency = nextCurrency;
+        _rate = null;
+        _warning = null;
+        _converting = false;
+      });
+      return;
+    }
+
+    final previous = _accountId;
+    setState(() {
+      _accountId = id;
+      _converting = true;
+    });
+    try {
+      final converted = await ref.read(aiRepositoryProvider).convertAmount(
+            amount: sourceAmount,
+            fromCurrency: sourceCurrency,
+            toCurrency: nextCurrency,
+          );
+      if (!mounted || seq != _convertSeq) return;
+      setState(() {
+        _amount.text = _moneyText(converted.amount, converted.currency);
+        _amountCurrency = converted.currency.toUpperCase();
+        _rate = converted.rate > 0 ? converted.rate : null;
+        _warning = null;
+        _converting = false;
+      });
+    } catch (e) {
+      if (!mounted || seq != _convertSeq) return;
+      setState(() {
+        _accountId = previous;
+        _converting = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is Failure ? e.message : e.toString())),
+      );
+    }
+  }
+
+  void _acceptUnconverted(List<Account> accounts) {
+    final account = _accountById(accounts, _accountId);
+    if (account == null) return;
+    setState(() {
+      _amountCurrency = account.currency.toUpperCase();
+      _rate = null;
+      _warning = null;
+    });
+  }
+
   Future<void> _save(List<Account> accounts, List<Category> categories) async {
     final amount = canonicalMoney(_amount.text);
+    if (!_amountMatches(accounts)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Convert the receipt amount before saving'),
+        ),
+      );
+      return;
+    }
     if (amount == null || _accountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid amount and account')),
@@ -228,6 +354,16 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
             ]);
       _categoryId ??= _proposedCategoryId;
     }
+    final selectedAccount = _accountById(accounts, _accountId);
+    final amountCurrency =
+        _amountCurrency ?? selectedAccount?.currency ?? 'USD';
+    final showRate = widget.extraction is ReceiptExtraction &&
+        _rate != null &&
+        _sourceCurrency != null &&
+        _sourceAmount != null &&
+        _sourceCurrency != amountCurrency;
+    final mismatch = !_amountMatches(accounts);
+
     final selectedCategoryId = _categoryId ??
         matchCategoryId(filtered, _type, [
           _parsed().category,
@@ -292,7 +428,62 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
                       }),
                     ),
                     const SizedBox(height: 16),
-                    AmountField(controller: _amount),
+                    AmountField(
+                      controller: _amount,
+                      label: 'Amount ($amountCurrency)',
+                    ),
+                    if (showRate) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Receipt total ${formatMoney(_sourceAmount!, _sourceCurrency!)} converted at today\'s rate (1 $_sourceCurrency = ${_rateText(_rate!)} $amountCurrency).',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                    if (_converting) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Converting to ${selectedAccount?.currency ?? ''}…',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                    if (_warning != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        _warning!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                      ),
+                    ],
+                    if (mismatch && !_converting) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Save stays off until this amount is in ${selectedAccount?.currency}.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          TextButton(
+                            onPressed: () =>
+                                _changeAccount(_accountId, accounts),
+                            child: Text(
+                              'Convert to ${selectedAccount?.currency}',
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => _acceptUnconverted(accounts),
+                            child: Text(
+                              'Use this number as ${selectedAccount?.currency}',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     CategoryChipRow(
                       categories: filtered,
@@ -306,6 +497,7 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
+                      key: ValueKey(_accountId),
                       initialValue: _accountId,
                       decoration:
                           const InputDecoration(labelText: 'Account'),
@@ -317,7 +509,9 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
                             ),
                           )
                           .toList(),
-                      onChanged: (v) => setState(() => _accountId = v),
+                      onChanged: _converting
+                          ? null
+                          : (v) => _changeAccount(v, accounts),
                     ),
                     const SizedBox(height: 12),
                     AppTextField(
@@ -338,8 +532,10 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
             const SizedBox(height: 12),
             AppButton(
               label: 'Save',
-              loading: _loading,
-              onPressed: () => _save(accounts, categories),
+              loading: _loading || _converting,
+              onPressed: mismatch || _converting
+                  ? null
+                  : () => _save(accounts, categories),
             ),
           ],
         ),

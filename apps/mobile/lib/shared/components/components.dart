@@ -678,11 +678,13 @@ class AmountField extends StatelessWidget {
   const AmountField({
     super.key,
     required this.controller,
+    this.label = 'Amount',
     this.onChanged,
     this.autofocus = false,
   });
 
   final TextEditingController controller;
+  final String label;
   final ValueChanged<String>? onChanged;
   final bool autofocus;
 
@@ -690,7 +692,7 @@ class AmountField extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppTextField(
       controller: controller,
-      label: 'Amount',
+      label: label,
       hint: '0.00',
       autofocus: autofocus,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),

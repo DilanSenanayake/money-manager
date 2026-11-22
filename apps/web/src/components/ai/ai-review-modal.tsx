@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { saveReviewedTransaction } from "@/app/actions/ai";
+import {
+  convertCurrencyAmount,
+  saveReviewedTransaction,
+} from "@/app/actions/ai";
 import { trackEvent } from "@/lib/analytics";
 import type { Account, Category } from "@/lib/types";
 import type {
@@ -19,7 +22,7 @@ import {
   fromMerchantAndNotes,
   toMerchantAndNotes,
 } from "@/lib/transaction-description";
-import { cn } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
 import { CategoryChip } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
 import { DateQuickPick } from "@/components/ui/date-quick-pick";
@@ -89,6 +92,41 @@ function payeeKeyOf(extraction: Extraction): string | null {
   if (!extraction || !("payee_key" in extraction)) return null;
   const key = extraction.payee_key;
   return typeof key === "string" && key.trim() ? key.trim() : null;
+}
+
+type ReceiptMoney = {
+  sourceAmount: number;
+  sourceCurrency: string;
+  amountCurrency: string;
+  rate: number | null;
+  warning: string | null;
+};
+
+function receiptMoneyFrom(receipt: ReceiptExtraction): ReceiptMoney {
+  const sourceCurrency = receipt.source_currency || receipt.currency;
+  const sourceAmount =
+    receipt.source_amount != null && Number.isFinite(receipt.source_amount)
+      ? receipt.source_amount
+      : receipt.amount;
+  const rate =
+    receipt.exchange_rate != null &&
+    Number.isFinite(receipt.exchange_rate) &&
+    receipt.exchange_rate > 0
+      ? receipt.exchange_rate
+      : null;
+  return {
+    sourceAmount,
+    sourceCurrency,
+    amountCurrency: receipt.currency,
+    rate,
+    warning: receipt.conversion_warning?.trim() || null,
+  };
+}
+
+function formatRate(rate: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 6,
+  }).format(rate);
 }
 
 type FillBaseline = {
@@ -218,12 +256,18 @@ export function AiReviewModal({
   const router = useRouter();
   const [form, setForm] = useState<AiReviewSave | null>(null);
   const [saving, setSaving] = useState(false);
+  const [receiptMoney, setReceiptMoney] = useState<ReceiptMoney | null>(null);
+  const [converting, setConverting] = useState(false);
   const baselineRef = useRef<FillBaseline | null>(null);
+  const convertSeq = useRef(0);
 
   useEffect(() => {
     if (!open) {
       baselineRef.current = null;
+      convertSeq.current += 1;
       setForm(null);
+      setReceiptMoney(null);
+      setConverting(false);
       return;
     }
     const next = initialForm
@@ -248,6 +292,11 @@ export function AiReviewModal({
       };
     }
     setForm(next);
+    setReceiptMoney(
+      source === "receipt" && extraction && "currency" in extraction
+        ? receiptMoneyFrom(extraction as ReceiptExtraction)
+        : null
+    );
   }, [open, extraction, accounts, categories, source, initialForm, ocrText]);
 
   const relevantCategories = form
@@ -258,6 +307,104 @@ export function AiReviewModal({
     accounts.find((a) => a.id === form?.account_id)?.currency ??
     accounts[0]?.currency ??
     "USD";
+  const amountLabelCurrency =
+    receiptMoney?.amountCurrency ?? selectedAccountCurrency;
+  const amountMatchesAccount =
+    !receiptMoney || receiptMoney.amountCurrency === selectedAccountCurrency;
+
+  async function changeAccount(accountId: string) {
+    const nextCurrency = accounts.find((a) => a.id === accountId)?.currency;
+    if (!nextCurrency) return;
+    const seq = ++convertSeq.current;
+    const money = receiptMoney;
+
+    if (!money || nextCurrency === money.amountCurrency) {
+      setConverting(false);
+      setForm((current) =>
+        current ? { ...current, account_id: accountId } : current
+      );
+      return;
+    }
+
+    if (nextCurrency === money.sourceCurrency) {
+      setConverting(false);
+      setForm((current) =>
+        current
+          ? {
+              ...current,
+              account_id: accountId,
+              amount: asMoneyInput(money.sourceAmount),
+            }
+          : current
+      );
+      setReceiptMoney({
+        ...money,
+        amountCurrency: nextCurrency,
+        rate: null,
+        warning: null,
+      });
+      return;
+    }
+
+    const previousId = form?.account_id ?? "";
+    setForm((current) =>
+      current ? { ...current, account_id: accountId } : current
+    );
+    setConverting(true);
+    try {
+      const result = await convertCurrencyAmount({
+        amount: money.sourceAmount,
+        from_currency: money.sourceCurrency,
+        to_currency: nextCurrency,
+      });
+      if (seq !== convertSeq.current) return;
+      if ("error" in result) {
+        toast.error(result.error);
+        setForm((current) =>
+          current && current.account_id === accountId
+            ? { ...current, account_id: previousId }
+            : current
+        );
+        return;
+      }
+      setForm((current) =>
+        current
+          ? {
+              ...current,
+              account_id: accountId,
+              amount: asMoneyInput(result.data.amount),
+            }
+          : current
+      );
+      setReceiptMoney({
+        ...money,
+        amountCurrency: result.data.currency,
+        rate: result.data.rate,
+        warning: null,
+      });
+    } catch {
+      if (seq === convertSeq.current) {
+        toast.error("Couldn't convert that amount. Please try again.");
+        setForm((current) =>
+          current && current.account_id === accountId
+            ? { ...current, account_id: previousId }
+            : current
+        );
+      }
+    } finally {
+      if (seq === convertSeq.current) setConverting(false);
+    }
+  }
+
+  function acceptUnconverted() {
+    if (!receiptMoney) return;
+    setReceiptMoney({
+      ...receiptMoney,
+      amountCurrency: selectedAccountCurrency,
+      rate: null,
+      warning: null,
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -301,7 +448,7 @@ export function AiReviewModal({
 
                 <div className="space-y-2">
                   <Label htmlFor="review-amount">
-                    Amount ({selectedAccountCurrency})
+                    Amount ({amountLabelCurrency})
                   </Label>
                   <Input
                     id="review-amount"
@@ -311,10 +458,65 @@ export function AiReviewModal({
                     min="0"
                     className="h-12 text-2xl font-semibold"
                     value={form.amount}
+                    disabled={converting}
                     onChange={(e) =>
                       setForm({ ...form, amount: e.target.value })
                     }
                   />
+                  {receiptMoney &&
+                  receiptMoney.rate != null &&
+                  receiptMoney.sourceCurrency !== amountLabelCurrency ? (
+                    <p className="text-xs text-[var(--muted)]">
+                      Receipt total{" "}
+                      {formatMoney(
+                        receiptMoney.sourceAmount,
+                        receiptMoney.sourceCurrency
+                      )}{" "}
+                      converted at today&apos;s rate (1{" "}
+                      {receiptMoney.sourceCurrency} ={" "}
+                      {formatRate(receiptMoney.rate)} {amountLabelCurrency}).
+                    </p>
+                  ) : null}
+                  {converting ? (
+                    <p className="text-xs text-[var(--muted)]">
+                      Converting to {selectedAccountCurrency}…
+                    </p>
+                  ) : null}
+                  {receiptMoney?.warning ? (
+                    <p className="text-xs text-amber-800">
+                      {receiptMoney.warning}
+                    </p>
+                  ) : null}
+                  {receiptMoney && !amountMatchesAccount && !converting ? (
+                    <div className="space-y-2">
+                      <p className="text-xs text-[var(--muted)]">
+                        Save stays off until this amount is in{" "}
+                        {selectedAccountCurrency}.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={converting}
+                          onClick={() => void changeAccount(form.account_id)}
+                        >
+                          {converting
+                            ? "Converting…"
+                            : `Convert to ${selectedAccountCurrency}`}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={converting}
+                          onClick={acceptUnconverted}
+                        >
+                          Use this number as {selectedAccountCurrency}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
@@ -340,9 +542,8 @@ export function AiReviewModal({
                   <Label>Account</Label>
                   <Select
                     value={form.account_id}
-                    onValueChange={(v) =>
-                      setForm({ ...form, account_id: v })
-                    }
+                    disabled={converting}
+                    onValueChange={(v) => void changeAccount(v)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Account" />
@@ -387,7 +588,13 @@ export function AiReviewModal({
                 <Button
                   size="lg"
                   className="h-11 w-full min-w-32 sm:w-auto"
-                  disabled={saving || !form.account_id || !form.amount}
+                  disabled={
+                    saving ||
+                    converting ||
+                    !form.account_id ||
+                    !form.amount ||
+                    !amountMatchesAccount
+                  }
                   onClick={async () => {
                     setSaving(true);
                     try {
