@@ -58,6 +58,7 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
   bool _loading = false;
   bool _converting = false;
   int _convertSeq = 0;
+  bool _autoConvertStarted = false;
   double? _sourceAmount;
   String? _sourceCurrency;
   String? _amountCurrency;
@@ -339,6 +340,18 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
       _accountId ??= initial;
     } else {
       _accountId ??= accounts.isNotEmpty ? accounts.first.id : null;
+    }
+    if (!_autoConvertStarted &&
+        widget.extraction is ReceiptExtraction &&
+        accounts.isNotEmpty &&
+        !_amountMatches(accounts)) {
+      _autoConvertStarted = true;
+      final id = _accountId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final latest = ref.read(accountsProvider).valueOrNull ?? accounts;
+        _changeAccount(id, latest);
+      });
     }
     final filtered = categories.where((c) => c.type == _type).toList();
     if (!_categoryBaselineSet && filtered.isNotEmpty) {

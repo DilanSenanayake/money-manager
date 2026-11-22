@@ -113,6 +113,9 @@ public sealed class AiService(
                 key => result.PayeeKey = key,
                 ct);
 
+            // The model often labels the total with the wallet currency. The
+            // printed symbol is what decides whether a live rate is needed.
+            ReceiptCurrencyDetector.UseDetectedCurrency(result, text);
             await ApplyReceiptCurrencyAsync(result, ct);
 
             return Result<ReceiptExtraction>.Ok(result);
@@ -365,23 +368,23 @@ public sealed class AiService(
             return;
         }
 
-        if (!ReceiptCurrencyConversion.TryResolveAccount(
-                result.AccountId, wallets, out var target, out var accountId))
+        string? baseCurrency = null;
+        try
         {
-            string? baseCurrency = null;
-            try
-            {
-                var profile = await supabase.GetSingleAsync<Profile>(
-                    "profiles",
-                    $"select=base_currency&id=eq.{user.UserId}",
-                    ct);
-                baseCurrency = profile?.BaseCurrency;
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Receipt currency skipped; profile unavailable for user {UserId}", user.UserId);
-            }
+            var profile = await supabase.GetSingleAsync<Profile>(
+                "profiles",
+                $"select=base_currency&id=eq.{user.UserId}",
+                ct);
+            baseCurrency = profile?.BaseCurrency;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Receipt currency skipped; profile unavailable for user {UserId}", user.UserId);
+        }
 
+        if (!ReceiptCurrencyConversion.TryResolveAccount(
+                result.AccountId, wallets, baseCurrency, out var target, out var accountId))
+        {
             target = ReceiptCurrencyConversion.FallbackCurrency(baseCurrency);
         }
         else if (!string.IsNullOrWhiteSpace(accountId))

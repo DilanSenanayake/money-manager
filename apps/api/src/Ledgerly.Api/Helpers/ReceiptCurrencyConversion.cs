@@ -24,25 +24,35 @@ public static class ReceiptCurrencyConversion
     public static bool TryResolveAccount(
         string? accountId,
         IReadOnlyList<Account> accounts,
+        string? baseCurrency,
         out string currency,
         out string? resolvedAccountId)
     {
         if (Guid.TryParse(accountId, out var id))
         {
-            var match = accounts.FirstOrDefault(a =>
-                a.Id == id && Currencies.All.Contains(a.Currency));
+            var match = accounts.FirstOrDefault(a => a.Id == id && IsKnown(a.Currency));
             if (match is not null)
             {
-                currency = match.Currency;
+                currency = Normalize(match.Currency);
                 resolvedAccountId = match.Id.ToString();
                 return true;
             }
         }
 
-        var first = accounts.FirstOrDefault(a => Currencies.All.Contains(a.Currency));
+        var preferred = Normalize(baseCurrency);
+        var inBase = accounts.FirstOrDefault(a =>
+            IsKnown(a.Currency) && Normalize(a.Currency) == preferred);
+        if (inBase is not null)
+        {
+            currency = Normalize(inBase.Currency);
+            resolvedAccountId = inBase.Id.ToString();
+            return true;
+        }
+
+        var first = accounts.FirstOrDefault(a => IsKnown(a.Currency));
         if (first is not null)
         {
-            currency = first.Currency;
+            currency = Normalize(first.Currency);
             resolvedAccountId = first.Id.ToString();
             return true;
         }
@@ -54,9 +64,15 @@ public static class ReceiptCurrencyConversion
 
     public static string FallbackCurrency(string? baseCurrency)
     {
-        var code = (baseCurrency ?? "").Trim().ToUpperInvariant();
+        var code = Normalize(baseCurrency);
         return Currencies.All.Contains(code) ? code : "USD";
     }
+
+    private static bool IsKnown(string? currency) =>
+        Currencies.All.Contains(Normalize(currency));
+
+    private static string Normalize(string? currency) =>
+        (currency ?? "").Trim().ToUpperInvariant();
 
     /// <summary>
     /// Converts the receipt total into <paramref name="targetCurrency"/> using a live rate.

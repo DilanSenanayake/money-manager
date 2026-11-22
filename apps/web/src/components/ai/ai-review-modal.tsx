@@ -129,6 +129,10 @@ function formatRate(rate: number) {
   }).format(rate);
 }
 
+function sameCurrency(a?: string | null, b?: string | null) {
+  return (a ?? "").trim().toUpperCase() === (b ?? "").trim().toUpperCase();
+}
+
 type FillBaseline = {
   account_id: string;
   category_id: string | null;
@@ -260,11 +264,13 @@ export function AiReviewModal({
   const [converting, setConverting] = useState(false);
   const baselineRef = useRef<FillBaseline | null>(null);
   const convertSeq = useRef(0);
+  const autoConvertKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       baselineRef.current = null;
       convertSeq.current += 1;
+      autoConvertKey.current = null;
       setForm(null);
       setReceiptMoney(null);
       setConverting(false);
@@ -310,7 +316,8 @@ export function AiReviewModal({
   const amountLabelCurrency =
     receiptMoney?.amountCurrency ?? selectedAccountCurrency;
   const amountMatchesAccount =
-    !receiptMoney || receiptMoney.amountCurrency === selectedAccountCurrency;
+    !receiptMoney ||
+    sameCurrency(receiptMoney.amountCurrency, selectedAccountCurrency);
 
   async function changeAccount(accountId: string) {
     const nextCurrency = accounts.find((a) => a.id === accountId)?.currency;
@@ -318,7 +325,7 @@ export function AiReviewModal({
     const seq = ++convertSeq.current;
     const money = receiptMoney;
 
-    if (!money || nextCurrency === money.amountCurrency) {
+    if (!money || sameCurrency(nextCurrency, money.amountCurrency)) {
       setConverting(false);
       setForm((current) =>
         current ? { ...current, account_id: accountId } : current
@@ -326,7 +333,7 @@ export function AiReviewModal({
       return;
     }
 
-    if (nextCurrency === money.sourceCurrency) {
+    if (sameCurrency(nextCurrency, money.sourceCurrency)) {
       setConverting(false);
       setForm((current) =>
         current
@@ -395,6 +402,18 @@ export function AiReviewModal({
       if (seq === convertSeq.current) setConverting(false);
     }
   }
+
+  useEffect(() => {
+    if (!open) return;
+    if (!form?.account_id || !receiptMoney) return;
+    if (sameCurrency(receiptMoney.amountCurrency, selectedAccountCurrency)) {
+      return;
+    }
+    const key = `${form.account_id}|${receiptMoney.sourceCurrency}|${receiptMoney.amountCurrency}|${receiptMoney.sourceAmount}`;
+    if (autoConvertKey.current === key) return;
+    autoConvertKey.current = key;
+    void changeAccount(form.account_id);
+  }, [open, form?.account_id, receiptMoney, selectedAccountCurrency]);
 
   function acceptUnconverted() {
     if (!receiptMoney) return;
@@ -465,7 +484,10 @@ export function AiReviewModal({
                   />
                   {receiptMoney &&
                   receiptMoney.rate != null &&
-                  receiptMoney.sourceCurrency !== amountLabelCurrency ? (
+                  !sameCurrency(
+                    receiptMoney.sourceCurrency,
+                    amountLabelCurrency
+                  ) ? (
                     <p className="text-xs text-[var(--muted)]">
                       Receipt total{" "}
                       {formatMoney(
