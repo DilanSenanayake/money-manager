@@ -54,6 +54,9 @@ public static partial class ReceiptCurrencyDetector
         return hits.Count == 0 ? null : Choose(hits)?.Code;
     }
 
+    /// <summary>True when the text names a currency, even if the code is ambiguous.</summary>
+    public static bool MentionsCurrency(string? text) => Filtered(text).Count > 0;
+
     private static List<Hit> Filtered(string? ocrText)
     {
         var hits = Collect(ocrText);
@@ -197,7 +200,7 @@ public static partial class ReceiptCurrencyDetector
     private static partial Regex TotalLine();
 
     [GeneratedRegex(
-        @"\b(?:sri\s+lankan?\s+rupees?|indian\s+rupees?|us\s+dollars?|australian\s+dollars?|canadian\s+dollars?|singapore\s+dollars?|swiss\s+francs?|british\s+pounds?|pound\s+sterling|japanese\s+yen)\b|US\$|\bUSD\b|\bDOLLARS?\b|A\$|\bAUD\b|C\$|\bCAD\b|S\$|\bSGD\b|€|\bEUR(?:O(?:S)?|S)?\b|£|\bGBP\b|\bPOUNDS?\b|\bSTERLING\b|¥|￥|\bJPY\b|\bYEN\b|\bCHF\b|\bFRANCS?\b|\bLKR\b|\bSLR\b|රු\.?|₹|\bINR\b|\bRs\.?\b|\bRupees?\b|(?<![A-Za-z])\$(?=\s*\d)",
+        @"(?<![A-Za-z])(?:sri\s+lankan?\s+rupees?|indian\s+rupees?|us\s+dollars?|australian\s+dollars?|canadian\s+dollars?|singapore\s+dollars?|swiss\s+francs?|british\s+pounds?|pound\s+sterling|japanese\s+yen)(?![A-Za-z])|US\$|(?<![A-Za-z])USD(?![A-Za-z])|(?<![A-Za-z])DOLLARS?(?![A-Za-z])|A\$|(?<![A-Za-z])AUD(?![A-Za-z])|C\$|(?<![A-Za-z])CAD(?![A-Za-z])|S\$|(?<![A-Za-z])SGD(?![A-Za-z])|€|(?<![A-Za-z])EUR(?:O(?:S)?|S)?(?![A-Za-z])|£|(?<![A-Za-z])GBP(?![A-Za-z])|(?<![A-Za-z])POUNDS?(?![A-Za-z])|(?<![A-Za-z])STERLING(?![A-Za-z])|¥|￥|(?<![A-Za-z])JPY(?![A-Za-z])|(?<![A-Za-z])YEN(?![A-Za-z])|(?<![A-Za-z])CHF(?![A-Za-z])|(?<![A-Za-z])FRANCS?(?![A-Za-z])|(?<![A-Za-z])LKR(?![A-Za-z])|(?<![A-Za-z])SLR(?![A-Za-z])|රු\.?|₹|(?<![A-Za-z])INR(?![A-Za-z])|(?<![A-Za-z])Rs\.?(?![A-Za-z])|(?<![A-Za-z])Rupees?(?![A-Za-z])|(?<![A-Za-z])\$(?=\s*\d)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex Token();
 

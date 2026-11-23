@@ -334,6 +334,18 @@ public sealed class SmsExtraction
     [JsonPropertyName("currency")]
     public string? Currency { get; set; }
 
+    [JsonPropertyName("source_amount")]
+    public decimal? SourceAmount { get; set; }
+
+    [JsonPropertyName("source_currency")]
+    public string? SourceCurrency { get; set; }
+
+    [JsonPropertyName("exchange_rate")]
+    public decimal? ExchangeRate { get; set; }
+
+    [JsonPropertyName("conversion_warning")]
+    public string? ConversionWarning { get; set; }
+
     [JsonPropertyName("account_hint")]
     public string? AccountHint { get; set; }
 
@@ -372,6 +384,18 @@ public sealed class QuickTextExtraction
 
     [JsonPropertyName("currency")]
     public string? Currency { get; set; }
+
+    [JsonPropertyName("source_amount")]
+    public decimal? SourceAmount { get; set; }
+
+    [JsonPropertyName("source_currency")]
+    public string? SourceCurrency { get; set; }
+
+    [JsonPropertyName("exchange_rate")]
+    public decimal? ExchangeRate { get; set; }
+
+    [JsonPropertyName("conversion_warning")]
+    public string? ConversionWarning { get; set; }
 
     [JsonPropertyName("notes")]
     public string? Notes { get; set; }

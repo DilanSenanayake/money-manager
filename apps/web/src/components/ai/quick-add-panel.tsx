@@ -150,7 +150,7 @@ export function QuickAddPanel({
     stopBusy();
     setExtraction(data);
     setSource(kind);
-    setOcrText(kind === "receipt" ? receiptOcr : null);
+    setOcrText(receiptOcr);
     setInitialForm(null);
     setReviewOpen(true);
   }
@@ -255,7 +255,7 @@ export function QuickAddPanel({
         toast.error(result.error);
         return;
       }
-      openReview(result.data, asSms ? "sms" : "text");
+      openReview(result.data, asSms ? "sms" : "text", text);
     } catch {
       stopBusy();
       toast.error("Something went wrong. Please try again.");

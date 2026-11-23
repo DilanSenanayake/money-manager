@@ -19,6 +19,7 @@ import { matchCategoryId, sanitizeOcrForCategoryHints } from "@/lib/category-mat
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { asMoneyInput } from "@/lib/money";
 import {
+  mentionsCurrency,
   receiptMoneyFrom,
   type ReceiptMoney,
 } from "@/lib/receipt-currency";
@@ -106,6 +107,39 @@ function formatRate(rate: number) {
 
 function sameCurrency(a?: string | null, b?: string | null) {
   return (a ?? "").trim().toUpperCase() === (b ?? "").trim().toUpperCase();
+}
+
+function reviewMoney(
+  extraction: Extraction,
+  source: AiSource | null,
+  ocrText: string | null,
+  accountCurrency: string
+): ReceiptMoney | null {
+  if (
+    !extraction ||
+    (source !== "receipt" && source !== "text" && source !== "sms") ||
+    !("amount" in extraction) ||
+    !("currency" in extraction)
+  ) {
+    return null;
+  }
+
+  const noted = mentionsCurrency(ocrText);
+  const alreadyConverted = Boolean(
+    extraction.source_currency &&
+      extraction.exchange_rate &&
+      sameCurrency(extraction.currency, accountCurrency)
+  );
+  const currency =
+    source === "receipt" || alreadyConverted || noted
+      ? extraction.currency
+      : accountCurrency;
+
+  return receiptMoneyFrom(
+    { ...extraction, currency },
+    source === "receipt" || noted ? ocrText : null,
+    accountCurrency
+  );
 }
 
 type FillBaseline = {
@@ -287,14 +321,7 @@ export function AiReviewModal({
       accounts.find((a) => a.id === next?.account_id)?.currency ??
       accounts[0]?.currency ??
       "USD";
-    const money =
-      source === "receipt" && extraction && "currency" in extraction
-        ? receiptMoneyFrom(
-            extraction as ReceiptExtraction,
-            ocrText,
-            accountCurrency
-          )
-        : null;
+    const money = reviewMoney(extraction, source, ocrText, accountCurrency);
     const needsConvert = Boolean(
       money && !sameCurrency(money.amountCurrency, accountCurrency)
     );
@@ -498,7 +525,7 @@ export function AiReviewModal({
                     amountLabelCurrency
                   ) ? (
                     <p className="text-xs text-[var(--muted)]">
-                      Receipt total{" "}
+                      {source === "receipt" ? "Receipt total" : "Original amount"}{" "}
                       {formatMoney(
                         receiptMoney.sourceAmount,
                         receiptMoney.sourceCurrency

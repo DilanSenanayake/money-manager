@@ -90,7 +90,7 @@ See [`apps/mobile/README.md`](./apps/mobile/README.md).
 - Income / expense / transfer CRUD
 - Category budgets with 80% / 100% alerts
 - Analytics + recurring bills
-- Multi-currency + manual exchange rates
+- Multi-currency: live conversion on Check & Save when a note, SMS, or receipt names a currency; manual exchange rates for combined totals
 - AI never auto-saves — confirm step required
 - A review edit to payee, category, or account is remembered for that user and reused on the next fill
 

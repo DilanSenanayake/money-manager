@@ -1,4 +1,4 @@
-import { CURRENCIES, type ReceiptExtraction } from "@/lib/schemas";
+import { CURRENCIES } from "@/lib/schemas";
 
 const KNOWN = new Set<string>(CURRENCIES);
 
@@ -7,7 +7,7 @@ const totalLine =
 
 function tokenPattern() {
   return new RegExp(
-    String.raw`\b(?:sri\s+lankan?\s+rupees?|indian\s+rupees?|us\s+dollars?|australian\s+dollars?|canadian\s+dollars?|singapore\s+dollars?|swiss\s+francs?|british\s+pounds?|pound\s+sterling|japanese\s+yen)\b|US\$|\bUSD\b|\bDOLLARS?\b|A\$|\bAUD\b|C\$|\bCAD\b|S\$|\bSGD\b|€|\bEUR(?:O(?:S)?|S)?\b|£|\bGBP\b|\bPOUNDS?\b|\bSTERLING\b|¥|￥|\bJPY\b|\bYEN\b|\bCHF\b|\bFRANCS?\b|\bLKR\b|\bSLR\b|රු\.?|₹|\bINR\b|\bRs\.?\b|\bRupees?\b|(?<![A-Za-z])\$(?=\s*\d)`,
+    String.raw`(?<![A-Za-z])(?:sri\s+lankan?\s+rupees?|indian\s+rupees?|us\s+dollars?|australian\s+dollars?|canadian\s+dollars?|singapore\s+dollars?|swiss\s+francs?|british\s+pounds?|pound\s+sterling|japanese\s+yen)(?![A-Za-z])|US\$|(?<![A-Za-z])USD(?![A-Za-z])|(?<![A-Za-z])DOLLARS?(?![A-Za-z])|A\$|(?<![A-Za-z])AUD(?![A-Za-z])|C\$|(?<![A-Za-z])CAD(?![A-Za-z])|S\$|(?<![A-Za-z])SGD(?![A-Za-z])|€|(?<![A-Za-z])EUR(?:O(?:S)?|S)?(?![A-Za-z])|£|(?<![A-Za-z])GBP(?![A-Za-z])|(?<![A-Za-z])POUNDS?(?![A-Za-z])|(?<![A-Za-z])STERLING(?![A-Za-z])|¥|￥|(?<![A-Za-z])JPY(?![A-Za-z])|(?<![A-Za-z])YEN(?![A-Za-z])|(?<![A-Za-z])CHF(?![A-Za-z])|(?<![A-Za-z])FRANCS?(?![A-Za-z])|(?<![A-Za-z])LKR(?![A-Za-z])|(?<![A-Za-z])SLR(?![A-Za-z])|රු\.?|₹|(?<![A-Za-z])INR(?![A-Za-z])|(?<![A-Za-z])Rs\.?(?![A-Za-z])|(?<![A-Za-z])Rupees?(?![A-Za-z])|(?<![A-Za-z])\$(?=\s*\d)`,
     "gi"
   );
 }
@@ -152,6 +152,11 @@ function one(hits: Hit[]) {
   return codes[0];
 }
 
+/** True when the text names a currency, even if more than one code appears. */
+export function mentionsCurrency(ocrText?: string | null) {
+  return collect(ocrText).length > 0;
+}
+
 /** Currency printed on the receipt, or null when it is ambiguous. */
 export function detectReceiptCurrency(ocrText?: string | null) {
   const hits = collect(ocrText);
@@ -226,6 +231,15 @@ export function resolveReceiptCurrency(
   return target || "USD";
 }
 
+export type MoneyExtraction = {
+  amount: number;
+  currency?: string | null;
+  source_amount?: number | null;
+  source_currency?: string | null;
+  exchange_rate?: number | null;
+  conversion_warning?: string | null;
+};
+
 export type ReceiptMoney = {
   sourceAmount: number;
   sourceCurrency: string;
@@ -236,7 +250,7 @@ export type ReceiptMoney = {
 
 /** Money shown on Check & Save. Keeps a live conversion the API already did. */
 export function receiptMoneyFrom(
-  receipt: ReceiptExtraction,
+  receipt: MoneyExtraction,
   ocrText: string | null | undefined,
   accountCurrency: string
 ): ReceiptMoney {

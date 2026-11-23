@@ -142,7 +142,8 @@ See [`apps/api/README.md`](./apps/api/README.md) for endpoints and run instructi
 ### 3.8 Settings & multi-currency
 
 - Profile: display name + base currency
-- Manual exchange rates (`exchange_rates` table)
+- Manual exchange rates (`exchange_rates` table) convert wallet balances into the base currency for dashboard, budget, and analytics totals. A missing rate hides the combined total instead of assuming 1:1
+- These saved rates are separate from Check & Save. A note, SMS, or receipt uses a live rate only while you review it (§3.9)
 - Supported currencies: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, SGD
 - Page: `/settings`
 - Helpers: `apps/web/src/lib/currency.ts`, `apps/web/src/app/actions/settings.ts`
@@ -155,17 +156,29 @@ Primary entry: **`/add`** (mobile center FAB + sidebar “Add”).
 |------|--------|
 | Scan receipt | Tesseract OCR → Groq text parse → Confirm → Save |
 | Paste bank SMS | Paste/clipboard → Parse → Confirm → Save |
-| Describe it | One line e.g. `Coffee 450` → Parse → Confirm → Save |
+| Describe it | One line e.g. `Coffee 450` or `cofee 5usd` → Parse → Confirm → Save |
 | Quick manual | Amount + category chip → Save (defaults: today, first account) |
+
+Check & Save converts a named currency into the selected account before anything is stored:
+
+1. The model reads the amount as written and does not convert it.
+2. The API reads the raw text. A code stuck to the number counts (`5usd`, `200lkr`). A code inside another word does not (`EUROPE` is not EUR).
+3. No currency in the text: the number stays in the selected account's currency (`coffee 450`).
+4. The named currency matches the account: no rate is requested.
+5. The named currency differs: today's mid-market rate converts the original amount. Check & Save shows the account amount, with the original amount and rate underneath (`$5.00` at `1 USD = … LKR`).
+6. Changing the account converts that original amount again. It does not convert the figure already shown.
+7. Save stores only the account-currency amount. The rate is not written on the transaction.
+8. If today's rate cannot be loaded, the amount stays in the named currency and Check & Save says so. Save stays off until you convert or accept that number as the account currency.
 
 - Confirm modal shows amount, type, category chips, account — extra fields under “More”
 - AI never auto-saves
 - If the user changes the payee, category, or account before save, that combination is stored in `fill_feedback` and reused the next time the same payee appears. Amount and date are not remembered. Quick manual add does not write this table.
 - `/import` redirects to `/add`
 - Components: `quick-add-panel.tsx`, `ai-review-modal.tsx`
-- Actions: `parseReceiptText` (after client OCR), `parseBankSms`, `parseQuickText`, `saveReviewedTransaction`
-- Receipt pipeline: **Tesseract.js** (browser OCR) → Groq JSON extract → review modal
-- Helper: `src/lib/ocr.ts` (`extractTextFromImage`)
+- Actions: `parseReceiptText` (after client OCR), `parseBankSms`, `parseQuickText`, `convertCurrencyAmount`, `saveReviewedTransaction`
+- Receipt pipeline: **Tesseract.js** (browser OCR) → Groq JSON extract → same live conversion → review modal
+- Live rate: ExchangeRate-API open endpoint (`https://open.er-api.com/v6`), called only when the two currencies differ. Account changes call `POST /v1/ai/convert-amount`
+- Helpers: `src/lib/ocr.ts` (`extractTextFromImage`), `src/lib/receipt-currency.ts`, `apps/api/src/Ledgerly.Api/Helpers/ReceiptCurrencyDetector.cs`, `ReceiptCurrencyConversion.cs`
 
 ### 3.10 PWA
 
@@ -465,7 +478,7 @@ cd apps/web && npm test
 1. **Shared .NET API** — web and mobile share one REST backend (`apps/api`); business logic lives once.  
 2. **30-second add first** — `/add` is the primary daily action; secondary tools live under More.  
 3. **Supabase Auth + JWT to API** — clients login with Supabase; API validates and forwards the token for RLS.  
-4. **Human-in-the-loop AI** — extraction always goes through a review step; nothing saves until the user confirms. A changed payee, category, or account is remembered per user in `fill_feedback` and applied on the next fill for that payee.  
+4. **Human-in-the-loop AI** — extraction always goes through a review step; nothing saves until the user confirms. A currency named in the text is converted into the selected account at today's rate before save; the stored amount is in that account's currency. A changed payee, category, or account is remembered per user in `fill_feedback` and applied on the next fill for that payee.  
 5. **Groq free-tier AI** — keeps cost at zero; fallback across available Groq models on rate limits.  
 6. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
 7. **RLS by default** — every table is user-scoped; no service-role key in clients.  

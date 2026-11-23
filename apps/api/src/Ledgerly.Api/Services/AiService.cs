@@ -142,7 +142,8 @@ public sealed class AiService(
                 $"""
                 Parse this bank SMS / alert into structured transaction fields.
                 Credit = money received (income). Debit = money spent (expense).
-                Amount must be a positive number (no currency symbols).
+                Amount must be the number written in the message. Do not convert it.
+                Currency is the ISO code named in the message: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Rs, rupees, and රු mean LKR. $, dollars, and USD mean USD. € means EUR. £ means GBP. ₹ means INR. If the message names no currency, use an empty string.
                 Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
                 Merchant is a short description: read the whole message, then suggest a clearer short wording for who was paid or what it was for. Do not copy a raw fragment. Use "Unknown" only if nothing usable is there.
                 type must be exactly "Credit" or "Debit".
@@ -165,6 +166,19 @@ public sealed class AiService(
                 categoryId => result.CategoryId = categoryId,
                 accountId => result.AccountId = accountId,
                 key => result.PayeeKey = key,
+                ct);
+            await ApplyNotedCurrencyAsync(
+                result.Amount,
+                result.Currency,
+                trimmed,
+                result.AccountId,
+                amount => result.Amount = amount,
+                currency => result.Currency = currency,
+                sourceAmount => result.SourceAmount = sourceAmount,
+                sourceCurrency => result.SourceCurrency = sourceCurrency,
+                rate => result.ExchangeRate = rate,
+                warning => result.ConversionWarning = warning,
+                accountId => result.AccountId = accountId,
                 ct);
             return Result<SmsExtraction>.Ok(result);
         }
@@ -198,6 +212,8 @@ public sealed class AiService(
             var prompt =
                 $"""
                 Parse this short personal finance note into a single income or expense transaction. Prefer expense unless the text clearly means income (salary, refund, received, paid me, etc.). Date YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
+                Amount is the number written in the note. Do not convert it.
+                Currency is the ISO code named in the note: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Rs, rupees, and රු mean LKR. $, dollars, and USD mean USD. € means EUR. £ means GBP. ₹ means INR. If the note names no currency, use an empty string. Never guess a currency that is not written.
                 For expense category use ONE of: {expenseNames.IfEmpty("Groceries, Dining, Transport, Shopping, Utilities, Health, Entertainment, Rent, Other")}.
                 For income category use ONE of: {incomeNames.IfEmpty("Salary, Freelance, Investments")}.
 
@@ -220,6 +236,19 @@ public sealed class AiService(
                 categoryId => result.CategoryId = categoryId,
                 accountId => result.AccountId = accountId,
                 key => result.PayeeKey = key,
+                ct);
+            await ApplyNotedCurrencyAsync(
+                result.Amount,
+                result.Currency,
+                trimmed,
+                result.AccountId,
+                amount => result.Amount = amount,
+                currency => result.Currency = currency,
+                sourceAmount => result.SourceAmount = sourceAmount,
+                sourceCurrency => result.SourceCurrency = sourceCurrency,
+                rate => result.ExchangeRate = rate,
+                warning => result.ConversionWarning = warning,
+                accountId => result.AccountId = accountId,
                 ct);
             return Result<QuickTextExtraction>.Ok(result);
         }
@@ -345,6 +374,84 @@ public sealed class AiService(
             logger.LogError(ex, "AI save-reviewed failed for user {UserId}", user.UserId);
             return Result<Guid?>.Fail(OwnershipGuards.GenericError);
         }
+    }
+
+    private async Task ApplyNotedCurrencyAsync(
+        decimal amount,
+        string? modelCurrency,
+        string text,
+        string? accountId,
+        Action<decimal> setAmount,
+        Action<string?> setCurrency,
+        Action<decimal?> setSourceAmount,
+        Action<string?> setSourceCurrency,
+        Action<decimal?> setRate,
+        Action<string?> setWarning,
+        Action<string?> setAccountId,
+        CancellationToken ct)
+    {
+        var (target, resolvedAccountId) = await ResolveWalletCurrencyAsync(accountId, ct);
+        if (!string.IsNullOrWhiteSpace(resolvedAccountId))
+            setAccountId(resolvedAccountId);
+
+        // A bare number stays in the wallet currency. Only a currency written in
+        // the note is converted, so a guessed code cannot rescale "coffee 450".
+        var printed = ReceiptCurrencyDetector.MentionsCurrency(text)
+            ? ReceiptCurrencyDetector.Resolve(modelCurrency, text, target)
+            : target;
+
+        var quote = await ReceiptCurrencyConversion.QuoteAsync(
+            amount, printed, target, liveRates, ct);
+        setAmount(quote.Amount);
+        setCurrency(string.IsNullOrEmpty(quote.Currency) ? printed : quote.Currency);
+        setSourceAmount(quote.SourceAmount);
+        setSourceCurrency(quote.SourceCurrency);
+        setRate(quote.ExchangeRate);
+        setWarning(quote.ConversionWarning);
+    }
+
+    private async Task<(string Target, string? AccountId)> ResolveWalletCurrencyAsync(
+        string? accountId,
+        CancellationToken ct)
+    {
+        List<Account> wallets = [];
+        try
+        {
+            wallets = await accountsService.GetAllAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Currency conversion skipped wallet lookup for user {UserId}", user.UserId);
+        }
+
+        string? baseCurrency = null;
+        try
+        {
+            var profile = await supabase.GetSingleAsync<Profile>(
+                "profiles",
+                $"select=base_currency&id=eq.{user.UserId}",
+                ct);
+            baseCurrency = profile?.BaseCurrency;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Currency conversion skipped profile lookup for user {UserId}", user.UserId);
+        }
+
+        if (!ReceiptCurrencyConversion.TryResolveAccount(
+                accountId, wallets, baseCurrency, out var target, out var resolvedAccountId))
+        {
+            target = ReceiptCurrencyConversion.FallbackCurrency(baseCurrency);
+            resolvedAccountId = null;
+        }
+
+        return (target, resolvedAccountId);
+    }
+
+    private static string KnownCurrency(string? currency)
+    {
+        var code = (currency ?? "").Trim().ToUpperInvariant();
+        return Currencies.All.Contains(code) ? code : "";
     }
 
     private async Task ApplyReceiptCurrencyAsync(
@@ -505,6 +612,7 @@ public sealed class AiService(
         result.Merchant = OwnershipGuards.Clamp(result.Merchant, 200);
         result.Category = OwnershipGuards.Clamp(result.Category, 100);
         result.Notes = OwnershipGuards.ClampNullable(result.Notes, 1000);
+        result.Currency = KnownCurrency(result.Currency);
         var type = (result.Type ?? "").Trim().ToLowerInvariant();
         result.Type = type == TransactionTypes.Income
             ? TransactionTypes.Income
@@ -534,6 +642,7 @@ public sealed class AiService(
             : OwnershipGuards.Clamp(result.Merchant, 200);
         result.Notes = OwnershipGuards.ClampNullable(result.Notes, 1000);
         result.AccountHint = OwnershipGuards.ClampNullable(result.AccountHint, 100);
+        result.Currency = KnownCurrency(result.Currency);
 
         if (!OwnershipGuards.IsValidIsoDate(result.Date))
             result.Date = DateHelpers.LocalDateYyyyMmDd();

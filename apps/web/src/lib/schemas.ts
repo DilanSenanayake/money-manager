@@ -188,6 +188,10 @@ export const smsExtractionSchema = z.object({
     .string()
     .describe("Transaction date in YYYY-MM-DD; use today if unknown"),
   currency: currencySchema.optional().describe("Currency if mentioned"),
+  source_amount: z.number().nullable().optional(),
+  source_currency: currencySchema.nullable().optional(),
+  exchange_rate: z.number().nullable().optional(),
+  conversion_warning: z.string().nullable().optional(),
   account_hint: z
     .string()
     .nullable()
@@ -217,6 +221,10 @@ export const quickTextExtractionSchema = z.object({
       "Likely category e.g. Salary, Groceries, Dining, Transport, Shopping, Utilities, Health, Entertainment, Rent, Other"
     ),
   currency: currencySchema.optional().describe("Currency if mentioned"),
+  source_amount: z.number().nullable().optional(),
+  source_currency: currencySchema.nullable().optional(),
+  exchange_rate: z.number().nullable().optional(),
+  conversion_warning: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   category_id: z.string().uuid().nullable().optional(),
   account_id: z.string().uuid().nullable().optional(),

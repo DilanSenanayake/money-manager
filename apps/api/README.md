@@ -63,10 +63,23 @@ The API is **stateless** (no server sessions). It validates the Supabase access 
 | GET | `/v1/dashboard/budgets` | Budget progress |
 | GET/PATCH | `/v1/settings/profile` | Profile |
 | GET/PUT/DELETE | `/v1/settings/exchange-rates` | FX rates |
-| POST | `/v1/ai/parse-receipt` | OCR text → structured draft |
-| POST | `/v1/ai/parse-sms` | Bank SMS → draft |
-| POST | `/v1/ai/parse-text` | One-liner → draft |
-| POST | `/v1/ai/save-reviewed` | Persist after user confirm. If payee, category, or account changed, upsert that user's `fill_feedback` row |
+| POST | `/v1/ai/parse-receipt` | OCR text → structured draft, then the same account conversion as parse-text |
+| POST | `/v1/ai/parse-sms` | Bank SMS → draft, then the same account conversion as parse-text |
+| POST | `/v1/ai/parse-text` | One-liner → draft. A currency named in the text (`5usd`, `200lkr`) is converted into the selected account at today's rate |
+| POST | `/v1/ai/convert-amount` | Convert `{ amount, from_currency, to_currency }` with today's rate. Used when Check & Save changes account |
+| POST | `/v1/ai/save-reviewed` | Persist after user confirm. Stores the account-currency amount only. If payee, category, or account changed, upsert that user's `fill_feedback` row |
+
+## Check & Save currency
+
+Notes, bank SMS, and receipt text share one rule. The model returns the amount as written. The API then reads the raw text:
+
+- No currency named: the number stays in the selected account's currency.
+- A code glued to the number counts (`cofee 5usd`). A code inside another word does not (`EUROPE`).
+- A different currency is converted with today's mid-market rate from `https://open.er-api.com/v6`. The rate is fetched only when the currencies differ.
+- The draft includes `source_amount`, `source_currency`, and `exchange_rate`. Save stores the converted amount on the transaction and does not store the rate.
+- Changing the account calls `POST /v1/ai/convert-amount` from the original amount, not from the already converted figure.
+
+Manual rates in `exchange_rates` are a separate path. They convert wallet balances into the profile base currency for dashboard totals.
 
 ## Review feedback
 

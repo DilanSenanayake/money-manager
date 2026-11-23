@@ -141,6 +141,8 @@ public class ReceiptCurrencyConversionTests
     [InlineData("TOTAL INR 200.00", "INR")]
     [InlineData("TOTAL LKR 500.00 (USD 1.50)", "LKR")]
     [InlineData("TOTAL $ 24.00", "USD")]
+    [InlineData("cofee 5usd", "USD")]
+    [InlineData("tea 200lkr", "LKR")]
     public void Detects_the_currency_printed_on_the_receipt(string text, string expected)
     {
         Assert.Equal(expected, ReceiptCurrencyDetector.Detect(text));
@@ -152,6 +154,33 @@ public class ReceiptCurrencyConversionTests
         Assert.Equal(
             "LKR",
             ReceiptCurrencyDetector.Resolve("USD", "TOTAL LKR 500.00 (USD 1.50)", "LKR"));
+    }
+
+    [Fact]
+    public void A_bare_note_does_not_count_as_a_currency()
+    {
+        Assert.False(ReceiptCurrencyDetector.MentionsCurrency("coffee 450"));
+        Assert.True(ReceiptCurrencyDetector.MentionsCurrency("tea 200 rs"));
+        Assert.Equal(
+            "LKR",
+            ReceiptCurrencyDetector.Resolve("USD", "tea 200 rs", "USD"));
+        Assert.True(ReceiptCurrencyDetector.MentionsCurrency("cofee 5usd"));
+        Assert.Equal(
+            "USD",
+            ReceiptCurrencyDetector.Resolve("LKR", "cofee 5usd", "LKR"));
+    }
+
+    [Fact]
+    public async Task Noted_rupees_convert_into_the_wallet_currency()
+    {
+        var quote = await ReceiptCurrencyConversion.QuoteAsync(200m, "LKR", "USD", new CountingRates { Rate = 0.003m });
+
+        Assert.Equal(0.60m, quote.Amount);
+        Assert.Equal("USD", quote.Currency);
+        Assert.Equal(200m, quote.SourceAmount);
+        Assert.Equal("LKR", quote.SourceCurrency);
+        Assert.Equal(0.003m, quote.ExchangeRate);
+        Assert.Null(quote.ConversionWarning);
     }
 
     [Fact]

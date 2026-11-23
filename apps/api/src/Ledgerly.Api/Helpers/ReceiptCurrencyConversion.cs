@@ -78,21 +78,31 @@ public static class ReceiptCurrencyConversion
     /// Converts the receipt total into <paramref name="targetCurrency"/> using a live rate.
     /// Does not call the provider when the receipt is already in that currency.
     /// </summary>
-    public static async Task ApplyLiveRateAsync(
-        ReceiptExtraction receipt,
+    public readonly record struct CurrencyQuote(
+        decimal Amount,
+        string Currency,
+        decimal? SourceAmount,
+        string? SourceCurrency,
+        decimal? ExchangeRate,
+        string? ConversionWarning);
+
+    /// <summary>
+    /// Converts <paramref name="amount"/> from <paramref name="sourceCurrency"/> into
+    /// <paramref name="targetCurrency"/>. Same-currency input is returned unchanged.
+    /// </summary>
+    public static async Task<CurrencyQuote> QuoteAsync(
+        decimal amount,
+        string? sourceCurrency,
         string targetCurrency,
         ILiveRateProvider rates,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string subject = "amount")
     {
-        receipt.SourceAmount = null;
-        receipt.SourceCurrency = null;
-        receipt.ExchangeRate = null;
-        receipt.ConversionWarning = null;
-
-        var source = (receipt.Currency ?? "").Trim().ToUpperInvariant();
+        var original = (sourceCurrency ?? "").Trim();
+        var source = original.ToUpperInvariant();
         var target = targetCurrency.Trim().ToUpperInvariant();
         if (!NeedsLiveRate(source, target))
-            return;
+            return new CurrencyQuote(amount, original, null, null, null, null);
 
         decimal? rate;
         try
@@ -110,30 +120,54 @@ public static class ReceiptCurrencyConversion
 
         if (rate is null or <= 0)
         {
-            receipt.ConversionWarning =
-                $"This receipt is in {source}. Today's {source} to {target} rate couldn't be loaded, so the amount is still in {source}.";
-            return;
+            return new CurrencyQuote(
+                amount,
+                original,
+                null,
+                null,
+                null,
+                $"This {subject} is in {source}. Today's {source} to {target} rate couldn't be loaded, so the amount is still in {source}.");
         }
 
-        if (!TryConvert(receipt.Amount, rate.Value, target, out var converted))
+        if (!TryConvert(amount, rate.Value, target, out var converted))
         {
-            receipt.ConversionWarning =
-                $"This receipt is in {source}. It couldn't be converted to {target}, so the amount is still in {source}.";
-            return;
+            return new CurrencyQuote(
+                amount,
+                original,
+                null,
+                null,
+                null,
+                $"This {subject} is in {source}. It couldn't be converted to {target}, so the amount is still in {source}.");
         }
 
-        foreach (var item in receipt.LineItems)
+        return new CurrencyQuote(converted, target, amount, source, rate, null);
+    }
+
+    public static async Task ApplyLiveRateAsync(
+        ReceiptExtraction receipt,
+        string targetCurrency,
+        ILiveRateProvider rates,
+        CancellationToken ct = default)
+    {
+        var quote = await QuoteAsync(
+            receipt.Amount, receipt.Currency, targetCurrency, rates, ct, "receipt");
+        if (quote.ExchangeRate is decimal rate)
         {
-            if (item.Price is not decimal price) continue;
-            if (TryConvert(price, rate.Value, target, out var lineTotal))
-                item.Price = lineTotal;
+            foreach (var item in receipt.LineItems)
+            {
+                if (item.Price is not decimal price) continue;
+                if (TryConvert(price, rate, quote.Currency, out var lineTotal))
+                    item.Price = lineTotal;
+            }
         }
 
-        receipt.SourceAmount = receipt.Amount;
-        receipt.SourceCurrency = source;
-        receipt.ExchangeRate = rate;
-        receipt.Amount = converted;
-        receipt.Currency = target;
+        receipt.Amount = quote.Amount;
+        if (!string.IsNullOrEmpty(quote.Currency))
+            receipt.Currency = quote.Currency;
+        receipt.SourceAmount = quote.SourceAmount;
+        receipt.SourceCurrency = quote.SourceCurrency;
+        receipt.ExchangeRate = quote.ExchangeRate;
+        receipt.ConversionWarning = quote.ConversionWarning;
     }
 
     private static bool TryConvert(decimal amount, decimal rate, string target, out decimal converted)
