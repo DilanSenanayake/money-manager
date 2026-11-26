@@ -100,6 +100,63 @@ public class CurrencyConverterTests
     }
 }
 
+public class DateNormalizerTests
+{
+    private static readonly DateTime Today = new(2026, 11, 26, 12, 0, 0);
+
+    [Theory]
+    [InlineData("2026-09-07", "2026-09-07")]
+    [InlineData("07/09/2026", "2026-09-07")]
+    [InlineData("7/9/2026", "2026-09-07")]
+    [InlineData("07-09-2026", "2026-09-07")]
+    [InlineData("07.09.2026", "2026-09-07")]
+    [InlineData("2026/09/07", "2026-09-07")]
+    [InlineData("20260907", "2026-09-07")]
+    [InlineData("07/09/26", "2026-09-07")]
+    [InlineData("09/25/2026", "2026-09-25")]
+    [InlineData("25/09/2026", "2026-09-25")]
+    [InlineData("2026-25-09", "2026-09-25")]
+    [InlineData("25-09-2026", "2026-09-25")]
+    [InlineData("09-25-2026", "2026-09-25")]
+    [InlineData("7 September 2026", "2026-09-07")]
+    [InlineData("7th September 2026", "2026-09-07")]
+    [InlineData("September 7, 2026", "2026-09-07")]
+    [InlineData("Sep 7 2026", "2026-09-07")]
+    [InlineData("07-Sep-2026", "2026-09-07")]
+    [InlineData("2026-09-07T14:30:00", "2026-09-07")]
+    [InlineData("07/09/2026 14:30", "2026-09-07")]
+    [InlineData("07/09/2026 2:30 PM", "2026-09-07")]
+    public void NormalizeToIsoDate_common_formats(string input, string expected)
+    {
+        Assert.Equal(expected, DateNormalizer.NormalizeToIsoDate(input, Today));
+    }
+
+    [Fact]
+    public void NormalizeToIsoDate_ambiguous_numeric_prefers_day_month_year()
+    {
+        // 05/11/2026 → 5 Nov 2026 (DMY), not 11 May 2026 (MDY).
+        Assert.Equal("2026-11-05", DateNormalizer.NormalizeToIsoDate("05/11/2026", Today));
+    }
+
+    [Fact]
+    public void NormalizeToIsoDate_unknown_falls_back_to_today()
+    {
+        Assert.Equal("2026-11-26", DateNormalizer.NormalizeToIsoDate("not-a-date", Today));
+        Assert.Equal("2026-11-26", DateNormalizer.NormalizeToIsoDate("", Today));
+        Assert.Equal("2026-11-26", DateNormalizer.NormalizeToIsoDate(null, Today));
+    }
+
+    [Fact]
+    public void PromptRule_mentions_common_formats_and_no_swap()
+    {
+        var rule = DateNormalizer.PromptRule("2026-11-26");
+        Assert.Contains("YYYY-MM-DD", rule);
+        Assert.Contains("DD/MM/YYYY", rule);
+        Assert.Contains("Never swap day and month", rule);
+        Assert.Contains("2026-11-26", rule);
+    }
+}
+
 public class OwnershipGuardsTests
 {
     [Theory]

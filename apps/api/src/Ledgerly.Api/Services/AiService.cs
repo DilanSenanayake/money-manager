@@ -60,7 +60,7 @@ public sealed class AiService(
                 Amount must be the TOTAL paid for the whole document (not tax-only or a single unit price). Do not convert the amount yourself.
                 Currency must be the ISO code printed beside that total: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Read symbols and words on the document ($, €, £, ¥, ₹, Rs, euro, pound, dollar, rupee, yen, franc). If no currency is printed, use an empty string. Never guess USD, and never relabel the printed total as another currency.
                 For each line_items entry, price must be the amount charged for the bought quantity on that line (line total = quantity × unit price when both appear). Do not use unit price alone when a line total is available or can be computed. Keep line prices in the same currency as the total.
-                Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
+                {DateNormalizer.PromptRule(DateHelpers.LocalDateYyyyMmDd())}
                 Pick category as ONE of these exact names when possible: {categoryNames}.
                 Prefer Dining for restaurants, cafes, coffee shops, fast food, and takeout. Prefer Groceries for supermarkets. Prefer Transport for bus, train, taxi, ride-hail, and similar tickets. Avoid Other when another listed category fits. Do not put raw OCR into notes — leave notes null unless there is a short useful detail.
 
@@ -144,7 +144,7 @@ public sealed class AiService(
                 Credit = money received (income). Debit = money spent (expense).
                 Amount must be the number written in the message. Do not convert it.
                 Currency is the ISO code named in the message: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Rs, rupees, and රු mean LKR. $, dollars, and USD mean USD. € means EUR. £ means GBP. ₹ means INR. If the message names no currency, use an empty string.
-                Date must be YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
+                {DateNormalizer.PromptRule(DateHelpers.LocalDateYyyyMmDd())}
                 Merchant is a short description: read the whole message, then suggest a clearer short wording for who was paid or what it was for. Do not copy a raw fragment. Use "Unknown" only if nothing usable is there.
                 type must be exactly "Credit" or "Debit".
 
@@ -211,7 +211,8 @@ public sealed class AiService(
         {
             var prompt =
                 $"""
-                Parse this short personal finance note into a single income or expense transaction. Prefer expense unless the text clearly means income (salary, refund, received, paid me, etc.). Date YYYY-MM-DD; if unknown use {DateHelpers.LocalDateYyyyMmDd()}.
+                Parse this short personal finance note into a single income or expense transaction. Prefer expense unless the text clearly means income (salary, refund, received, paid me, etc.).
+                {DateNormalizer.PromptRule(DateHelpers.LocalDateYyyyMmDd())}
                 Amount is the number written in the note. Do not convert it.
                 Currency is the ISO code named in the note: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Rs, rupees, and රු mean LKR. $, dollars, and USD mean USD. € means EUR. £ means GBP. ₹ means INR. If the note names no currency, use an empty string. Never guess a currency that is not written.
                 For expense category use ONE of: {expenseNames.IfEmpty("Groceries, Dining, Transport, Shopping, Utilities, Health, Entertainment, Rent, Other")}.
@@ -596,8 +597,7 @@ public sealed class AiService(
         // Unknown codes are cleared so a later step can read the printed currency.
         // Defaulting them to USD made a foreign total look like the wallet currency.
         result.Currency = Currencies.All.Contains(currency) ? currency : "";
-        if (!OwnershipGuards.IsValidIsoDate(result.Date))
-            result.Date = DateHelpers.LocalDateYyyyMmDd();
+        result.Date = DateNormalizer.NormalizeToIsoDate(result.Date);
         foreach (var item in result.LineItems)
         {
             item.Name = OwnershipGuards.Clamp(item.Name, 200);
@@ -617,8 +617,7 @@ public sealed class AiService(
         result.Type = type == TransactionTypes.Income
             ? TransactionTypes.Income
             : TransactionTypes.Expense;
-        if (!OwnershipGuards.IsValidIsoDate(result.Date))
-            result.Date = DateHelpers.LocalDateYyyyMmDd();
+        result.Date = DateNormalizer.NormalizeToIsoDate(result.Date);
     }
 
     private static void NormalizeSms(SmsExtraction result)
@@ -644,8 +643,7 @@ public sealed class AiService(
         result.AccountHint = OwnershipGuards.ClampNullable(result.AccountHint, 100);
         result.Currency = KnownCurrency(result.Currency);
 
-        if (!OwnershipGuards.IsValidIsoDate(result.Date))
-            result.Date = DateHelpers.LocalDateYyyyMmDd();
+        result.Date = DateNormalizer.NormalizeToIsoDate(result.Date);
     }
 }
 
