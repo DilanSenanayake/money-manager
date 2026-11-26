@@ -51,6 +51,17 @@ export interface Transaction {
   category?: Category | null;
 }
 
+/** A description logged often enough to repeat from home. */
+export interface FrequentRecord {
+  label: string;
+  type: "income" | "expense";
+  amount: number;
+  accountId: string;
+  categoryId: string | null;
+  category?: Category | null;
+  count: number;
+}
+
 export interface ExchangeRate {
   id: string;
   user_id: string;

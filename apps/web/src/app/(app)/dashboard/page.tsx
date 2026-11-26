@@ -6,6 +6,7 @@ import { ratesCovering } from "@/lib/currency";
 import { RateGap, RateStamp } from "@/components/money/rate-notice";
 import { transactionTitle } from "@/lib/transaction-description";
 import { getDashboardData } from "@/app/actions/dashboard";
+import { FrequentQuickAdd } from "@/components/dashboard/frequent-quick-add";
 import { BudgetAlerts, BudgetBars } from "@/components/budgets/budget-bars";
 import {
   CategoryIcon,
@@ -48,6 +49,11 @@ export default async function DashboardPage() {
             </Link>
           </Button>
         }
+      />
+
+      <FrequentQuickAdd
+        records={data.frequent ?? []}
+        accounts={data.accounts}
       />
 
       {isEmpty && (

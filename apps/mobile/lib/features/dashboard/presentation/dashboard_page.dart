@@ -13,6 +13,7 @@ import '../../../shared/components/components.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../data/dashboard_repository.dart';
+import 'frequent_quick_add.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -96,6 +97,17 @@ class DashboardPage extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  if (data.frequent.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    FadeUp(
+                      delay: const Duration(milliseconds: 30),
+                      child: FrequentQuickAdd(
+                        records: data.frequent,
+                        accounts: data.accounts,
+                        baseCurrency: data.baseCurrency,
+                      ),
+                    ),
+                  ],
                   if (missingRates.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.md),
                     StatusBanner(

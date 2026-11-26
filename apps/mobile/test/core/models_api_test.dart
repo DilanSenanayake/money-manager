@@ -53,6 +53,39 @@ void main() {
       expect(data.profile?.displayName, 'Dilan');
       expect(data.accounts.single.name, 'Cash');
       expect(data.budgets.single.status, 'ok');
+      expect(data.frequent, isEmpty);
+    });
+
+    test('reads frequent quick-add records', () {
+      final data = DashboardData.fromJson({
+        'accounts': [],
+        'rates': [],
+        'budgets': [],
+        'recent': [],
+        'frequent': [
+          {
+            'label': 'Coffee',
+            'type': 'expense',
+            'amount': 4.5,
+            'accountId': 'acc-1',
+            'categoryId': 'cat-1',
+            'count': 8,
+            'category': {
+              'id': 'cat-1',
+              'name': 'Dining',
+              'icon': 'utensils',
+              'type': 'expense',
+            },
+          },
+        ],
+      });
+
+      final coffee = data.frequent.single;
+      expect(coffee.label, 'Coffee');
+      expect(coffee.amount, 4.5);
+      expect(coffee.categoryId, 'cat-1');
+      expect(coffee.category?.name, 'Dining');
+      expect(coffee.count, 8);
     });
   });
 

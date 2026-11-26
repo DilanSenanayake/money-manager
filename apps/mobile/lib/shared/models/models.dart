@@ -469,6 +469,44 @@ double? _optionalDouble(Map<String, dynamic> json, List<String> keys) {
   return null;
 }
 
+class FrequentRecord extends Equatable {
+  const FrequentRecord({
+    required this.label,
+    required this.type,
+    required this.amount,
+    required this.accountId,
+    this.categoryId,
+    this.category,
+    required this.count,
+  });
+
+  final String label;
+  final String type;
+  final double amount;
+  final String accountId;
+  final String? categoryId;
+  final Category? category;
+  final int count;
+
+  factory FrequentRecord.fromJson(Map<String, dynamic> json) {
+    return FrequentRecord(
+      label: asString(json['label']),
+      type: asString(json['type'], 'expense'),
+      amount: asDouble(json['amount']),
+      accountId: asString(json['accountId'] ?? json['account_id']),
+      categoryId: asNullableString(json['categoryId'] ?? json['category_id']),
+      category: json['category'] is Map
+          ? Category.fromJson(asMap(json['category']))
+          : null,
+      count: asInt(json['count']),
+    );
+  }
+
+  @override
+  List<Object?> get props =>
+      [label, type, amount, accountId, categoryId, category, count];
+}
+
 class DashboardData extends Equatable {
   const DashboardData({
     this.profile,
@@ -480,6 +518,7 @@ class DashboardData extends Equatable {
     this.missingRateCurrencies = const [],
     required this.budgets,
     required this.recent,
+    this.frequent = const [],
     required this.baseCurrency,
     this.monthStart = '',
     this.monthEnd = '',
@@ -494,6 +533,7 @@ class DashboardData extends Equatable {
   final List<String> missingRateCurrencies;
   final List<BudgetProgress> budgets;
   final List<Transaction> recent;
+  final List<FrequentRecord> frequent;
   final String baseCurrency;
   final String monthStart;
   final String monthEnd;
@@ -525,6 +565,10 @@ class DashboardData extends Equatable {
           .whereType<Map>()
           .map((e) => Transaction.fromJson(asMap(e)))
           .toList(),
+      frequent: asList(json['frequent'])
+          .whereType<Map>()
+          .map((e) => FrequentRecord.fromJson(asMap(e)))
+          .toList(),
       baseCurrency: asString(
         json['baseCurrency'] ?? json['base_currency'],
         'USD',
@@ -542,6 +586,7 @@ class DashboardData extends Equatable {
         income,
         expense,
         missingRateCurrencies,
+        frequent,
         baseCurrency,
       ];
 }

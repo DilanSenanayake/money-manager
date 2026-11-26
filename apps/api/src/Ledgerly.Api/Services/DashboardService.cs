@@ -11,7 +11,10 @@ public interface IDashboardService
     Task<List<BudgetProgress>> GetBudgetsAsync(CancellationToken ct = default);
 }
 
-public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser user) : IDashboardService
+public sealed class DashboardService(
+    ISupabaseRestClient supabase,
+    ICurrentUser user,
+    ILogger<DashboardService> logger) : IDashboardService
 {
     public async Task<DashboardResponse> GetDashboardAsync(CancellationToken ct = default)
     {
@@ -23,13 +26,21 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
             "categories", $"user_id=eq.{user.UserId}", ct);
         var ratesTask = supabase.GetListAsync<ExchangeRate>(
             "exchange_rates", $"user_id=eq.{user.UserId}", ct);
+        var historyTask = supabase.GetListAsync<Transaction>(
+            "transactions",
+            $"select=amount,type,date,account_id,category_id,merchant,notes,created_at&user_id=eq.{user.UserId}&type=in.(income,expense)&order=date.desc,created_at.desc&limit=500",
+            ct);
+        var feedbackTask = LoadFeedbackAsync(ct);
 
-        await Task.WhenAll(profileTask, accountsTask, categoriesTask, ratesTask);
+        await Task.WhenAll(
+            profileTask, accountsTask, categoriesTask, ratesTask, historyTask, feedbackTask);
 
         var profile = await profileTask;
         var accounts = await accountsTask;
         var categories = await categoriesTask;
         var rates = await ratesTask;
+        var history = await historyTask;
+        var feedback = await feedbackTask;
 
         var monthStart = DateHelpers.LocalMonthStartYyyyMmDd();
         var monthEnd = DateHelpers.LocalMonthEndYyyyMmDd();
@@ -133,6 +144,7 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
             MissingRateCurrencies = missingRateCurrencies,
             Budgets = budgets,
             Recent = recent,
+            Frequent = FrequentRecords.Top(history, categories, accounts, feedback),
             BaseCurrency = baseCurrency,
             MonthStart = monthStart,
             MonthEnd = monthEnd,
@@ -263,6 +275,22 @@ public sealed class DashboardService(ISupabaseRestClient supabase, ICurrentUser 
             Summary = summary,
             BaseCurrency = baseCurrency,
         };
+    }
+
+    private async Task<List<FillFeedbackRow>> LoadFeedbackAsync(CancellationToken ct)
+    {
+        try
+        {
+            return await supabase.GetListAsync<FillFeedbackRow>(
+                "fill_feedback",
+                $"select=payee_key,category_id,account_id&user_id=eq.{user.UserId}",
+                ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Fill feedback lookup skipped for user {UserId}", user.UserId);
+            return [];
+        }
     }
 
     private async Task<List<Transaction>> LoadAllTransactionsAsync(CancellationToken ct)

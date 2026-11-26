@@ -6,6 +6,7 @@ import type {
   BudgetProgress,
   CategorySpendPoint,
   ExchangeRate,
+  FrequentRecord,
   MonthlyReport,
   Profile,
   SpendingReportSummary,
@@ -22,6 +23,7 @@ type DashboardResponse = {
   missingRateCurrencies?: string[];
   budgets: BudgetProgress[];
   recent: Transaction[];
+  frequent?: FrequentRecord[];
   baseCurrency: string;
   monthStart: string;
   monthEnd: string;

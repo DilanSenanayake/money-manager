@@ -463,6 +463,9 @@ public sealed class DashboardResponse
     [JsonPropertyName("recent")]
     public List<Transaction> Recent { get; set; } = [];
 
+    [JsonPropertyName("frequent")]
+    public List<FrequentRecord> Frequent { get; set; } = [];
+
     [JsonPropertyName("baseCurrency")]
     public string BaseCurrency { get; set; } = "USD";
 
@@ -471,6 +474,30 @@ public sealed class DashboardResponse
 
     [JsonPropertyName("monthEnd")]
     public string MonthEnd { get; set; } = "";
+}
+
+public sealed class FrequentRecord
+{
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = "";
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = TransactionTypes.Expense;
+
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonPropertyName("accountId")]
+    public Guid AccountId { get; set; }
+
+    [JsonPropertyName("categoryId")]
+    public Guid? CategoryId { get; set; }
+
+    [JsonPropertyName("category")]
+    public Category? Category { get; set; }
+
+    [JsonPropertyName("count")]
+    public int Count { get; set; }
 }
 
 public sealed class AnalyticsResponse
