@@ -3,9 +3,11 @@ using Ledgerly.Api.Models;
 namespace Ledgerly.Api.Helpers;
 
 /// <summary>
-/// A saved review correction: one payee key with the category and account
-/// the user kept. The parsed description is left as-is. Amount and date
-/// are not part of the combination.
+/// A saved review correction: one description key with the category and
+/// account the user kept. The parsed description is left as-is on the next
+/// fill; only category and account are reused. Amount and date are not part
+/// of the combination. Category (and account) selection is the feedback —
+/// the row is indexed by the description, not by raw source-text payee words.
 /// </summary>
 public static class FillFeedback
 {
@@ -15,6 +17,9 @@ public static class FillFeedback
         "payment", "purchase", "ltd", "pvt", "inc", "llc", "limited", "txn"
     };
 
+    /// <summary>
+    /// Normalized words from a description, used as the <c>payee_key</c> index.
+    /// </summary>
     public static string? PayeeKey(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
@@ -27,7 +32,7 @@ public static class FillFeedback
     }
 
     /// <summary>
-    /// Longest saved key whose words all appear in the new text or merchant.
+    /// Longest saved key whose words all appear in the new description or source text.
     /// </summary>
     public static FillFeedbackRow? Match(
         IEnumerable<FillFeedbackRow> rows,
@@ -53,8 +58,9 @@ public static class FillFeedback
     }
 
     /// <summary>
-    /// When the review changed payee, category, or account, return the full
-    /// combination to store. An unchanged save returns null.
+    /// When the review changed category or account, return the combination to
+    /// store under the saved description. An unchanged save, or a description-only
+    /// edit, returns null — selecting category (or account) is the feedback.
     /// </summary>
     public static FillFeedbackChange? FromReview(FillFeedbackInput input)
     {
@@ -65,14 +71,13 @@ public static class FillFeedback
             && proposedCategory != savedCategory;
         var accountChanged = input.ProposedAccountId is Guid proposedAccount
             && proposedAccount != input.SavedAccountId;
-        var merchantChanged = MerchantChanged(input.ProposedMerchant, input.SavedMerchant);
 
-        if (!categoryChanged && !accountChanged && !merchantChanged)
+        if (!categoryChanged && !accountChanged)
             return null;
 
-        var key = PayeeKey(input.PayeeKey)
-            ?? PayeeKey(input.ProposedMerchant)
-            ?? PayeeKey(input.SavedMerchant);
+        // Index by the description the user kept (or the draft description).
+        var key = PayeeKey(input.SavedMerchant)
+            ?? PayeeKey(input.ProposedMerchant);
         if (key is null) return null;
 
         var display = input.SavedMerchant?.Trim();
@@ -80,15 +85,6 @@ public static class FillFeedback
         else if (display.Length > 200) display = display[..200];
 
         return new FillFeedbackChange(key, display, input.SavedCategoryId, input.SavedAccountId);
-    }
-
-    private static bool MerchantChanged(string? proposed, string? saved)
-    {
-        if (proposed is null) return false;
-        var left = proposed.Trim();
-        var right = (saved ?? "").Trim();
-        if (left.Length == 0 && right.Length == 0) return false;
-        return !string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
     }
 
     private static IEnumerable<string> Tokens(string? text)
@@ -110,7 +106,6 @@ public static class FillFeedback
 
 public sealed record FillFeedbackInput(
     bool HasBaseline,
-    string? PayeeKey,
     string? ProposedMerchant,
     Guid? ProposedCategoryId,
     Guid? ProposedAccountId,

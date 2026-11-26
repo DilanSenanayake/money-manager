@@ -172,7 +172,7 @@ Check & Save converts a named currency into the selected account before anything
 
 - Confirm modal shows amount, type, category chips, account — extra fields under “More”
 - AI never auto-saves
-- If the user changes the payee, category, or account before save, that combination is stored in `fill_feedback` and reused the next time the same payee appears. Amount and date are not remembered. Quick manual add does not write this table.
+- If the user changes the category or account before save, that combination is stored in `fill_feedback` under the description and reused the next time the same description appears. Amount and date are not remembered. Quick manual add does not write this table.
 - `/import` redirects to `/add`
 - Components: `quick-add-panel.tsx`, `ai-review-modal.tsx`
 - Actions: `parseReceiptText` (after client OCR), `parseBankSms`, `parseQuickText`, `convertCurrencyAmount`, `saveReviewedTransaction`
@@ -236,7 +236,7 @@ Run in order:
 3. `003_credit_balance_polarity.sql` — credit cards use positive “owed”; charges increase owed, payments decrease it
 4. `004_production_hardening.sql`
 5. `005_delete_own_account.sql`
-6. `006_fill_feedback.sql` — per-user payee corrections from the review sheet
+6. `006_fill_feedback.sql` — per-user description → category/account corrections from the review sheet
 
 ### Tables
 
@@ -247,7 +247,7 @@ Run in order:
 | `categories` | Income/expense categories + optional monthly budget |
 | `transactions` | Income, expense, transfer rows |
 | `exchange_rates` | Per-user manual FX rates |
-| `fill_feedback` | One row per user and payee: the category and account they kept after editing a smart-add review |
+| `fill_feedback` | One row per user and description: the category and account they kept after editing a smart-add review |
 
 ### Triggers & functions
 
@@ -259,20 +259,20 @@ Run in order:
 
 - RLS enabled on all public tables  
 - Policies restrict rows to `auth.uid() = user_id` (or `id` for profiles)  
-- `fill_feedback` is included. A lookup only loads the signed-in user's rows, so one person's payee correction is never applied to someone else.
+- `fill_feedback` is included. A lookup only loads the signed-in user's rows, so one person's description correction is never applied to someone else.
 
 ### Review feedback (`fill_feedback`)
 
-Written by `POST /v1/ai/save-reviewed` only when the review sheet differs from the draft in payee, category, or account. The row stores the combination they saved:
+Written by `POST /v1/ai/save-reviewed` only when the review sheet differs from the draft in category or account. Selecting the category (or account) is the feedback; the row is indexed by the description they saved:
 
 | Column | Role |
 |--------|------|
-| `payee_key` | Match words from the original text (`POS-KEELLS SUPER` → `keells super`). Unique with `user_id`. |
-| `display_name` | Label they typed. Not used for matching. |
+| `payee_key` | Normalized words from the description (`Keells` → `keells`). Unique with `user_id`. |
+| `display_name` | Full description they typed. Not used for matching. |
 | `category_id` | Category they kept |
 | `account_id` | Account they kept |
 
-Amount and date stay on `transactions` only. The next receipt, SMS, or note is filled from this row when every word of `payee_key` appears in the new text. The longest matching key wins. Logic lives in `apps/api/src/Ledgerly.Api/Helpers/FillFeedback.cs`.
+Amount and date stay on `transactions` only. The next receipt, SMS, or note is filled from this row when every word of `payee_key` appears in the new description (or source text). The longest matching key wins. Logic lives in `apps/api/src/Ledgerly.Api/Helpers/FillFeedback.cs`.
 
 If the table is created from DBeaver rather than the Supabase SQL editor, reload the API schema cache or the save is invisible to PostgREST:
 
@@ -478,7 +478,7 @@ cd apps/web && npm test
 1. **Shared .NET API** — web and mobile share one REST backend (`apps/api`); business logic lives once.  
 2. **30-second add first** — `/add` is the primary daily action; secondary tools live under More.  
 3. **Supabase Auth + JWT to API** — clients login with Supabase; API validates and forwards the token for RLS.  
-4. **Human-in-the-loop AI** — extraction always goes through a review step; nothing saves until the user confirms. A currency named in the text is converted into the selected account at today's rate before save; the stored amount is in that account's currency. A changed payee, category, or account is remembered per user in `fill_feedback` and applied on the next fill for that payee.  
+4. **Human-in-the-loop AI** — extraction always goes through a review step; nothing saves until the user confirms. A currency named in the text is converted into the selected account at today's rate before save; the stored amount is in that account's currency. A changed category or account is remembered per user in `fill_feedback` under the description and applied on the next fill for that description.  
 5. **Groq free-tier AI** — keeps cost at zero; fallback across available Groq models on rate limits.  
 6. **DB-owned balances** — triggers update balances so the app cannot drift from transaction history.  
 7. **RLS by default** — every table is user-scoped; no service-role key in clients.  

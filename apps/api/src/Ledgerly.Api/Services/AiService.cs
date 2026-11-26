@@ -523,7 +523,8 @@ public sealed class AiService(
                 "fill_feedback",
                 $"select=payee_key,category_id,account_id&user_id=eq.{user.UserId}",
                 ct);
-            var hit = FillFeedback.Match(rows, sourceText, merchant);
+            // Rows are indexed by description; match the parsed description first.
+            var hit = FillFeedback.Match(rows, merchant, sourceText);
             if (hit is null) return;
 
             // Description stays as parsed. Feedback only fills category and account.
@@ -555,7 +556,6 @@ public sealed class AiService(
             || request.ProposedAccountId is not null;
         var change = FillFeedback.FromReview(new FillFeedbackInput(
             hasBaseline,
-            request.PayeeKey,
             request.ProposedMerchant,
             request.ProposedCategoryId,
             request.ProposedAccountId,

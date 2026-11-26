@@ -1,5 +1,6 @@
--- One combination per user and payee: the category and account they kept
--- after editing a smart-add review. Another user's rows are never read.
+-- One combination per user and description: the category and account they
+-- kept after editing a smart-add review. Indexed by normalized description
+-- words in payee_key. Another user's rows are never read.
 
 create table if not exists public.fill_feedback (
   id uuid primary key default gen_random_uuid(),
