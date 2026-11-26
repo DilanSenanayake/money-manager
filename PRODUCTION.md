@@ -91,7 +91,7 @@ Run **in order**, once per environment. Never edit an already-applied file — a
 3. `supabase/migrations/003_credit_balance_polarity.sql`
 4. `supabase/migrations/004_production_hardening.sql` — ownership trigger, UPDATE `WITH CHECK`, composite indexes
 5. `supabase/migrations/005_delete_own_account.sql`
-6. `supabase/migrations/006_fill_feedback.sql` — per-user payee, category, and account corrections from the smart-add review sheet
+6. `supabase/migrations/006_fill_feedback.sql` — per-user description → category and account corrections from the smart-add review sheet
 
 No additional index migration is required for launch. Existing indexes cover `user_id`, `(user_id, date)`, and `(user_id, category_id, date)`.
 

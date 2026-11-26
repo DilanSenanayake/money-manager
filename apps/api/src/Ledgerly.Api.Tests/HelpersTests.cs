@@ -211,9 +211,9 @@ public class FillFeedbackTests
     [InlineData("Rent", "rent")]
     [InlineData("Unknown", null)]
     [InlineData("", null)]
-    public void PayeeKey_keeps_the_words_that_will_appear_again(string merchant, string? expected)
+    public void PayeeKey_normalizes_description_words(string description, string? expected)
     {
-        Assert.Equal(expected, FillFeedback.PayeeKey(merchant));
+        Assert.Equal(expected, FillFeedback.PayeeKey(description));
     }
 
     [Fact]
@@ -225,6 +225,7 @@ public class FillFeedbackTests
 
         var hit = FillFeedback.Match(
             [dialog, keells, keellsSuper],
+            "Keells Super",
             "A/c XX4521 debited LKR 3180 for POS-KEELLS SUPER");
 
         Assert.Equal("keells super", hit?.PayeeKey);
@@ -244,7 +245,19 @@ public class FillFeedbackTests
     }
 
     [Fact]
-    public void FromReview_stores_the_whole_combination_when_category_changes()
+    public void FromReview_skips_a_description_only_edit()
+    {
+        var category = Guid.NewGuid();
+        var account = Guid.NewGuid();
+        var change = FillFeedback.FromReview(Input(
+            category, account, "POS-KEELLS SUPER",
+            category, account, "Keells"));
+
+        Assert.Null(change);
+    }
+
+    [Fact]
+    public void FromReview_indexes_by_the_saved_description_when_category_changes()
     {
         var groceries = Guid.NewGuid();
         var household = Guid.NewGuid();
@@ -252,11 +265,10 @@ public class FillFeedbackTests
 
         var change = FillFeedback.FromReview(Input(
             groceries, account, "POS-KEELLS SUPER",
-            household, account, "Keells",
-            payeeKey: "keells super"));
+            household, account, "Keells"));
 
         Assert.NotNull(change);
-        Assert.Equal("keells super", change!.PayeeKey);
+        Assert.Equal("keells", change!.PayeeKey);
         Assert.Equal("Keells", change.DisplayName);
         Assert.Equal(household, change.CategoryId);
         Assert.Equal(account, change.AccountId);
@@ -266,7 +278,7 @@ public class FillFeedbackTests
     public void FromReview_without_a_baseline_does_not_store()
     {
         var change = FillFeedback.FromReview(new FillFeedbackInput(
-            false, "keells", null, null, null, "Keells", Guid.NewGuid(), Guid.NewGuid()));
+            false, null, null, null, "Keells", Guid.NewGuid(), Guid.NewGuid()));
 
         Assert.Null(change);
     }
@@ -279,11 +291,9 @@ public class FillFeedbackTests
         string proposedMerchant,
         Guid savedCategory,
         Guid savedAccount,
-        string savedMerchant,
-        string? payeeKey = null) =>
+        string savedMerchant) =>
         new(
             true,
-            payeeKey,
             proposedMerchant,
             proposedCategory,
             proposedAccount,

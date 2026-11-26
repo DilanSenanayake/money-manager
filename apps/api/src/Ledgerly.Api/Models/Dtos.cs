@@ -222,7 +222,7 @@ public sealed class AiReviewSaveRequest
     [JsonPropertyName("proposed_merchant")]
     public string? ProposedMerchant { get; set; }
 
-    /// <summary>Match word from the original text, echoed so a renamed label stays on the same row.</summary>
+    /// <summary>Optional client echo of a prior match key. Save indexes by description instead.</summary>
     [MaxLength(80)]
     [JsonPropertyName("payee_key")]
     public string? PayeeKey { get; set; }

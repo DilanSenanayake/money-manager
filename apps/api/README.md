@@ -67,7 +67,7 @@ The API is **stateless** (no server sessions). It validates the Supabase access 
 | POST | `/v1/ai/parse-sms` | Bank SMS → draft, then the same account conversion as parse-text |
 | POST | `/v1/ai/parse-text` | One-liner → draft. A currency named in the text (`5usd`, `200lkr`) is converted into the selected account at today's rate |
 | POST | `/v1/ai/convert-amount` | Convert `{ amount, from_currency, to_currency }` with today's rate. Used when Check & Save changes account |
-| POST | `/v1/ai/save-reviewed` | Persist after user confirm. Stores the account-currency amount only. If payee, category, or account changed, upsert that user's `fill_feedback` row |
+| POST | `/v1/ai/save-reviewed` | Persist after user confirm. Stores the account-currency amount only. If category or account changed, upsert that user's `fill_feedback` row indexed by description |
 
 ## Check & Save currency
 
@@ -83,11 +83,11 @@ Manual rates in `exchange_rates` are a separate path. They convert wallet balanc
 
 ## Review feedback
 
-`fill_feedback` (migration `006_fill_feedback.sql`) stores one combination per signed-in user and payee: `payee_key`, `display_name`, `category_id`, `account_id`.
+`fill_feedback` (migration `006_fill_feedback.sql`) stores one combination per signed-in user and description: `payee_key`, `display_name`, `category_id`, `account_id`.
 
-- Saved only when the review sheet changes payee, category, or account. Unchanged saves and manual transactions do not write a row.
-- `payee_key` is the normalized words from the original text. The label the user types is `display_name` and is not the lookup key.
-- The next parse copies category and account when those words appear again. Amount and date always come from the new text.
+- Saved only when the review sheet changes category or account (that selection is the feedback). Description-only edits, unchanged saves, and manual transactions do not write a row.
+- `payee_key` is the normalized words from the description the user kept. The full label is `display_name` and is not the lookup key.
+- The next parse copies category and account when those words appear again in the description. Amount and date always come from the new text.
 - RLS is `auth.uid() = user_id`. Another user's corrections are never read.
 
 ## Docker
