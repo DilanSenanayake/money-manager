@@ -1,43 +1,36 @@
-/** Merge merchant + notes into one user-facing description. */
-export function fromMerchantAndNotes(
+/** Short name plus optional longer detail, stored in separate columns. */
+export function entryDescriptions(
   merchant?: string | null,
   notes?: string | null
-): string {
-  const m = merchant?.trim() ?? "";
-  const n = notes?.trim() ?? "";
-  if (!m) return n;
-  if (!n || n === m) return m;
-  // Merchant was truncated title of a longer note
-  if (n.startsWith(m)) return n;
-  return `${m}\n${n}`;
+): { merchant: string | null; notes: string | null } {
+  const name = (merchant ?? "").trim();
+  const detail = (notes ?? "").trim();
+  return {
+    merchant: name ? name.slice(0, 200) : null,
+    notes: detail ? detail.slice(0, 1000) : null,
+  };
 }
 
-/**
- * Split a single description into DB fields:
- * - merchant: short title (≤200) for lists
- * - notes: full text when longer than 200, otherwise unused
- */
-export function toMerchantAndNotes(description: string): {
-  merchant: string | null;
-  notes: string | null;
-} {
-  const text = description.trim();
-  if (!text) return { merchant: null, notes: null };
-  if (text.length <= 200) return { merchant: text, notes: null };
-  return { merchant: text.slice(0, 200), notes: text.slice(0, 1000) };
+/** Longer detail for a list row, when it adds something beyond the short name. */
+export function transactionDetail(tx: {
+  merchant?: string | null;
+  notes?: string | null;
+}): string | null {
+  const name = (tx.merchant ?? "").trim();
+  const detail = (tx.notes ?? "").trim();
+  if (!detail || detail.toLowerCase() === name.toLowerCase()) return null;
+  return detail;
 }
 
-/** Prefer merchant, fall back to notes — for list row titles. */
+/** Short name for a list row, then the long description, then the category. */
 export function transactionTitle(tx: {
   merchant?: string | null;
   notes?: string | null;
   category?: { name: string } | null;
   type?: string;
 }): string {
-  return (
-    fromMerchantAndNotes(tx.merchant, tx.notes).split("\n")[0] ||
-    tx.category?.name ||
-    tx.type ||
-    "Transaction"
-  );
+  const name = (tx.merchant ?? "").trim().split("\n")[0]?.trim() ?? "";
+  if (name) return name;
+  const detail = (tx.notes ?? "").trim().split("\n")[0]?.trim() ?? "";
+  return detail || tx.category?.name || tx.type || "Transaction";
 }

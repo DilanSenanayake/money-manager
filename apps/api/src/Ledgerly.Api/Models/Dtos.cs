@@ -112,6 +112,17 @@ public sealed class CreateTransactionRequest
 
     [JsonPropertyName("transfer_to_account_id")]
     public Guid? TransferToAccountId { get; set; }
+
+    /// <summary>Original short description when a home quick-add is repeating a record.</summary>
+    [MaxLength(200)]
+    [JsonPropertyName("proposed_merchant")]
+    public string? ProposedMerchant { get; set; }
+
+    [JsonPropertyName("proposed_category_id")]
+    public Guid? ProposedCategoryId { get; set; }
+
+    [JsonPropertyName("proposed_account_id")]
+    public Guid? ProposedAccountId { get; set; }
 }
 
 public sealed class TransactionFilter
@@ -466,6 +477,9 @@ public sealed class DashboardResponse
     [JsonPropertyName("frequent")]
     public List<FrequentRecord> Frequent { get; set; } = [];
 
+    [JsonPropertyName("shortcuts")]
+    public List<QuickShortcut> Shortcuts { get; set; } = [];
+
     [JsonPropertyName("baseCurrency")]
     public string BaseCurrency { get; set; } = "USD";
 
@@ -480,6 +494,9 @@ public sealed class FrequentRecord
 {
     [JsonPropertyName("label")]
     public string Label { get; set; } = "";
+
+    [JsonPropertyName("notes")]
+    public string? Notes { get; set; }
 
     [JsonPropertyName("type")]
     public string Type { get; set; } = TransactionTypes.Expense;
@@ -498,6 +515,49 @@ public sealed class FrequentRecord
 
     [JsonPropertyName("count")]
     public int Count { get; set; }
+}
+
+public sealed class QuickShortcut
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = "";
+
+    [JsonPropertyName("notes")]
+    public string? Notes { get; set; }
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = TransactionTypes.Expense;
+
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonPropertyName("categoryId")]
+    public Guid? CategoryId { get; set; }
+
+    [JsonPropertyName("category")]
+    public Category? Category { get; set; }
+}
+
+public sealed class CreateQuickAddRequest
+{
+    [Required, MaxLength(200)]
+    [JsonPropertyName("merchant")]
+    public string? Merchant { get; set; }
+
+    [MaxLength(1000)]
+    [JsonPropertyName("notes")]
+    public string? Notes { get; set; }
+
+    [Required]
+    [JsonPropertyName("category_id")]
+    public Guid? CategoryId { get; set; }
+
+    [Range(0.01, double.MaxValue)]
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
 }
 
 public sealed class AnalyticsResponse

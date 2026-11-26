@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failures.dart';
 import '../../../core/utils/category_match.dart';
-import '../../../core/utils/currency.dart';
+import '../../../core/utils/money.dart';
 import '../../../core/utils/receipt_currency.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money_input.dart';
@@ -303,7 +303,7 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
       setState(() {
         _accountId = previous;
         _converting = false;
-        if (_amount.text.trim().isEmpty && sourceAmount != null) {
+        if (_amount.text.trim().isEmpty) {
           _amount.text = _moneyText(sourceAmount, sourceCurrency);
         }
       });
@@ -598,12 +598,14 @@ class _AiReviewSheetState extends ConsumerState<AiReviewSheet> {
                     const SizedBox(height: 12),
                     AppTextField(
                       controller: _merchant,
-                      label: 'Merchant',
+                      label: 'Description',
+                      hint: 'Name, like Coffee or Rent',
                     ),
                     const SizedBox(height: 12),
                     AppTextField(
                       controller: _notes,
-                      label: 'Notes (optional)',
+                      label: 'Long description',
+                      hint: 'Optional details',
                       maxLines: 2,
                     ),
                     const SizedBox(height: 8),

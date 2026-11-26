@@ -116,6 +116,7 @@ builder.Services.AddSingleton<ILiveRateProvider, OpenExchangeRateProvider>();
 builder.Services.AddScoped<IAccountsService, AccountsService>();
 builder.Services.AddScoped<ICategoriesService, CategoriesService>();
 builder.Services.AddScoped<ITransactionsService, TransactionsService>();
+builder.Services.AddScoped<IQuickAddsService, QuickAddsService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IAiService, AiService>();

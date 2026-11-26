@@ -472,6 +472,7 @@ double? _optionalDouble(Map<String, dynamic> json, List<String> keys) {
 class FrequentRecord extends Equatable {
   const FrequentRecord({
     required this.label,
+    this.notes,
     required this.type,
     required this.amount,
     required this.accountId,
@@ -481,6 +482,7 @@ class FrequentRecord extends Equatable {
   });
 
   final String label;
+  final String? notes;
   final String type;
   final double amount;
   final String accountId;
@@ -491,6 +493,7 @@ class FrequentRecord extends Equatable {
   factory FrequentRecord.fromJson(Map<String, dynamic> json) {
     return FrequentRecord(
       label: asString(json['label']),
+      notes: asNullableString(json['notes']),
       type: asString(json['type'], 'expense'),
       amount: asDouble(json['amount']),
       accountId: asString(json['accountId'] ?? json['account_id']),
@@ -504,7 +507,45 @@ class FrequentRecord extends Equatable {
 
   @override
   List<Object?> get props =>
-      [label, type, amount, accountId, categoryId, category, count];
+      [label, notes, type, amount, accountId, categoryId, category, count];
+}
+
+class QuickShortcut extends Equatable {
+  const QuickShortcut({
+    required this.id,
+    required this.label,
+    this.notes,
+    required this.type,
+    required this.amount,
+    this.categoryId,
+    this.category,
+  });
+
+  final String id;
+  final String label;
+  final String? notes;
+  final String type;
+  final double amount;
+  final String? categoryId;
+  final Category? category;
+
+  factory QuickShortcut.fromJson(Map<String, dynamic> json) {
+    return QuickShortcut(
+      id: asString(json['id']),
+      label: asString(json['label']),
+      notes: asNullableString(json['notes']),
+      type: asString(json['type'], 'expense'),
+      amount: asDouble(json['amount']),
+      categoryId: asNullableString(json['categoryId'] ?? json['category_id']),
+      category: json['category'] is Map
+          ? Category.fromJson(asMap(json['category']))
+          : null,
+    );
+  }
+
+  @override
+  List<Object?> get props =>
+      [id, label, notes, type, amount, categoryId, category];
 }
 
 class DashboardData extends Equatable {
@@ -519,6 +560,7 @@ class DashboardData extends Equatable {
     required this.budgets,
     required this.recent,
     this.frequent = const [],
+    this.shortcuts = const [],
     required this.baseCurrency,
     this.monthStart = '',
     this.monthEnd = '',
@@ -534,6 +576,7 @@ class DashboardData extends Equatable {
   final List<BudgetProgress> budgets;
   final List<Transaction> recent;
   final List<FrequentRecord> frequent;
+  final List<QuickShortcut> shortcuts;
   final String baseCurrency;
   final String monthStart;
   final String monthEnd;
@@ -569,6 +612,10 @@ class DashboardData extends Equatable {
           .whereType<Map>()
           .map((e) => FrequentRecord.fromJson(asMap(e)))
           .toList(),
+      shortcuts: asList(json['shortcuts'])
+          .whereType<Map>()
+          .map((e) => QuickShortcut.fromJson(asMap(e)))
+          .toList(),
       baseCurrency: asString(
         json['baseCurrency'] ?? json['base_currency'],
         'USD',
@@ -587,6 +634,7 @@ class DashboardData extends Equatable {
         expense,
         missingRateCurrencies,
         frequent,
+        shortcuts,
         baseCurrency,
       ];
 }
@@ -659,6 +707,9 @@ class TransactionInput {
     this.isRecurring = false,
     this.recurringFrequency,
     this.transferToAccountId,
+    this.proposedMerchant,
+    this.proposedCategoryId,
+    this.proposedAccountId,
   });
 
   final String accountId;
@@ -671,6 +722,9 @@ class TransactionInput {
   final bool isRecurring;
   final String? recurringFrequency;
   final String? transferToAccountId;
+  final String? proposedMerchant;
+  final String? proposedCategoryId;
+  final String? proposedAccountId;
 
   Map<String, dynamic> toJson() => {
         'account_id': accountId,
@@ -685,6 +739,10 @@ class TransactionInput {
             isRecurring ? (recurringFrequency ?? 'monthly') : null,
         if (transferToAccountId != null)
           'transfer_to_account_id': transferToAccountId,
+        if (proposedMerchant != null) 'proposed_merchant': proposedMerchant,
+        if (proposedCategoryId != null)
+          'proposed_category_id': proposedCategoryId,
+        if (proposedAccountId != null) 'proposed_account_id': proposedAccountId,
       };
 }
 

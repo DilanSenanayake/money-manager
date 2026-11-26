@@ -122,6 +122,36 @@ public sealed class Transaction
     public Category? Category { get; set; }
 }
 
+public sealed class QuickAdd
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("user_id")]
+    public Guid UserId { get; set; }
+
+    [JsonPropertyName("merchant")]
+    public string Merchant { get; set; } = "";
+
+    [JsonPropertyName("notes")]
+    public string? Notes { get; set; }
+
+    [JsonPropertyName("category_id")]
+    public Guid? CategoryId { get; set; }
+
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = TransactionTypes.Expense;
+
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; set; }
+
+    [JsonPropertyName("category")]
+    public Category? Category { get; set; }
+}
+
 public sealed class FillFeedbackRow
 {
     [JsonPropertyName("payee_key")]

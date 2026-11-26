@@ -37,6 +37,7 @@ export async function updateCategory(
   });
   if ("error" in result) return result;
   revalidatePath("/budgets");
+  revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/add");
   return { success: true };
@@ -46,6 +47,8 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   const result = await apiMutate(`/v1/categories/${id}`, { method: "DELETE" });
   if ("error" in result) return result;
   revalidatePath("/budgets");
+  revalidatePath("/transactions");
   revalidatePath("/dashboard");
+  revalidatePath("/add");
   return { success: true };
 }

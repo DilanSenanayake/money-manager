@@ -15,7 +15,8 @@ public static class FrequentRecords
         IEnumerable<Transaction> transactions,
         IReadOnlyList<Category> categories,
         IReadOnlyList<Account> accounts,
-        IEnumerable<FillFeedbackRow>? feedback = null)
+        IEnumerable<FillFeedbackRow>? feedback = null,
+        string? since = null)
     {
         var categoryById = categories.ToDictionary(c => c.Id);
         var accountIds = accounts.Select(a => a.Id).ToHashSet();
@@ -36,6 +37,8 @@ public static class FrequentRecords
                 continue;
             if (transaction.TransferPairId is not null) continue;
             if (transaction.Amount <= 0) continue;
+            if (since is not null && string.CompareOrdinal(transaction.Date, since) < 0)
+                continue;
 
             var text = DisplayText(transaction);
             var key = FillFeedback.PayeeKey(text);
@@ -78,6 +81,7 @@ public static class FrequentRecords
                 new FrequentRecord
                 {
                     Label = label,
+                    Notes = DetailText(template, label),
                     Type = type,
                     Amount = template.Amount,
                     AccountId = template.AccountId,
@@ -143,6 +147,15 @@ public static class FrequentRecords
         var line = text.Trim().Split('\n', 2)[0].Trim();
         if (line.Length == 0) return null;
         return line.Length <= 200 ? line : line[..200];
+    }
+
+    private static string? DetailText(Transaction transaction, string label)
+    {
+        var notes = transaction.Notes?.Trim();
+        if (string.IsNullOrEmpty(notes)
+            || string.Equals(notes, label, StringComparison.OrdinalIgnoreCase))
+            return null;
+        return notes.Length <= 1000 ? notes : notes[..1000];
     }
 
     private sealed record Candidate(FrequentRecord Record, string LastDate, DateTimeOffset LastCreated);

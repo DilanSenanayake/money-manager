@@ -75,6 +75,11 @@ class BudgetsPage extends ConsumerWidget {
           ref.invalidate(categoriesProvider);
           ref.invalidate(dashboardProvider);
         },
+        onDelete: () async {
+          await ref.read(categoriesRepositoryProvider).deleteCategory(id);
+          ref.invalidate(categoriesProvider);
+          ref.invalidate(dashboardProvider);
+        },
       ),
     );
   }
@@ -231,6 +236,7 @@ class _CategoryEditorSheet extends StatefulWidget {
     required this.type,
     this.initialBudget,
     required this.onSubmit,
+    this.onDelete,
   });
 
   final String title;
@@ -241,6 +247,7 @@ class _CategoryEditorSheet extends StatefulWidget {
   final double? initialBudget;
   final Future<void> Function(String name, String icon, String? budget)
       onSubmit;
+  final Future<void> Function()? onDelete;
 
   @override
   State<_CategoryEditorSheet> createState() => _CategoryEditorSheetState();
@@ -267,6 +274,43 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
     _nameCtrl.dispose();
     _budgetCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _confirmDelete() async {
+    final delete = widget.onDelete;
+    if (delete == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this category?'),
+        content: const Text(
+          'Entries that used it keep their amounts. The category leaves your budgets.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await delete();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is Failure ? e.message : e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -347,6 +391,19 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
               }
             },
           ),
+          if (widget.onDelete != null) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _saving ? null : _confirmDelete,
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ],
         ),
       ),

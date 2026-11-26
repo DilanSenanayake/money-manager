@@ -54,6 +54,7 @@ void main() {
       expect(data.accounts.single.name, 'Cash');
       expect(data.budgets.single.status, 'ok');
       expect(data.frequent, isEmpty);
+      expect(data.shortcuts, isEmpty);
     });
 
     test('reads frequent quick-add records', () {
@@ -86,6 +87,32 @@ void main() {
       expect(coffee.categoryId, 'cat-1');
       expect(coffee.category?.name, 'Dining');
       expect(coffee.count, 8);
+    });
+
+    test('reads saved quick-add shortcuts', () {
+      final data = DashboardData.fromJson({
+        'accounts': [],
+        'rates': [],
+        'budgets': [],
+        'recent': [],
+        'shortcuts': [
+          {
+            'id': 'short-1',
+            'label': 'Rent',
+            'notes': 'Monthly apartment',
+            'type': 'expense',
+            'amount': 900,
+            'categoryId': 'cat-2',
+          },
+        ],
+      });
+
+      final rent = data.shortcuts.single;
+      expect(rent.id, 'short-1');
+      expect(rent.label, 'Rent');
+      expect(rent.notes, 'Monthly apartment');
+      expect(rent.amount, 900);
+      expect(rent.categoryId, 'cat-2');
     });
   });
 

@@ -114,3 +114,23 @@ public sealed class TransactionsController(ITransactionsService transactions) : 
         return result.Success ? Ok(new SuccessResponse()) : BadRequest(new ErrorResponse(result.Error!));
     }
 }
+
+[ApiController]
+[Authorize]
+[Route("v1/quick-adds")]
+public sealed class QuickAddsController(IQuickAddsService quickAdds) : ControllerBase
+{
+    [HttpPost]
+    public async Task<ActionResult> Create([FromBody] CreateQuickAddRequest request, CancellationToken ct)
+    {
+        var result = await quickAdds.CreateAsync(request, ct);
+        return result.Success ? Ok(new SuccessResponse()) : BadRequest(new ErrorResponse(result.Error!));
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var result = await quickAdds.DeleteAsync(id, ct);
+        return result.Success ? Ok(new SuccessResponse()) : BadRequest(new ErrorResponse(result.Error!));
+    }
+}

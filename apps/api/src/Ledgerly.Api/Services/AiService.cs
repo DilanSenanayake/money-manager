@@ -62,7 +62,8 @@ public sealed class AiService(
                 For each line_items entry, price must be the amount charged for the bought quantity on that line (line total = quantity × unit price when both appear). Do not use unit price alone when a line total is available or can be computed. Keep line prices in the same currency as the total.
                 {DateNormalizer.PromptRule(DateHelpers.LocalDateYyyyMmDd())}
                 Pick category as ONE of these exact names when possible: {categoryNames}.
-                Prefer Dining for restaurants, cafes, coffee shops, fast food, and takeout. Prefer Groceries for supermarkets. Prefer Transport for bus, train, taxi, ride-hail, and similar tickets. Avoid Other when another listed category fits. Do not put raw OCR into notes — leave notes null unless there is a short useful detail.
+                Prefer Dining for restaurants, cafes, coffee shops, fast food, and takeout. Prefer Groceries for supermarkets. Prefer Transport for bus, train, taxi, ride-hail, and similar tickets. Avoid Other when another listed category fits.
+                merchant is a short name for the place or purchase. notes is an optional longer description of what was bought. Leave notes null when the short name is enough. Do not put raw OCR into notes.
 
                 OCR text:
                 ---
@@ -145,7 +146,8 @@ public sealed class AiService(
                 Amount must be the number written in the message. Do not convert it.
                 Currency is the ISO code named in the message: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Rs, rupees, and රු mean LKR. $, dollars, and USD mean USD. € means EUR. £ means GBP. ₹ means INR. If the message names no currency, use an empty string.
                 {DateNormalizer.PromptRule(DateHelpers.LocalDateYyyyMmDd())}
-                Merchant is a short description: read the whole message, then suggest a clearer short wording for who was paid or what it was for. Do not copy a raw fragment. Use "Unknown" only if nothing usable is there.
+                merchant is a short name for who was paid or what it was for. Read the whole message, then suggest a clearer short wording. Do not copy a raw fragment. Use "Unknown" only if nothing usable is there.
+                notes is an optional longer description. Leave it null when the short name is enough. Do not paste the message into notes.
                 type must be exactly "Credit" or "Debit".
 
                 Message:
@@ -217,6 +219,7 @@ public sealed class AiService(
                 Currency is the ISO code named in the note: USD, EUR, GBP, LKR, INR, JPY, AUD, CAD, CHF, or SGD. Rs, rupees, and රු mean LKR. $, dollars, and USD mean USD. € means EUR. £ means GBP. ₹ means INR. If the note names no currency, use an empty string. Never guess a currency that is not written.
                 For expense category use ONE of: {expenseNames.IfEmpty("Groceries, Dining, Transport, Shopping, Utilities, Health, Entertainment, Rent, Other")}.
                 For income category use ONE of: {incomeNames.IfEmpty("Salary, Freelance, Investments")}.
+                merchant is a short name for the entry, like "Coffee" or "Rent". notes is an optional longer description. Leave notes null when the short name is enough.
 
                 Note:
                 {trimmed}

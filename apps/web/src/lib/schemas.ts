@@ -105,6 +105,9 @@ export const transactionSchema = z.object({
   is_recurring: z.boolean().default(false),
   recurring_frequency: recurringFrequencySchema.nullable().optional(),
   transfer_to_account_id: z.string().uuid().optional().nullable(),
+  proposed_merchant: z.string().max(200).nullable().optional(),
+  proposed_category_id: z.string().uuid().nullable().optional(),
+  proposed_account_id: z.string().uuid().nullable().optional(),
 });
 
 export const transactionFilterSchema = z.object({
@@ -144,7 +147,7 @@ export const receiptLineItemSchema = z.object({
 
 /** Shared by Gemini generateObject for receipt text (after Tesseract OCR) */
 export const receiptExtractionSchema = z.object({
-  merchant: z.string().describe("Store, merchant, carrier, or issuer name"),
+  merchant: z.string().describe("Short name for the place or purchase"),
   amount: z.number().describe("Total amount paid for the whole document"),
   currency: currencySchema.describe(
     "ISO code printed for the total. If the document shows no currency, use USD"
@@ -171,7 +174,7 @@ export const receiptExtractionSchema = z.object({
     .string()
     .nullable()
     .optional()
-    .describe("Extra notes from the bill, receipt, ticket, or similar document"),
+    .describe("Optional longer description. Leave null when the short name is enough"),
   category_id: z.string().uuid().nullable().optional(),
   account_id: z.string().uuid().nullable().optional(),
   payee_key: z.string().max(80).nullable().optional(),
@@ -183,7 +186,7 @@ export const smsExtractionSchema = z.object({
   type: z
     .enum(["Credit", "Debit"])
     .describe("Credit = money in, Debit = money out"),
-  merchant: z.string().describe("Merchant, payee, or counterparty"),
+  merchant: z.string().describe("Short name for who was paid or what it was for"),
   date: z
     .string()
     .describe("Transaction date in YYYY-MM-DD; use today if unknown"),
@@ -197,7 +200,11 @@ export const smsExtractionSchema = z.object({
     .nullable()
     .optional()
     .describe("Account last-4 or name hint from the message"),
-  notes: z.string().nullable().optional(),
+  notes: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Optional longer description. Leave null when the short name is enough"),
   category_id: z.string().uuid().nullable().optional(),
   account_id: z.string().uuid().nullable().optional(),
   payee_key: z.string().max(80).nullable().optional(),
@@ -211,7 +218,7 @@ export const quickTextExtractionSchema = z.object({
     .describe("income = money in, expense = money out"),
   merchant: z
     .string()
-    .describe("Merchant, payee, or short description"),
+    .describe("Short name, like Coffee or Rent"),
   date: z
     .string()
     .describe("Transaction date in YYYY-MM-DD; use today if unknown"),
@@ -225,7 +232,11 @@ export const quickTextExtractionSchema = z.object({
   source_currency: currencySchema.nullable().optional(),
   exchange_rate: z.number().nullable().optional(),
   conversion_warning: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
+  notes: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Optional longer description. Leave null when the short name is enough"),
   category_id: z.string().uuid().nullable().optional(),
   account_id: z.string().uuid().nullable().optional(),
   payee_key: z.string().max(80).nullable().optional(),
@@ -247,6 +258,21 @@ export const aiReviewSaveSchema = z.object({
   payee_key: z.string().max(80).nullable().optional(),
 });
 
+export const quickAddSchema = z.object({
+  merchant: z.string().trim().min(1, "Enter a description").max(200),
+  notes: z
+    .string()
+    .max(1000)
+    .nullable()
+    .optional()
+    .transform((value) => {
+      const text = value?.trim() ?? "";
+      return text ? text : null;
+    }),
+  category_id: z.string().uuid("Choose a category"),
+  amount: moneyString(),
+});
+
 export type ProfileInput = z.infer<typeof profileSchema>;
 export type AccountInput = z.infer<typeof accountSchema>;
 export type CategoryInput = z.infer<typeof categorySchema>;
@@ -257,3 +283,4 @@ export type ReceiptExtraction = z.infer<typeof receiptExtractionSchema>;
 export type SmsExtraction = z.infer<typeof smsExtractionSchema>;
 export type QuickTextExtraction = z.infer<typeof quickTextExtractionSchema>;
 export type AiReviewSave = z.infer<typeof aiReviewSaveSchema>;
+export type QuickAddInput = z.infer<typeof quickAddSchema>;

@@ -245,6 +245,12 @@ class TxTile extends StatelessWidget {
     final title = transaction.merchant?.isNotEmpty == true
         ? transaction.merchant!
         : (transaction.category?.name ?? labelForTxType(transaction.type));
+    final detail = transaction.notes?.trim();
+    final longDescription = detail == null ||
+            detail.isEmpty ||
+            detail.toLowerCase() == title.toLowerCase()
+        ? null
+        : detail;
     final subtitle = [
       transaction.account?.name,
       if (showDate) formatFriendlyDate(transaction.date),
@@ -324,21 +330,33 @@ class TxTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Row(
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Flexible(
-              child: Text(
-                subtitle.isNotEmpty
-                    ? subtitle
-                    : labelForTxType(transaction.type),
+            if (longDescription != null)
+              Text(
+                longDescription,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: context.texts.bodySmall?.copyWith(color: context.muted),
               ),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    subtitle.isNotEmpty
+                        ? subtitle
+                        : labelForTxType(transaction.type),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (showTypeBadge) ...[
+                  const SizedBox(width: 8),
+                  _TypeBadge(type: transaction.type),
+                ],
+              ],
             ),
-            if (showTypeBadge) ...[
-              const SizedBox(width: 8),
-              _TypeBadge(type: transaction.type),
-            ],
           ],
         ),
         trailing: MoneyText(

@@ -25,7 +25,7 @@ import { extractTextFromImage } from "@/lib/ocr";
 import { looksLikeBankSms } from "@/lib/smart-input";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import { canonicalMoney } from "@/lib/money";
-import { toMerchantAndNotes } from "@/lib/transaction-description";
+import { entryDescriptions } from "@/lib/transaction-description";
 import type { Account, Category } from "@/lib/types";
 import type {
   AiReviewSave,
@@ -101,6 +101,7 @@ export function QuickAddPanel({
   const [manualCategoryId, setManualCategoryId] = useState<string | null>(null);
   const [manualDate, setManualDate] = useState(localDateYYYYMMDD());
   const [manualDescription, setManualDescription] = useState("");
+  const [manualDetail, setManualDetail] = useState("");
 
   const [extraction, setExtraction] = useState<
     ReceiptExtraction | SmsExtraction | QuickTextExtraction | null
@@ -292,7 +293,7 @@ export function QuickAddPanel({
         amount,
         type: manualType,
         date: manualDate,
-        ...toMerchantAndNotes(manualDescription),
+        ...entryDescriptions(manualDescription, manualDetail),
         is_recurring: false,
         recurring_frequency: null,
         transfer_to_account_id: null,
@@ -311,6 +312,7 @@ export function QuickAddPanel({
       setManualCategoryId(null);
       setManualDate(localDateYYYYMMDD());
       setManualDescription("");
+      setManualDetail("");
       stopBusy();
       router.push("/dashboard");
       router.refresh();
@@ -573,12 +575,20 @@ export function QuickAddPanel({
               onChange={(e) => setManualAmount(e.target.value)}
             />
             <Textarea
-              placeholder="What was this for? (optional)"
-              rows={2}
-              maxLength={1000}
+              placeholder="Name, like Coffee or Rent"
+              rows={1}
+              maxLength={200}
               value={manualDescription}
               disabled={busy}
               onChange={(e) => setManualDescription(e.target.value)}
+            />
+            <Textarea
+              placeholder="Long description (optional)"
+              rows={2}
+              maxLength={1000}
+              value={manualDetail}
+              disabled={busy}
+              onChange={(e) => setManualDetail(e.target.value)}
             />
             <DateQuickPick
               value={manualDate}

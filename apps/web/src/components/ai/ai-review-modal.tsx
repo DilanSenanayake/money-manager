@@ -23,10 +23,7 @@ import {
   receiptMoneyFrom,
   type ReceiptMoney,
 } from "@/lib/receipt-currency";
-import {
-  fromMerchantAndNotes,
-  toMerchantAndNotes,
-} from "@/lib/transaction-description";
+import { entryDescriptions } from "@/lib/transaction-description";
 import { cn, formatMoney } from "@/lib/utils";
 import { CategoryChip } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
@@ -175,8 +172,8 @@ function toReviewForm(
       amount: asMoneyInput(text.amount),
       type,
       date: text.date || today,
-      merchant: fromMerchantAndNotes(text.merchant, text.notes),
-      notes: null,
+      merchant: text.merchant,
+      notes: text.notes,
       is_recurring: false,
       recurring_frequency: null,
     };
@@ -207,8 +204,8 @@ function toReviewForm(
       amount: asMoneyInput(sms.amount),
       type,
       date: sms.date || today,
-      merchant: fromMerchantAndNotes(sms.merchant, sms.notes),
-      notes: null,
+      merchant: sms.merchant,
+      notes: sms.notes,
       is_recurring: false,
       recurring_frequency: null,
     };
@@ -246,11 +243,8 @@ function toReviewForm(
     amount: asMoneyInput(receipt?.amount),
     type,
     date: receipt?.date || today,
-    merchant: fromMerchantAndNotes(
-      receipt?.merchant,
-      receiptNotes || lineNotes || null
-    ),
-    notes: null,
+    merchant: receipt?.merchant ?? null,
+    notes: receiptNotes || lineNotes || null,
     is_recurring: false,
     recurring_frequency: null,
   };
@@ -296,24 +290,20 @@ export function AiReviewModal({
     preparedKey.current = key;
     autoConvertKey.current = null;
 
-    const next = initialForm
-      ? {
-          ...initialForm,
-          merchant: fromMerchantAndNotes(
-            initialForm.merchant,
-            initialForm.notes
-          ),
-          notes: null,
-        }
+    const drafted = initialForm
+      ? initialForm
       : extraction
         ? toReviewForm(extraction, accounts, categories, source, ocrText)
         : null;
+    const described = drafted
+      ? { ...drafted, ...entryDescriptions(drafted.merchant, drafted.notes) }
+      : null;
+    const next = described;
     if (next) {
-      const proposed = toMerchantAndNotes(next.merchant ?? "");
       baselineRef.current = {
         account_id: next.account_id,
         category_id: next.category_id ?? null,
-        merchant: proposed.merchant,
+        merchant: next.merchant,
         payee_key: payeeKeyOf(extraction),
       };
     }
@@ -579,14 +569,26 @@ export function AiReviewModal({
 
                 <div className="space-y-2">
                   <Label htmlFor="review-description">Description</Label>
-                  <Textarea
+                  <Input
                     id="review-description"
                     value={form.merchant ?? ""}
-                    placeholder="What was this for?"
+                    placeholder="Name, like Coffee or Rent"
+                    maxLength={200}
+                    onChange={(e) =>
+                      setForm({ ...form, merchant: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="review-detail">Long description</Label>
+                  <Textarea
+                    id="review-detail"
+                    value={form.notes ?? ""}
+                    placeholder="Optional details"
                     rows={2}
                     maxLength={1000}
                     onChange={(e) =>
-                      setForm({ ...form, merchant: e.target.value })
+                      setForm({ ...form, notes: e.target.value })
                     }
                   />
                 </div>
@@ -656,24 +658,25 @@ export function AiReviewModal({
                   onClick={async () => {
                     setSaving(true);
                     try {
-                      const { merchant, notes } = toMerchantAndNotes(
-                        form.merchant ?? ""
+                      const descriptions = entryDescriptions(
+                        form.merchant,
+                        form.notes
                       );
                       const categoryId =
                         form.category_id ??
                         matchCategoryId(
                           categories,
                           form.type,
-                          merchant,
-                          notes,
+                          descriptions.merchant,
+                          descriptions.notes,
                           sanitizeOcrForCategoryHints(ocrText)
                         );
                       const baseline = baselineRef.current;
                       const result = await saveReviewedTransaction({
                         ...form,
                         category_id: categoryId,
-                        merchant,
-                        notes,
+                        merchant: descriptions.merchant,
+                        notes: descriptions.notes,
                         proposed_category_id: baseline?.category_id ?? null,
                         proposed_account_id: baseline?.account_id || null,
                         proposed_merchant: baseline?.merchant ?? null,

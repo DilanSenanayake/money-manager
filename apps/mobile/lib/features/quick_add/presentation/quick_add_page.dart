@@ -810,14 +810,15 @@ class _ManualForm extends StatelessWidget {
         const SizedBox(height: 16),
         AppTextField(
           controller: merchant,
-          label: 'Description (optional)',
-          hint: 'Where or what',
+          label: 'Description',
+          hint: 'Name, like Coffee or Rent',
           prefixIcon: Icons.storefront_outlined,
         ),
         const SizedBox(height: 12),
         AppTextField(
           controller: notes,
-          label: 'Notes (optional)',
+          label: 'Long description',
+          hint: 'Optional details',
           maxLines: 3,
           prefixIcon: Icons.notes_rounded,
         ),

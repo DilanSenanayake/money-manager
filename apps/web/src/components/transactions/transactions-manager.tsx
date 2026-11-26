@@ -13,8 +13,8 @@ import type { Account, Category, Transaction } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { localDateYYYYMMDD } from "@/lib/dates";
 import {
-  fromMerchantAndNotes,
-  toMerchantAndNotes,
+  entryDescriptions,
+  transactionDetail,
   transactionTitle,
 } from "@/lib/transaction-description";
 import type { TransactionInput } from "@/lib/schemas";
@@ -82,8 +82,8 @@ function formFromTransaction(tx: Transaction): TransactionInput {
       typeof tx.amount === "number" ? tx.amount.toFixed(2) : String(tx.amount),
     type: tx.type === "transfer" ? "expense" : tx.type,
     date: tx.date,
-    merchant: fromMerchantAndNotes(tx.merchant, tx.notes),
-    notes: null,
+    merchant: tx.merchant ?? "",
+    notes: tx.notes ?? "",
     is_recurring: tx.is_recurring,
     recurring_frequency: tx.recurring_frequency,
     transfer_to_account_id: null,
@@ -91,8 +91,7 @@ function formFromTransaction(tx: Transaction): TransactionInput {
 }
 
 function payloadFromForm(form: TransactionInput): TransactionInput {
-  const { merchant, notes } = toMerchantAndNotes(form.merchant ?? "");
-  return { ...form, merchant, notes };
+  return { ...form, ...entryDescriptions(form.merchant, form.notes) };
 }
 
 export function TransactionsManager({
@@ -315,14 +314,26 @@ export function TransactionsManager({
                 />
                 <div className="space-y-2">
                   <Label htmlFor="tx-description">Description</Label>
-                  <Textarea
+                  <Input
                     id="tx-description"
-                    placeholder="What was this for? (optional)"
-                    rows={2}
-                    maxLength={1000}
+                    placeholder="Name, like Coffee or Rent"
+                    maxLength={200}
                     value={form.merchant ?? ""}
                     onChange={(e) =>
                       setForm({ ...form, merchant: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tx-detail">Long description</Label>
+                  <Textarea
+                    id="tx-detail"
+                    placeholder="Optional details"
+                    rows={2}
+                    maxLength={1000}
+                    value={form.notes ?? ""}
+                    onChange={(e) =>
+                      setForm({ ...form, notes: e.target.value })
                     }
                   />
                 </div>
@@ -466,6 +477,11 @@ export function TransactionsManager({
                   <p className="truncate font-medium">
                     {transactionTitle(tx)}
                   </p>
+                  {transactionDetail(tx) ? (
+                    <p className="truncate text-xs text-[var(--muted)]">
+                      {transactionDetail(tx)}
+                    </p>
+                  ) : null}
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)] sm:gap-2">
                     <span className="shrink-0">{tx.date}</span>
                     {!tx.category && (

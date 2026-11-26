@@ -54,12 +54,24 @@ export interface Transaction {
 /** A description logged often enough to repeat from home. */
 export interface FrequentRecord {
   label: string;
+  notes?: string | null;
   type: "income" | "expense";
   amount: number;
   accountId: string;
   categoryId: string | null;
   category?: Category | null;
   count: number;
+}
+
+/** A shortcut the user saved so home can add it in one tap. */
+export interface QuickShortcut {
+  id: string;
+  label: string;
+  notes?: string | null;
+  type: "income" | "expense";
+  amount: number;
+  categoryId: string | null;
+  category?: Category | null;
 }
 
 export interface ExchangeRate {

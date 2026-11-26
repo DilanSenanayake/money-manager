@@ -143,6 +143,23 @@ public class FrequentRecordsTests
         Assert.Equal(2, rent.Count);
     }
 
+    [Fact]
+    public void Top_counts_only_the_past_two_weeks()
+    {
+        var rows = new List<Transaction>
+        {
+            Tx("Coffee", "expense", 4, _dining, "2026-01-01"),
+            Tx("Coffee", "expense", 4, _dining, "2026-01-02"),
+            Tx("Tea", "expense", 3, _dining, "2026-03-01"),
+            Tx("Tea", "expense", 3, _dining, "2026-03-02"),
+        };
+
+        var top = FrequentRecords.Top(
+            rows, Categories(), Accounts(), since: "2026-03-01");
+
+        Assert.Equal("Tea", Assert.Single(top).Label);
+    }
+
     private List<Category> Categories() =>
     [
         new() { Id = _dining, Name = "Dining", Icon = "utensils", Type = "expense" },

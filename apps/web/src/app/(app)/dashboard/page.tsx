@@ -4,7 +4,11 @@ import { PlusTileIcon } from "@/components/layout/action-tiles";
 import { formatMoney } from "@/lib/utils";
 import { ratesCovering } from "@/lib/currency";
 import { RateGap, RateStamp } from "@/components/money/rate-notice";
-import { transactionTitle } from "@/lib/transaction-description";
+import {
+  transactionDetail,
+  transactionTitle,
+} from "@/lib/transaction-description";
+import { getCategories } from "@/app/actions/categories";
 import { getDashboardData } from "@/app/actions/dashboard";
 import { FrequentQuickAdd } from "@/components/dashboard/frequent-quick-add";
 import { BudgetAlerts, BudgetBars } from "@/components/budgets/budget-bars";
@@ -19,7 +23,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 
 export default async function DashboardPage() {
-  const data = await getDashboardData();
+  const [data, categories] = await Promise.all([
+    getDashboardData(),
+    getCategories(),
+  ]);
   const isEmpty = data.recent.length === 0;
   const firstName = data.profile?.display_name?.split(" ")[0];
   const missingRates = data.missingRateCurrencies ?? [];
@@ -53,7 +60,10 @@ export default async function DashboardPage() {
 
       <FrequentQuickAdd
         records={data.frequent ?? []}
+        shortcuts={data.shortcuts ?? []}
         accounts={data.accounts}
+        categories={categories}
+        baseCurrency={data.baseCurrency}
       />
 
       {isEmpty && (
@@ -176,6 +186,11 @@ export default async function DashboardPage() {
                   <p className="truncate text-sm font-medium">
                     {transactionTitle(tx)}
                   </p>
+                  {transactionDetail(tx) ? (
+                    <p className="truncate text-xs text-[var(--muted)]">
+                      {transactionDetail(tx)}
+                    </p>
+                  ) : null}
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)] sm:gap-2">
                     <span className="shrink-0">{tx.date}</span>
                     {!tx.category && (

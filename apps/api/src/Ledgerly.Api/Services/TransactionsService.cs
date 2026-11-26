@@ -169,12 +169,56 @@ public sealed class TransactionsService(
                     : null,
             }, ct);
 
+            await RememberQuickFeedbackAsync(request, categoryId, ct);
             return Result.Ok();
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create transaction for user {UserId}", user.UserId);
             return Result.Fail(OwnershipGuards.GenericError);
+        }
+    }
+
+    private async Task RememberQuickFeedbackAsync(
+        CreateTransactionRequest request,
+        Guid? savedCategoryId,
+        CancellationToken ct)
+    {
+        var hasBaseline = request.ProposedMerchant is not null
+            || request.ProposedCategoryId is not null
+            || request.ProposedAccountId is not null;
+        if (!hasBaseline) return;
+
+        var change = FillFeedback.FromReview(new FillFeedbackInput(
+            true,
+            request.ProposedMerchant,
+            request.ProposedCategoryId,
+            request.ProposedAccountId,
+            request.Merchant,
+            savedCategoryId,
+            request.AccountId));
+        if (change is null) return;
+
+        try
+        {
+            await supabase.UpsertAsync(
+                "fill_feedback",
+                new
+                {
+                    user_id = user.UserId,
+                    payee_key = change.PayeeKey,
+                    display_name = change.DisplayName,
+                    category_id = change.CategoryId,
+                    account_id = change.AccountId,
+                    updated_at = DateTimeOffset.UtcNow,
+                },
+                "user_id,payee_key",
+                ct,
+                includeNulls: true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Fill feedback was not saved for user {UserId}", user.UserId);
         }
     }
 

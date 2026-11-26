@@ -7,6 +7,7 @@ import type {
   CategorySpendPoint,
   ExchangeRate,
   FrequentRecord,
+  QuickShortcut,
   MonthlyReport,
   Profile,
   SpendingReportSummary,
@@ -24,6 +25,7 @@ type DashboardResponse = {
   budgets: BudgetProgress[];
   recent: Transaction[];
   frequent?: FrequentRecord[];
+  shortcuts?: QuickShortcut[];
   baseCurrency: string;
   monthStart: string;
   monthEnd: string;

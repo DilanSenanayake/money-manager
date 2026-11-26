@@ -682,12 +682,14 @@ class _TransactionEditorSheetState
               const SizedBox(height: 12),
               AppTextField(
                 controller: _merchant,
-                label: 'Merchant',
+                label: 'Description',
+                hint: 'Name, like Coffee or Rent',
               ),
               const SizedBox(height: 12),
               AppTextField(
                 controller: _notes,
-                label: 'Notes (optional)',
+                label: 'Long description',
+                hint: 'Optional details',
                 maxLines: 2,
               ),
               SwitchListTile(

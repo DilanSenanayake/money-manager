@@ -97,17 +97,16 @@ class DashboardPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (data.frequent.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    FadeUp(
-                      delay: const Duration(milliseconds: 30),
-                      child: FrequentQuickAdd(
-                        records: data.frequent,
-                        accounts: data.accounts,
-                        baseCurrency: data.baseCurrency,
-                      ),
+                  const SizedBox(height: AppSpacing.lg),
+                  FadeUp(
+                    delay: const Duration(milliseconds: 30),
+                    child: FrequentQuickAdd(
+                      records: data.frequent,
+                      shortcuts: data.shortcuts,
+                      accounts: data.accounts,
+                      baseCurrency: data.baseCurrency,
                     ),
-                  ],
+                  ),
                   if (missingRates.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.md),
                     StatusBanner(

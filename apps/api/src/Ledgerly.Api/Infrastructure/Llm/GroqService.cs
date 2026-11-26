@@ -85,7 +85,8 @@ public sealed class GroqService(
                     content =
                         """
                         You extract structured personal-finance data. Respond with ONLY valid JSON matching the requested shape. No markdown.
-                        The merchant field is the description the user will see. Read the entire source text first, then write a short, clear description of who was paid or what the money was for. Suggest better wording; do not copy a raw fragment from the text. Keep it under about 60 characters. Leave out account numbers, balances, reference codes, and boilerplate. Use "Unknown" only when the text gives no usable clue.
+                        The merchant field is the short name the user will see, like a payee or a few words for what the money was for. Read the entire source text first, then write a clear short name. Suggest better wording; do not copy a raw fragment. Keep merchant under about 40 characters. Leave out account numbers, balances, reference codes, and boilerplate. Use "Unknown" only when the text gives no usable clue.
+                        The notes field is an optional longer description. Use it only when there is extra detail worth keeping, such as what was bought or why. Keep it to one or two short sentences. Leave notes null when the short name is enough. Do not paste the raw source into notes.
                         """
                 },
                 new

@@ -14,10 +14,12 @@ public interface IDashboardService
 public sealed class DashboardService(
     ISupabaseRestClient supabase,
     ICurrentUser user,
-    ILogger<DashboardService> logger) : IDashboardService
+    ILogger<DashboardService> logger,
+    IQuickAddsService quickAdds) : IDashboardService
 {
     public async Task<DashboardResponse> GetDashboardAsync(CancellationToken ct = default)
     {
+        var frequentSince = DateHelpers.LocalDateYyyyMmDd(DateTime.Now.Date.AddDays(-14));
         var profileTask = supabase.GetSingleAsync<Profile>(
             "profiles", $"id=eq.{user.UserId}", ct);
         var accountsTask = supabase.GetListAsync<Account>(
@@ -28,12 +30,13 @@ public sealed class DashboardService(
             "exchange_rates", $"user_id=eq.{user.UserId}", ct);
         var historyTask = supabase.GetListAsync<Transaction>(
             "transactions",
-            $"select=amount,type,date,account_id,category_id,merchant,notes,created_at&user_id=eq.{user.UserId}&type=in.(income,expense)&order=date.desc,created_at.desc&limit=500",
+            $"select=amount,type,date,account_id,category_id,merchant,notes,created_at&user_id=eq.{user.UserId}&type=in.(income,expense)&date=gte.{frequentSince}&order=date.desc,created_at.desc&limit=500",
             ct);
         var feedbackTask = LoadFeedbackAsync(ct);
+        var shortcutsTask = quickAdds.ListAsync(ct);
 
         await Task.WhenAll(
-            profileTask, accountsTask, categoriesTask, ratesTask, historyTask, feedbackTask);
+            profileTask, accountsTask, categoriesTask, ratesTask, historyTask, feedbackTask, shortcutsTask);
 
         var profile = await profileTask;
         var accounts = await accountsTask;
@@ -41,6 +44,7 @@ public sealed class DashboardService(
         var rates = await ratesTask;
         var history = await historyTask;
         var feedback = await feedbackTask;
+        var shortcuts = await shortcutsTask;
 
         var monthStart = DateHelpers.LocalMonthStartYyyyMmDd();
         var monthEnd = DateHelpers.LocalMonthEndYyyyMmDd();
@@ -144,7 +148,8 @@ public sealed class DashboardService(
             MissingRateCurrencies = missingRateCurrencies,
             Budgets = budgets,
             Recent = recent,
-            Frequent = FrequentRecords.Top(history, categories, accounts, feedback),
+            Frequent = FrequentRecords.Top(history, categories, accounts, feedback, frequentSince),
+            Shortcuts = shortcuts,
             BaseCurrency = baseCurrency,
             MonthStart = monthStart,
             MonthEnd = monthEnd,

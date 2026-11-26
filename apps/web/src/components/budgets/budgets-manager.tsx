@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { createCategory, updateCategory } from "@/app/actions/categories";
+import {
+  createCategory,
+  deleteCategory,
+  updateCategory,
+} from "@/app/actions/categories";
 import type { BudgetProgress, Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BudgetBars } from "@/components/budgets/budget-bars";
@@ -43,6 +48,8 @@ export function BudgetsManager({
   currency: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [deleting, setDeleting] = useState<Category | null>(null);
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
     name: "",
@@ -51,19 +58,50 @@ export function BudgetsManager({
     monthly_budget: "" as string | null,
   });
 
+  function openCreate() {
+    setEditing(null);
+    setForm({
+      name: "",
+      icon: "circle",
+      type: "expense",
+      monthly_budget: "",
+    });
+    setOpen(true);
+  }
+
+  function openEdit(category: Category) {
+    setEditing(category);
+    setForm({
+      name: category.name,
+      icon: category.icon,
+      type: category.type,
+      monthly_budget:
+        category.monthly_budget == null ? "" : String(category.monthly_budget),
+    });
+    setOpen(true);
+  }
+
   return (
     <div className="page-stack">
       <PageHeader
         title="Budgets"
         description="Category monthly limits with clear 80% / 100% warnings"
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(next) => {
+              setOpen(next);
+              if (!next) setEditing(null);
+            }}
+          >
             <DialogTrigger asChild>
-              <Button>Add category</Button>
+              <Button onClick={openCreate}>Add category</Button>
             </DialogTrigger>
             <DialogContent>
             <DialogHeader>
-              <DialogTitle>New category</DialogTitle>
+              <DialogTitle>
+                {editing ? "Edit category" : "New category"}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-2">
@@ -136,15 +174,19 @@ export function BudgetsManager({
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    const result = await createCategory({
+                    const input = {
                       ...form,
                       monthly_budget:
                         form.type === "expense" ? form.monthly_budget : null,
-                    });
+                    };
+                    const result = editing
+                      ? await updateCategory(editing.id, input)
+                      : await createCategory(input);
                     if (result.error) toast.error(result.error);
                     else {
-                      toast.success("Category created");
+                      toast.success(editing ? "Category updated" : "Category created");
                       setOpen(false);
+                      setEditing(null);
                     }
                   })
                 }
@@ -191,8 +233,8 @@ export function BudgetsManager({
                   <p className="text-xs capitalize text-slate-500">{cat.type}</p>
                 </div>
               </div>
-              {cat.type === "expense" && (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                {cat.type === "expense" && (
                   <Input
                     className="w-full max-w-[8rem] sm:w-28"
                     type="number"
@@ -214,12 +256,70 @@ export function BudgetsManager({
                       });
                     }}
                   />
-                </div>
-              )}
+                )}
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`Edit ${cat.name}`}
+                  onClick={() => openEdit(cat)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`Delete ${cat.name}`}
+                  onClick={() => setDeleting(cat)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={deleting !== null}
+        onOpenChange={(next) => {
+          if (!next) setDeleting(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {deleting?.name}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-[var(--muted)]">
+            This category will be removed. Entries that used it keep their
+            amounts.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleting(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={pending || !deleting}
+              onClick={() => {
+                if (!deleting) return;
+                const id = deleting.id;
+                startTransition(async () => {
+                  const result = await deleteCategory(id);
+                  if (result.error) toast.error(result.error);
+                  else {
+                    toast.success("Category deleted");
+                    setDeleting(null);
+                  }
+                });
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
